@@ -1,0 +1,63 @@
+version: 1
+mode: bootstrap
+
+project:
+  name: Codas
+  expansion: Code Atlas System
+  purpose: Agent-agnostic codebase governance for repositories maintained by coding agents.
+
+workspace:
+  roots:
+    - .
+
+constraint_sources:
+  authoritative:
+    - docs/codas-design.html
+    - docs/codas-implementation-plan.html
+    - docs/codas-structure-map-schema.html
+    - .codas/config.yml
+    - .codas/policies.yml
+    - .codas/structure.yml
+    - .codas/program.yml
+    - .trellis/workflow.md
+    - .trellis/config.yaml
+    - .trellis/spec/**/*.md
+    - .trellis/tasks/**/*.md
+    - .trellis/tasks/**/task.json
+  supporting:
+    - README.md
+    - pyproject.toml
+    - tests/**/*.py
+    - src/**/*.py
+    - scripts/*
+
+workflow:
+  adapter: trellis
+  root: .trellis
+  task_system: true
+  current_task_file: .trellis/.current-task
+  task_globs:
+    - .trellis/tasks/*/task.json
+    - .trellis/tasks/*/prd.md
+    - .trellis/tasks/*/implement.jsonl
+    - .trellis/tasks/*/check.jsonl
+    - .trellis/tasks/archive/**/*/task.json
+    - .trellis/tasks/archive/**/*/prd.md
+    - .trellis/tasks/archive/**/*/implement.jsonl
+    - .trellis/tasks/archive/**/*/check.jsonl
+
+dogfooding:
+  enabled: true
+  protocol: docs/codas-design.html#dogfooding-protocol
+  bootstrap_gate:
+    - PYTHONPATH=src python3 -m unittest discover -s tests
+    - git status --short
+
+wiki:
+  enabled: true
+  path: .codas/wiki
+  require_evidence: true
+
+receipts:
+  path: .codas/receipts
+  required_when_ci_exists: true

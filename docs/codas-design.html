@@ -1,0 +1,1514 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codas (Code Atlas System) 正式设计方案</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f7f4;
+      --paper: #ffffff;
+      --ink: #1e2329;
+      --muted: #606a76;
+      --line: #d9ded7;
+      --accent: #146b5f;
+      --accent-2: #8b4b1f;
+      --soft: #eef4f1;
+      --warn: #fff3d8;
+      --danger: #ffe8e3;
+      --code: #17212b;
+      --code-bg: #eef1f4;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-size: 16px;
+      line-height: 1.68;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 44px 24px 72px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 28px;
+      margin-bottom: 34px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 40px;
+      margin: 0 0 12px;
+    }
+
+    h2 {
+      font-size: 25px;
+      margin: 42px 0 14px;
+      padding-top: 6px;
+      border-top: 1px solid var(--line);
+    }
+
+    h3 {
+      font-size: 19px;
+      margin: 28px 0 10px;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 18px;
+      max-width: 860px;
+      margin: 0;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .meta div,
+    .callout,
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .meta div {
+      padding: 12px 14px;
+    }
+
+    .label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 4px;
+    }
+
+    .value {
+      font-weight: 650;
+    }
+
+    .callout {
+      padding: 16px 18px;
+      margin: 18px 0;
+      background: var(--soft);
+      border-color: #bfd6cf;
+    }
+
+    .callout strong {
+      color: var(--accent);
+    }
+
+    .warning {
+      background: var(--warn);
+      border-color: #efd08d;
+    }
+
+    .danger {
+      background: var(--danger);
+      border-color: #efb8aa;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: #eef0ec;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    code {
+      color: var(--code);
+      background: var(--code-bg);
+      padding: 2px 5px;
+      border-radius: 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .92em;
+    }
+
+    pre {
+      margin: 16px 0 24px;
+      padding: 16px;
+      overflow-x: auto;
+      color: #ecf1f4;
+      background: #17212b;
+      border-radius: 8px;
+      line-height: 1.5;
+      border: 1px solid #0c131a;
+    }
+
+    pre code {
+      color: inherit;
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+    }
+
+    ul,
+    ol {
+      padding-left: 22px;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0 24px;
+    }
+
+    .card {
+      padding: 16px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0 26px;
+    }
+
+    .step {
+      min-height: 92px;
+      padding: 12px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .step strong {
+      display: block;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .step span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .badge {
+      display: inline-block;
+      margin: 3px 5px 3px 0;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .must {
+      color: #8f2d1f;
+      font-weight: 700;
+    }
+
+    .should {
+      color: var(--accent-2);
+      font-weight: 700;
+    }
+
+    footer {
+      margin-top: 52px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 820px) {
+      main {
+        padding: 28px 16px 54px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .meta,
+      .grid,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Codas (Code Atlas System) 正式设计方案</h1>
+      <p class="subtitle">
+        Codas 是一个面向长期参与代码维护的 coding agent 的代码库地图与治理系统。
+        它通过确定性仓库事实、架构索引、任务上下文和强制 gate，阻止重复实现、孤儿文件、文档漂移和未解决的约束冲突进入主分支。
+      </p>
+      <section class="meta" aria-label="文档元信息">
+        <div>
+          <span class="label">Status</span>
+          <span class="value">Draft for Implementation</span>
+        </div>
+        <div>
+          <span class="label">Date</span>
+          <span class="value">2026-06-17</span>
+        </div>
+        <div>
+          <span class="label">Audience</span>
+          <span class="value">Agent-maintained repositories</span>
+        </div>
+        <div>
+          <span class="label">Interface</span>
+          <span class="value">CLI-first, agent-agnostic</span>
+        </div>
+      </section>
+    </header>
+
+    <section>
+      <h2>1. Executive Summary</h2>
+      <div class="callout">
+        <strong>Codas is a Code Atlas System for coding agents.</strong>
+        It maps a repository into verifiable facts, gives agents task-specific architectural context,
+        and blocks changes that introduce duplicate implementations, orphan artifacts, stale claims,
+        or unresolved constraint conflicts.
+      </div>
+      <p>
+        Codas 不是 Codex skill、Claude Code 插件、Trellis 插件或某种语言检查器。它是一个
+        <strong>agent-agnostic</strong>、<strong>language-agnostic</strong>、<strong>CLI-first</strong>
+        的 repo-local governance layer。Skill、MCP、Claude Code hooks、Codex instructions、GitHub Action
+        都只是接入方式。
+      </p>
+      <p>
+        Codas 的核心假设是：agent 不能被当成天然可靠的规则执行者，而应该被当成
+        <strong>untrusted patch producer</strong>。因此 Codas 不依赖提示词保证 agent 听话，而是通过
+        preflight context、local gate、CI gate 和 branch protection 保证违规变更不能静默合入。
+      </p>
+    </section>
+
+    <section>
+      <h2>2. Problem Statement</h2>
+      <p>在长期使用 coding agent 维护代码库时，常见问题不是单次代码质量，而是结构性漂移：</p>
+      <ul>
+        <li>agent 在不知道已有实现的情况下，为同一功能创建第二套类似实现。</li>
+        <li>agent 新增孤儿文件，文件存在但没有被 build、引用、任务或文档解释。</li>
+        <li>agent 修改代码后没有同步 PRD、spec、ADR、repo wiki 或 task 状态。</li>
+        <li>约束源本身互相冲突，agent 只能猜测哪个文档更可信。</li>
+        <li>重复实现可能隐藏在私有类型、局部 helper、组件内部结构中，单纯看文件结构无法发现。</li>
+      </ul>
+      <p>
+        这些问题不能靠更长的 prompt 解决。Codas 要把仓库事实变成可查询、可验证、可失败的系统边界。
+      </p>
+    </section>
+
+    <section>
+      <h2>3. Scope</h2>
+      <h3>3.1 适用范围</h3>
+      <p>Codas 适用于 <strong>任何让 coding agent 长期参与维护的代码库</strong>，并要求 agent 严格遵守其 gate 结果。</p>
+      <p>
+        <span class="badge">Swift / iOS</span>
+        <span class="badge">TypeScript / React / Node</span>
+        <span class="badge">Python</span>
+        <span class="badge">Rust</span>
+        <span class="badge">Go</span>
+        <span class="badge">Java / Kotlin</span>
+        <span class="badge">monorepo</span>
+        <span class="badge">backend</span>
+        <span class="badge">frontend</span>
+        <span class="badge">mobile</span>
+        <span class="badge">CLI tools</span>
+      </p>
+
+      <h3>3.2 非目标</h3>
+      <ul>
+        <li>Codas 不替代测试、编译、lint、typecheck 或安全扫描。</li>
+        <li>Codas 不替代 Trellis、GitHub Issues、Linear、Jira 等任务系统。</li>
+        <li>Codas 不承诺自动判断所有架构决策是否正确。</li>
+        <li>Codas 不把 LLM 输出当成唯一真相源。</li>
+        <li>Codas 不绑定 Codex、Claude Code、Cursor 或任何单一 agent 产品。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. Terminology</h2>
+      <p>
+        Codas 的术语必须先区分事实、声明、结构、导航、治理、任务和角色。后续实现以
+        <code>CONTEXT.md</code> 为领域语言源，本表是产品设计视角的摘要。
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>术语</th>
+            <th>定义</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Codas</strong></td>
+            <td>Code Atlas System，面向长期由 coding agent 参与维护的代码库治理 harness。</td>
+          </tr>
+          <tr>
+            <td><strong>Codas Core</strong></td>
+            <td>agent-agnostic 核心层，负责事实提取、声明校验、policy 执行、finding 输出和 waiver 管理。</td>
+          </tr>
+          <tr>
+            <td><strong>Atlas Inventory</strong></td>
+            <td>机器可读的仓库索引，包括 artifacts、symbols、modules、references、concepts、facts 和 claims。</td>
+          </tr>
+          <tr>
+            <td><strong>Artifact</strong></td>
+            <td>仓库中的任何实体，例如源码文件、测试、配置、schema、文档、spec、任务文件。</td>
+          </tr>
+          <tr>
+            <td><strong>Symbol</strong></td>
+            <td>语言层结构，例如 class、struct、function、component、route、service、schema、command。</td>
+          </tr>
+          <tr>
+            <td><strong>Module</strong></td>
+            <td>架构组织单元，可以来自 package、target、namespace、目录、service、framework 或手工定义。</td>
+          </tr>
+          <tr>
+            <td><strong>Concept</strong></td>
+            <td>业务或架构概念，例如 Auth、Composer、Billing、Chat Renderer、Model Provider。</td>
+          </tr>
+          <tr>
+            <td><strong>Fact</strong></td>
+            <td>Codas 从仓库中提取的可验证观察。</td>
+          </tr>
+          <tr>
+            <td><strong>Observed Fact</strong></td>
+            <td>直接来自仓库证据的 Fact，例如文件存在、parser 输出、Git 状态、任务文件或文档文本。</td>
+          </tr>
+          <tr>
+            <td><strong>Claim</strong></td>
+            <td>仓库内容中由人或 agent 写下的治理性陈述，可能过期、模糊或冲突。</td>
+          </tr>
+          <tr>
+            <td><strong>Governance Fact</strong></td>
+            <td>经过 authority、evidence、conflict 检查后，被 Codas 接受为治理输入的 Claim。</td>
+          </tr>
+          <tr>
+            <td><strong>Evidence</strong></td>
+            <td>支持 Fact 或 Claim 的具体仓库证据，例如路径、行号、symbol、AST 节点、文档段落、任务记录或 Git 状态。</td>
+          </tr>
+          <tr>
+            <td><strong>Conflict</strong></td>
+            <td>多个 Claim 或 Governance Fact 在 ownership、canonical placement、状态、职责边界上互相矛盾。</td>
+          </tr>
+          <tr>
+            <td><strong>Constraint Source</strong></td>
+            <td>产生约束的来源，例如 <code>AGENTS.md</code>、<code>CLAUDE.md</code>、PRD、spec、ADR、build config。</td>
+          </tr>
+          <tr>
+            <td><strong>Canonical Owner</strong></td>
+            <td>某个 concept 的主实现位置、归属模块或维护边界。</td>
+          </tr>
+          <tr>
+            <td><strong>Repository Structure</strong></td>
+            <td>仓库内文件、目录、模块边界、ownership 和 canonical placement 的有意组织，不是 OS filesystem。</td>
+          </tr>
+          <tr>
+            <td><strong>Structure Map</strong></td>
+            <td>Repository Structure 的 repo-local 可验证载体，描述 structure units、ownership、canonical placement、依赖规则、废弃路径和更新义务。详细 schema 见 <code>docs/codas-structure-map-schema.html</code>。</td>
+          </tr>
+          <tr>
+            <td><strong>Structure Unit</strong></td>
+            <td>Structure Map 中的一个可寻址结构单元，可以是目录、模块、package、feature area、service 或 component group。</td>
+          </tr>
+          <tr>
+            <td><strong>Ownership</strong></td>
+            <td>某个 Structure Unit、concept 或 capability 的声明归属，可以指向模块、团队、role、canonical file 或维护边界。</td>
+          </tr>
+          <tr>
+            <td><strong>Canonical Placement</strong></td>
+            <td>某类代码、能力、组件、配置或文档应当放置的位置。</td>
+          </tr>
+          <tr>
+            <td><strong>Structural Drift</strong></td>
+            <td>代码库实际结构逐渐偏离 Structure Map 或 Governance Fact 的现象。</td>
+          </tr>
+          <tr>
+            <td><strong>Orphan Artifact</strong></td>
+            <td>存在但没有清晰引用、owner、任务上下文、build 路径或文档解释的 artifact。</td>
+          </tr>
+          <tr>
+            <td><strong>Duplicate Implementation</strong></td>
+            <td>同一 concept、capability 或 responsibility 存在多个相似实现，且没有明确 canonical、variant 或 migration 关系。</td>
+          </tr>
+          <tr>
+            <td><strong>Orientation Layer</strong></td>
+            <td>帮助 agent 和人理解仓库的可读导航层，不是事实源。</td>
+          </tr>
+          <tr>
+            <td><strong>Atlas Wiki</strong></td>
+            <td>Orientation Layer 的 repo-local 实现，位于 <code>.codas/wiki</code>。</td>
+          </tr>
+          <tr>
+            <td><strong>Concept Index</strong></td>
+            <td>回答“这个概念是什么、在哪里实现、相关模块有哪些、canonical implementation 是什么”的索引。</td>
+          </tr>
+          <tr>
+            <td><strong>Decision Index</strong></td>
+            <td>重要产品、架构和结构决策索引，指向 ADR、PRD、spec、task 或 code evidence。</td>
+          </tr>
+          <tr>
+            <td><strong>Policy</strong></td>
+            <td>可执行规则，例如禁止未解释的新增 artifact、禁止重复 concept、要求 spec 同步。</td>
+          </tr>
+          <tr>
+            <td><strong>Gate</strong></td>
+            <td>在 agent 开工前、提交前或 CI 中执行的检查点。</td>
+          </tr>
+          <tr>
+            <td><strong>Finding</strong></td>
+            <td>Codas 发现的问题、风险或待决策事项。</td>
+          </tr>
+          <tr>
+            <td><strong>Waiver</strong></td>
+            <td>显式豁免。必须包含原因、owner、适用范围和过期条件。</td>
+          </tr>
+          <tr>
+            <td><strong>Context Pack</strong></td>
+            <td>Codas 为一次 agent 任务生成的开工上下文包。</td>
+          </tr>
+          <tr>
+            <td><strong>Program Plan</strong></td>
+            <td>位于单个 task 之上的项目级实施路线图，定义 phases、work items、dependencies、sequencing 和 exit criteria。</td>
+          </tr>
+          <tr>
+            <td><strong>Project Document Set</strong></td>
+            <td>一个规范 repo 应具备的治理与规划文档集合，包含每个文档的 role、path、authority、owner 和 update triggers。</td>
+          </tr>
+          <tr>
+            <td><strong>Document Role</strong></td>
+            <td>治理或规划文档在仓库中承担的责任，独立于具体文件路径、格式或标题。</td>
+          </tr>
+          <tr>
+            <td><strong>Document Role Manifest</strong></td>
+            <td>Project Document Set 的 repo-local 载体，负责把文档角色映射到具体文件，并说明每个文件何时必须更新。</td>
+          </tr>
+          <tr>
+            <td><strong>Receipt</strong></td>
+            <td>一次 agent 工作会话的记录，包含 task、inventory version、preflight hash 和 check 结果。</td>
+          </tr>
+          <tr>
+            <td><strong>Task System</strong></td>
+            <td>Codas 集成的任务系统。本项目当前使用 Trellis。</td>
+          </tr>
+          <tr>
+            <td><strong>Work Item</strong></td>
+            <td>一次具体变更任务，可以由 Trellis task、GitHub issue、Linear ticket 或本地 markdown task 承载。</td>
+          </tr>
+          <tr>
+            <td><strong>Trace</strong></td>
+            <td>从需求、设计、实现、检查到结构变更的可追踪链路。</td>
+          </tr>
+          <tr>
+            <td><strong>Domain Role</strong></td>
+            <td>Codas 领域内的职责定义，只定义目的、输入、输出和验收标准，不绑定具体 agent 产品。</td>
+          </tr>
+          <tr>
+            <td><strong>Role Integration</strong></td>
+            <td>把 Domain Role 映射到具体执行方式，例如 Codex skill、Claude Code subagent、hook、CI、GitHub Action 或人类 review checklist。</td>
+          </tr>
+          <tr>
+            <td><strong>Structure Architect</strong></td>
+            <td>项目初期负责设计和搭建 Repository Structure 的 Domain Role。</td>
+          </tr>
+          <tr>
+            <td><strong>Structure Steward</strong></td>
+            <td>项目进程中负责维护 Repository Structure、防止结构漂移的 Domain Role。</td>
+          </tr>
+          <tr>
+            <td><strong>Orientation Curator</strong></td>
+            <td>维护 Orientation Layer / Atlas Wiki 的 Domain Role，确保导航跟随仓库变化，但不把 wiki 当事实源。</td>
+          </tr>
+          <tr>
+            <td><strong>Policy Maintainer</strong></td>
+            <td>维护 Codas policy、severity、waiver 规则和 gate 行为的 Domain Role。</td>
+          </tr>
+          <tr>
+            <td><strong>Task Steward</strong></td>
+            <td>维护任务系统卫生和 Trace 完整性的 Domain Role。</td>
+          </tr>
+          <tr>
+            <td><strong>Document Steward</strong></td>
+            <td>定义并维护 Project Document Set 和 Document Role Manifest 的 Domain Role；项目初期可由 Structure Architect 承担。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>5. Design Principles</h2>
+      <ol>
+        <li><strong>Facts over prompts.</strong> 可验证事实优先于提示词。</li>
+        <li><strong>Claims are fallible.</strong> PRD、spec、AGENTS、wiki 都可能错，必须能检测冲突。</li>
+        <li><strong>Agent as untrusted patch producer.</strong> agent 可以产出 patch，但 patch 必须通过 gate。</li>
+        <li><strong>Fail closed for protected branches.</strong> 主分支无法确认安全时，默认阻止合并。</li>
+        <li><strong>Evidence everywhere.</strong> 每个 finding 都必须能指向文件、symbol、claim 或 diff。</li>
+        <li><strong>LLM assists, never rules.</strong> LLM 可辅助聚类和解释，但不能作为唯一裁决者。</li>
+        <li><strong>Adapters at the edge.</strong> 语言、构建系统、任务系统差异只能存在于 adapter 层。</li>
+        <li><strong>Local first, CI enforced.</strong> 本地体验要快，最终强约束由 CI 和 branch protection 保证。</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>6. System Architecture</h2>
+      <div class="flow" aria-label="系统流程">
+        <div class="step">
+          <strong>Adapters</strong>
+          <span>读取代码、文档、构建配置、任务系统、git diff。</span>
+        </div>
+        <div class="step">
+          <strong>Atlas</strong>
+          <span>生成 facts、claims、symbols、modules、references。</span>
+        </div>
+        <div class="step">
+          <strong>Concept Index</strong>
+          <span>聚合业务和架构概念，连接 canonical owner。</span>
+        </div>
+        <div class="step">
+          <strong>Policy Engine</strong>
+          <span>执行 duplicate、orphan、drift、conflict 等规则。</span>
+        </div>
+        <div class="step">
+          <strong>Gates</strong>
+          <span>preflight、precommit、CI gate 阻止违规变更。</span>
+        </div>
+      </div>
+
+      <pre><code>Repo Files + Docs + Build Config + Tasks + Git Diff
+        |
+        v
+Adapter Layer
+        |
+        +-- Fact Store
+        +-- Claim Store
+        |
+        v
+Atlas Inventory + Constraint Graph
+        +-- Structure Map
+        |
+        v
+Concept Index
+        |
+        +-- Context Pack for agents
+        +-- Atlas Wiki for navigation
+        +-- Policy Engine for gates
+        |
+        v
+Local Gate + CI Gate + Branch Protection</code></pre>
+    </section>
+
+    <section>
+      <h2>7. Product Shape</h2>
+      <h3>7.1 CLI-first</h3>
+      <p>Codas 第一形态是 CLI，因为 CLI 能被任意 agent、git hook、CI、Trellis、Makefile、GitHub Action 调用。</p>
+      <pre><code>codas init .
+codas inventory .
+codas preflight . --task .trellis/tasks/example.md
+codas explain . --concept Composer
+codas check . --diff main...HEAD
+codas plan .
+codas structure .
+codas wiki .
+codas doctor .</code></pre>
+
+      <h3>7.2 Not CLI-only</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Interface</th>
+            <th>作用</th>
+            <th>强制力</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CLI</td>
+            <td>最小可用入口，执行 inventory、preflight、check、plan、structure、wiki。</td>
+            <td>中</td>
+          </tr>
+          <tr>
+            <td>Git hooks</td>
+            <td>本地 pre-commit / pre-push 阻止明显坏变更。</td>
+            <td>中</td>
+          </tr>
+          <tr>
+            <td>CI Action</td>
+            <td>PR 和主分支强制执行 <code>codas check</code>。</td>
+            <td>高</td>
+          </tr>
+          <tr>
+            <td>MCP server</td>
+            <td>让 agent 以工具方式查询 concept、owner、risk。</td>
+            <td>低到中</td>
+          </tr>
+          <tr>
+            <td>Codex skill</td>
+            <td>教 Codex 如何调用 Codas 和处理 finding。</td>
+            <td>低</td>
+          </tr>
+          <tr>
+            <td>Claude Code hooks</td>
+            <td>在 Claude Code 工作流中自动运行 preflight/check。</td>
+            <td>中</td>
+          </tr>
+          <tr>
+            <td>Atlas Wiki</td>
+            <td>给人和 agent 阅读的 repo 导航层。</td>
+            <td>低</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>8. Repo-local State</h2>
+      <p>Codas 的运行状态应保存在仓库内，便于审查、版本化和 CI 复现。</p>
+      <p>
+        <code>.codas/documents.yml</code> 是 Document Role Manifest 的 authored claim surface；
+        <code>.codas/program.yml</code> 是 Program Plan 的 authored claim surface。
+        <code>.codas/structure.yml</code> 是 authored Structure Map claim surface；
+        字段、角色工作流和 normalized inventory 形态由
+        <code>docs/codas-structure-map-schema.html</code> 定义。
+      </p>
+      <pre><code>.codas/
+  config.yml
+  documents.yml
+  program.yml
+  policies.yml
+  waivers.yml
+  structure.yml
+  inventory/
+    atlas.json
+    symbols.json
+    modules.json
+    references.json
+    claims.json
+    concepts.json
+    structure.json
+  wiki/
+    index.md
+    concepts/
+    modules/
+    decisions/
+    risks/
+  receipts/
+    2026-06-17T120000Z.json
+  reports/
+    latest-check.json
+    latest-check.md</code></pre>
+      <p>
+        <code>.codas/inventory/**</code> 可以选择提交或不提交。默认建议提交关键索引和 wiki，
+        不提交临时 receipts，具体由 <code>.codas/config.yml</code> 控制。
+      </p>
+    </section>
+
+    <section>
+      <h2>9. Core Data Model</h2>
+      <h3>9.1 Fact</h3>
+      <pre><code>{
+  "id": "fact:symbol:src/auth/AuthService.ts:AuthService",
+  "kind": "symbol.definition",
+  "artifact": "src/auth/AuthService.ts",
+  "symbol": "AuthService",
+  "symbol_kind": "service",
+  "language": "typescript",
+  "evidence": {
+    "path": "src/auth/AuthService.ts",
+    "line": 12,
+    "extractor": "tree-sitter-typescript"
+  }
+}</code></pre>
+
+      <h3>9.2 Claim</h3>
+      <pre><code>{
+  "id": "claim:docs/specs/auth.md:canonical-auth",
+  "kind": "canonical_owner",
+  "concept": "auth",
+  "target": "src/auth/AuthService.ts",
+  "source": "docs/specs/auth.md",
+  "confidence": "declared",
+  "evidence": {
+    "path": "docs/specs/auth.md",
+    "line": 24
+  }
+}</code></pre>
+
+      <h3>9.3 Finding</h3>
+      <pre><code>{
+  "id": "finding:duplicate-concept:auth-session",
+  "policy": "duplicate_concept",
+  "severity": "error",
+  "concept": "session-management",
+  "message": "Two implementations appear to own session state.",
+  "evidence": [
+    {"path": "src/auth/sessionStore.ts", "symbol": "SessionStore"},
+    {"path": "src/utils/session.ts", "symbol": "SessionCache"}
+  ],
+  "resolution": [
+    "Merge one implementation into the canonical owner.",
+    "Declare an explicit canonical owner.",
+    "Add a temporary waiver with an expiry date."
+  ]
+}</code></pre>
+    </section>
+
+    <section>
+      <h2>10. Adapter Architecture</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Adapter 类型</th>
+            <th>职责</th>
+            <th>示例</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Language Adapter</td>
+            <td>提取 symbol、引用、导出 API、测试关系。</td>
+            <td>Swift、TypeScript、Python、Rust、Go、Java。</td>
+          </tr>
+          <tr>
+            <td>Build Adapter</td>
+            <td>判断 artifact 是否进入 build、test、package 或 runtime。</td>
+            <td>XcodeGen、Cargo、npm、Gradle、Bazel、Make。</td>
+          </tr>
+          <tr>
+            <td>Doc Adapter</td>
+            <td>解析 PRD、spec、ADR、README、agent rules 中的路径和 claim。</td>
+            <td>Markdown、YAML frontmatter、OpenAPI、GraphQL schema。</td>
+          </tr>
+          <tr>
+            <td>Workflow Adapter</td>
+            <td>读取任务状态、任务族、active/done、实现计划。</td>
+            <td>Trellis、GitHub Issues、Linear、本地 task markdown。</td>
+          </tr>
+          <tr>
+            <td>VCS Adapter</td>
+            <td>读取 git diff、changed files、merge base、ignored files。</td>
+            <td>Git。</td>
+          </tr>
+          <tr>
+            <td>Agent Adapter</td>
+            <td>把 context pack 暴露给具体 agent 环境。</td>
+            <td>Codex skill、Claude hooks、MCP server。</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>规则：</strong>核心模型不能出现 Swift、React、Django、Cargo 等生态细节。
+        这些差异必须被 adapter 转换成统一的 Artifact、Symbol、Module、Fact、Claim、Concept。
+      </div>
+    </section>
+
+    <section>
+      <h2>11. Policy and Gates</h2>
+      <h3>11.1 基础 Policy</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Policy</th>
+            <th>目标</th>
+            <th>默认级别</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>duplicate_concept</code></td>
+            <td>阻止同一 concept 出现多个未解释实现。</td>
+            <td>Error</td>
+          </tr>
+          <tr>
+            <td><code>orphan_artifact</code></td>
+            <td>阻止新增文件没有 build、引用、task 或文档解释。</td>
+            <td>Error</td>
+          </tr>
+          <tr>
+            <td><code>stale_claim</code></td>
+            <td>发现文档/spec 中不存在或已移动的路径和 symbol。</td>
+            <td>Warning</td>
+          </tr>
+          <tr>
+            <td><code>spec_drift</code></td>
+            <td>代码改变 concept 但没有同步约束源。</td>
+            <td>Error for public behavior, warning otherwise</td>
+          </tr>
+          <tr>
+            <td><code>missing_canonical_owner</code></td>
+            <td>新增 concept 没有主实现归属。</td>
+            <td>Error</td>
+          </tr>
+          <tr>
+            <td><code>constraint_conflict</code></td>
+            <td>多个约束源对同一 concept 给出冲突声明。</td>
+            <td>Error</td>
+          </tr>
+          <tr>
+            <td><code>stale_preflight</code></td>
+            <td>agent 没有基于当前 inventory 做过开工检查。</td>
+            <td>Error in CI when enabled</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>11.2 Gate Levels</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Gate</th>
+            <th>命令</th>
+            <th>执行时机</th>
+            <th>目的</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Preflight</td>
+            <td><code>codas preflight . --task &lt;task&gt;</code></td>
+            <td>agent 开工前</td>
+            <td>给出已有实现、相关文档、canonical owner、重复风险和必须同步项。</td>
+          </tr>
+          <tr>
+            <td>Local Check</td>
+            <td><code>codas check .</code></td>
+            <td>提交前或工作完成后</td>
+            <td>尽早发现 duplicate、orphan、drift、conflict。</td>
+          </tr>
+          <tr>
+            <td>CI Check</td>
+            <td><code>codas check . --ci --base origin/main</code></td>
+            <td>PR / merge 前</td>
+            <td>作为 required status check 阻止违规变更进入 protected branch。</td>
+          </tr>
+          <tr>
+            <td>Review Report</td>
+            <td><code>codas report . --format markdown</code></td>
+            <td>PR review</td>
+            <td>解释 finding 和推荐修复路径。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="danger">
+        <strong>强制原则：</strong>如果仓库启用了 Codas strict mode，CI gate 中的 Error finding
+        <span class="must">MUST</span> 阻止合并。agent 不能通过解释或忽略绕过 gate，只能修复、更新约束源或提交有效 waiver。
+      </div>
+    </section>
+
+    <section>
+      <h2>12. Compliance Model</h2>
+      <p>Codas 的遵守机制分四层，越往后越硬。</p>
+      <table>
+        <thead>
+          <tr>
+            <th>层级</th>
+            <th>机制</th>
+            <th>保证</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Context</td>
+            <td>agent 开工前读取 context pack。</td>
+            <td>降低误写概率，但不构成强保证。</td>
+          </tr>
+          <tr>
+            <td>Wrapper</td>
+            <td><code>codas run --task &lt;task&gt; -- &lt;agent-command&gt;</code></td>
+            <td>自动 preflight 和 check，记录 receipt。</td>
+          </tr>
+          <tr>
+            <td>Local Hook</td>
+            <td>pre-commit / pre-push 运行 <code>codas check</code>。</td>
+            <td>阻止大多数本地坏提交，可被手动绕过。</td>
+          </tr>
+          <tr>
+            <td>Remote Gate</td>
+            <td>CI required status check + branch protection。</td>
+            <td>真正强保证。绕过本地 hook 的变更也不能合并。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        因此 Codas 的安全边界不是“agent 一定会听话”，而是“即使 agent 不听话，违规 patch 也无法静默进入主分支”。
+      </p>
+    </section>
+
+    <section>
+      <h2>13. Constraint Conflict Resolution</h2>
+      <p>当 constraint source 互相冲突时，Codas 不让 agent 猜测，而是产生 error finding。</p>
+      <h3>13.1 参考优先级</h3>
+      <ol>
+        <li>Build graph 和 package graph：实际进入构建、测试、发布的事实。</li>
+        <li>Current code facts：当前代码里真实存在的 symbol、reference、module。</li>
+        <li>Explicit Codas overrides：仓库内显式声明的 canonical owner 或 policy override。</li>
+        <li>Architecture docs / ADR：架构决策。</li>
+        <li>Spec / PRD / task docs：功能与任务约束。</li>
+        <li>Agent instructions：AGENTS、CLAUDE、Codex skill 等行为约束。</li>
+        <li>Generated wiki：辅助导航，不能作为最高权威。</li>
+      </ol>
+      <p>
+        优先级只用于诊断和建议，不用于自动吞掉冲突。只要两个约束源都声称自己是 authoritative，
+        Codas <span class="must">MUST</span> 要求人类或明确 waiver 做决策。
+      </p>
+
+      <pre><code>CONSTRAINT_CONFLICT
+concept: ComposerSuggestionPopup
+claims:
+  - source: docs/specs/composer.md
+    claim: canonical owner is ChatInputComposer
+  - source: code facts
+    claim: another implementation exists in GlobalComposerBar
+required resolution:
+  1. extract a shared component
+  2. mark one implementation deprecated
+  3. update the canonical owner claim
+  4. or create a temporary waiver with an expiry date</code></pre>
+    </section>
+
+    <section>
+      <h2>14. Atlas Wiki</h2>
+      <p>
+        Atlas Wiki 是给 agent 和人阅读的导航层，不是唯一真相源。Wiki 必须从 inventory 和 claims 生成，
+        并且每个关键结论都带 evidence。
+      </p>
+      <pre><code>.codas/wiki/
+  index.md
+  concepts/
+    auth.md
+    composer.md
+    billing.md
+  modules/
+    frontend-routing.md
+    data-access.md
+  decisions/
+    canonical-implementations.md
+  risks/
+    duplicate-hotspots.md</code></pre>
+
+      <h3>Concept Page 模板</h3>
+      <pre><code># Composer
+
+## Canonical Owner
+- src/ui/composer/Composer.tsx
+  Evidence: symbol Composer, imported by 18 files, referenced by docs/specs/composer.md
+
+## Shared Primitives
+- ComposerSuggestionPopup
+- ComposerTokenParser
+
+## Duplicate Risks
+- Do not create another suggestion popup implementation.
+- Reuse or extract the canonical shared primitive first.
+
+## Related Specs
+- docs/specs/composer.md
+- .trellis/spec/frontend/composer-token-conventions.md
+
+## Last Verified
+- Generated from .codas/inventory/atlas.json at 2026-06-17T12:00:00Z</code></pre>
+    </section>
+
+    <section>
+      <h2>15. LLM Usage</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>适合 LLM</th>
+            <th>不应只靠 LLM</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>给 concept 起名和聚类。</td>
+            <td>判断路径是否存在。</td>
+          </tr>
+          <tr>
+            <td>总结 wiki 页面。</td>
+            <td>判断文件是否进入 build。</td>
+          </tr>
+          <tr>
+            <td>解释 finding 和推荐修复方案。</td>
+            <td>判断 symbol 是否定义。</td>
+          </tr>
+          <tr>
+            <td>推断两个实现是否语义相近，并给出置信度。</td>
+            <td>判断 git diff 触碰了哪些 artifact。</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        LLM 输出必须降级为 claim 或 suggestion，不能直接成为 fact。所有 LLM-assisted finding
+        <span class="should">SHOULD</span> 携带置信度和 evidence。
+      </p>
+    </section>
+
+    <section>
+      <h2>16. Configuration</h2>
+      <pre><code>version: 1
+mode: strict
+
+workspace:
+  roots:
+    - .
+
+adapters:
+  language:
+    - auto
+  build:
+    - auto
+  docs:
+    markdown:
+      constraint_sources:
+        - AGENTS.md
+        - CLAUDE.md
+        - PRD.md
+        - docs/specs/**/*.md
+        - .trellis/spec/**/*.md
+  workflow:
+    trellis:
+      enabled: true
+      root: .trellis
+
+policies:
+  duplicate_concept:
+    severity: error
+  orphan_artifact:
+    severity: error
+  stale_claim:
+    severity: warning
+  spec_drift:
+    severity: error
+  missing_canonical_owner:
+    severity: error
+  constraint_conflict:
+    severity: error
+  stale_preflight:
+    severity: error
+
+ci:
+  fail_on:
+    - error
+  require_fresh_preflight: true
+
+wiki:
+  enabled: true
+  output: .codas/wiki
+  require_evidence: true</code></pre>
+    </section>
+
+    <section>
+      <h2>17. Waiver Model</h2>
+      <p>Waiver 是显式豁免，不是忽略规则。每个 waiver 必须可审查、可过期、可归责。</p>
+      <pre><code>waivers:
+  - id: duplicate-concept-composer-popup-2026-06
+    finding: duplicate_concept
+    concept: ComposerSuggestionPopup
+    reason: Temporary migration; old implementation will be removed.
+    owner: "@oydodo"
+    expires: "2026-07-15"
+    evidence:
+      - path: src/ui/composer/Composer.tsx
+      - path: src/ui/global/GlobalComposerBar.tsx</code></pre>
+      <ul>
+        <li>过期 waiver <span class="must">MUST</span> 在 CI 中失败。</li>
+        <li>没有 owner 的 waiver <span class="must">MUST</span> 无效。</li>
+        <li>没有 reason 的 waiver <span class="must">MUST</span> 无效。</li>
+        <li>strict mode 下 error finding <span class="must">MUST</span> 只能通过修复或有效 waiver 解除。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>18. Agent Integrations</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Codex</h3>
+          <p>通过 Codas skill 和 CLI 接入。skill 负责教 Codex 在开工前运行 preflight、完成后运行 check，并读取 context pack。</p>
+        </article>
+        <article class="card">
+          <h3>Claude Code</h3>
+          <p>通过 <code>CLAUDE.md</code>、slash command 和 hooks 接入。hooks 可在任务开始和提交前调用 Codas。</p>
+        </article>
+        <article class="card">
+          <h3>Cursor / Other Agents</h3>
+          <p>通过 CLI、MCP server 或 repo-local wiki 接入。只要能执行 shell 或调用 MCP，就能使用 Codas。</p>
+        </article>
+        <article class="card">
+          <h3>CI / Review</h3>
+          <p>通过 GitHub Action、GitLab CI、Buildkite 或任意 CI 运行 <code>codas check --ci</code>，作为 required status check。</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>19. Workflow</h2>
+      <h3>19.1 Agent 开工流程</h3>
+      <ol>
+        <li>用户或任务系统给出 task。</li>
+        <li>agent 或 wrapper 执行 <code>codas preflight . --task &lt;task&gt;</code>。</li>
+        <li>Codas 生成 context pack，列出 canonical owner、相关实现、相关文档、重复风险。</li>
+        <li>agent 基于 context pack 修改代码。</li>
+        <li>agent 执行 <code>codas check .</code>。</li>
+        <li>如果有 error finding，agent 必须修复、更新约束源或添加有效 waiver。</li>
+        <li>PR 中 CI 执行 <code>codas check . --ci</code>，失败则禁止合并。</li>
+      </ol>
+
+      <h3>19.2 Context Pack 示例</h3>
+      <pre><code>task: Add composer suggestion filtering
+inventory_version: atlas:sha256:...
+
+read_first:
+  - src/ui/composer/Composer.tsx
+  - src/ui/composer/ComposerSuggestionPopup.tsx
+  - docs/specs/composer.md
+
+canonical_owners:
+  composer:
+    owner: src/ui/composer/Composer.tsx
+    evidence:
+      - symbol: Composer
+      - imports: 18
+
+duplicate_risks:
+  - Do not add another suggestion popup implementation.
+  - Reuse ComposerSuggestionPopup or update the canonical owner.
+
+must_update_if_changed:
+  - docs/specs/composer.md
+  - .codas/wiki/concepts/composer.md</code></pre>
+
+      <h3>19.3 Project Planning Documents</h3>
+      <p>
+        Trellis owns task-level workflow, but Codas also needs a project-level planning layer. A governed repository
+        <span class="must">MUST</span> distinguish the role of each planning document instead of relying on filename
+        convention or chat memory.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Document Role</th>
+            <th>Default Carrier</th>
+            <th>Responsibility</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Product / Architecture Design</td>
+            <td><code>docs/codas-design.html</code></td>
+            <td>Defines product scope, architecture principles, domain terms and non-goals.</td>
+          </tr>
+          <tr>
+            <td>Implementation Plan</td>
+            <td><code>docs/codas-implementation-plan.html</code></td>
+            <td>Translates design into module boundaries, phases, commands, policies and test strategy.</td>
+          </tr>
+          <tr>
+            <td>Structure Map Schema</td>
+            <td><code>docs/codas-structure-map-schema.html</code></td>
+            <td>Defines Structure Map fields, validation model, role workflows and normalized structure inventory shape.</td>
+          </tr>
+          <tr>
+            <td>Program Plan</td>
+            <td><code>.codas/program.yml</code> or a linked roadmap document</td>
+            <td>Defines milestones, dependencies, sequencing, work items and phase exit criteria.</td>
+          </tr>
+          <tr>
+            <td>Document Role Manifest</td>
+            <td><code>.codas/documents.yml</code></td>
+            <td>Defines the Project Document Set: required docs, paths, owners, authority and update triggers.</td>
+          </tr>
+          <tr>
+            <td>Structure Map</td>
+            <td><code>.codas/structure.yml</code></td>
+            <td>Defines Repository Structure, ownership, canonical placement and structural update obligations.</td>
+          </tr>
+          <tr>
+            <td>Task PRD / Context</td>
+            <td><code>.trellis/tasks/**</code></td>
+            <td>Defines requirements, implementation context and verification context for a single work item.</td>
+          </tr>
+          <tr>
+            <td>Spec / Guidelines</td>
+            <td><code>.trellis/spec/**</code></td>
+            <td>Defines recurring engineering rules and quality checks learned across tasks.</td>
+          </tr>
+          <tr>
+            <td>Orientation</td>
+            <td><code>.codas/wiki/**</code></td>
+            <td>Helps agents navigate concepts and decisions, but does not become a fact source.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The <strong>Document Steward</strong> owns the Document Role Manifest. During project bootstrap this role may
+        be performed by the <strong>Structure Architect</strong>, because document placement and authority are part of
+        the initial Repository Structure. During ongoing work, Codas should check that substantial Trellis tasks link
+        to an approved Program Plan phase or work item.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="dogfooding-protocol">20. Dogfooding Protocol</h2>
+      <div class="callout">
+        <strong>Codas must govern Codas.</strong>
+        The Codas repository is the first governed workspace. During implementation, every agent working on Codas
+        must follow the same philosophy Codas is designed to enforce for other repositories.
+      </div>
+      <p>
+        Before Codas can fully run its own <code>preflight</code> and <code>check</code> commands, the repository uses
+        a bootstrap protocol. This protocol is intentionally manual but mirrors the future system boundary:
+        identify the concept being changed, read canonical sources first, update related claims, run available gates,
+        and leave evidence for the next agent.
+      </p>
+
+      <h3>20.1 Bootstrap Rules</h3>
+      <ol>
+        <li>Every implementation task <span class="must">MUST</span> name the affected concept before editing.</li>
+        <li>Substantial implementation work <span class="must">MUST</span> identify the Program Plan phase or work item it advances once a Program Plan exists.</li>
+        <li>Every task <span class="must">MUST</span> read <code>docs/codas-design.html</code> and the relevant <code>.codas/wiki/**</code> page before changing code.</li>
+        <li>Changes to behavior, architecture, command shape, policies or data model <span class="must">MUST</span> update the design document or wiki claim that describes them.</li>
+        <li>New files <span class="must">MUST</span> have an explained owner: core, adapter, policy, integration, docs or tests.</li>
+        <li>Temporary duplication <span class="must">MUST</span> be represented as a waiver with owner, reason and expiry.</li>
+        <li>At the end of each task, the agent <span class="must">MUST</span> run the available local gate and report the result.</li>
+      </ol>
+
+      <h3>20.2 Bootstrap Gate</h3>
+      <pre><code>PYTHONPATH=src python3 -m unittest discover -s tests
+git status --short</code></pre>
+      <p>
+        Until <code>codas check</code> exists, this bootstrap gate is not a full substitute for Codas.
+        It is a minimum receipt: tests verify current behavior, and git status reveals newly created artifacts
+        that must be explained in the final report.
+      </p>
+
+      <h3>20.3 Dogfooding Acceptance</h3>
+      <ul>
+        <li>Codas implementation work <span class="must">MUST NOT</span> introduce architecture claims only in chat.</li>
+        <li>Codas implementation work <span class="must">MUST NOT</span> leave a new source, test or docs artifact without an owner and purpose.</li>
+        <li>Codas implementation work <span class="should">SHOULD</span> convert repeated manual dogfooding steps into product features.</li>
+        <li>The first mature version of <code>codas check</code> <span class="must">MUST</span> be able to check this repository.</li>
+      </ul>
+
+      <h3>20.4 Trellis Task System</h3>
+      <p>
+        The Codas repository uses Trellis as its canonical task system. Trellis owns task lifecycle,
+        persisted requirements and task context; Codas consumes Trellis as a workflow adapter and task fact source.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>System</th>
+            <th>Owns</th>
+            <th>Does Not Own</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Trellis</td>
+            <td>Task creation, <code>prd.md</code>, <code>implement.jsonl</code>, <code>check.jsonl</code>, workflow phases.</td>
+            <td>Architecture inventory, policy gates, waivers, duplicate detection.</td>
+          </tr>
+          <tr>
+            <td>Codas</td>
+            <td>Atlas inventory, facts, claims, concept index, policy gates, waivers, Atlas Wiki.</td>
+            <td>Replacing Trellis as the project task workflow.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Substantial implementation work in this repository <span class="must">MUST</span> have a Trellis task under
+        <code>.trellis/tasks/</code>. Requirement changes <span class="must">MUST</span> be persisted in that task's
+        <code>prd.md</code>, not left only in chat.
+      </p>
+    </section>
+
+    <section>
+      <h2>21. MVP Plan</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>阶段</th>
+            <th>目标</th>
+            <th>交付</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>P0</td>
+            <td>把现有 harness prototype 收束为 Codas CLI。</td>
+            <td><code>codas</code> 命令、repo config、基础报告格式。</td>
+          </tr>
+          <tr>
+            <td>P1</td>
+            <td>实现 language-agnostic inventory 和基础 gates。</td>
+            <td>file index、doc path scanner、git diff impact、duplicate symbol、orphan artifact。</td>
+          </tr>
+          <tr>
+            <td>P2</td>
+            <td>加入首批 adapter。</td>
+            <td>Swift、TypeScript、Python、Markdown、Git、Trellis adapter。</td>
+          </tr>
+          <tr>
+            <td>P3</td>
+            <td>建立 concept index 和 Atlas Wiki。</td>
+            <td><code>codas wiki</code>、concept pages、canonical owner map。</td>
+          </tr>
+          <tr>
+            <td>P4</td>
+            <td>强化执行边界。</td>
+            <td>pre-commit hook、GitHub Action、CI strict mode、receipt ledger。</td>
+          </tr>
+          <tr>
+            <td>P5</td>
+            <td>加入 LLM-assisted 聚类和 MCP。</td>
+            <td>MCP server、concept similarity suggestions、agent query API。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>22. Acceptance Criteria</h2>
+      <ul>
+        <li><code>codas inventory</code> 能在无语言 adapter 的情况下生成基础 artifact 和 doc claim 索引。</li>
+        <li><code>codas check</code> 能阻止新增 orphan artifact、stale doc path、明显 duplicate symbol。</li>
+        <li><code>codas preflight</code> 能基于 task 输出 read-first 文件、相关 concepts 和 duplicate risks。</li>
+        <li><code>codas wiki</code> 生成的页面每条 canonical 结论都包含 evidence。</li>
+        <li>strict mode 下 error finding 会导致非零退出码。</li>
+        <li>waiver 必须带 owner、reason、expires，否则无效。</li>
+        <li>CI 示例能作为 required status check 使用。</li>
+        <li>核心模型不包含 Swift/iOS 专有概念，Swift 只作为 adapter 存在。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>23. Initial Migration from Current Prototype</h2>
+      <p>旧 <code>harness-guard</code> 原型不再作为兼容入口保留。迁移到 Codas 的方式如下：</p>
+      <ol>
+        <li>删除旧 package 和 CLI：<code>harness_guard</code>、<code>harness-guard</code>。</li>
+        <li>建立新的 package 和 CLI：<code>codas</code>。</li>
+        <li>把已有 checks 拆成通用 policy：ignored/buildable、duplicate type、stale doc path、code/spec drift。</li>
+        <li>把 Swift/XcodeGen 逻辑移动到 adapter 层。</li>
+        <li>新增 <code>.codas/config.yml</code>、<code>policies.yml</code>、<code>waivers.yml</code>。</li>
+        <li>新增 <code>inventory</code>、<code>preflight</code>、<code>wiki</code> 子命令。</li>
+        <li>保留 Ciri 作为第一个 validation repo，但不让 Ciri 的结构进入核心抽象。</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>24. Risks and Mitigations</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>风险</th>
+            <th>缓解</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>误报过多导致团队关闭 Codas。</td>
+            <td>默认 warning 起步，strict mode 分阶段启用，支持可过期 waiver。</td>
+          </tr>
+          <tr>
+            <td>LLM 聚类不稳定。</td>
+            <td>LLM 结果只作为 suggestion，必须带 evidence 和 confidence。</td>
+          </tr>
+          <tr>
+            <td>多语言 monorepo adapter 复杂。</td>
+            <td>核心先做 artifact/doc/git 通用能力，语言能力按 adapter 增量加入。</td>
+          </tr>
+          <tr>
+            <td>agent 绕过本地流程。</td>
+            <td>CI required status check 和 branch protection 作为最终强约束。</td>
+          </tr>
+          <tr>
+            <td>wiki 变成另一份漂移文档。</td>
+            <td>wiki 从 inventory 生成，每条关键结论要求 evidence 和 last verified。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>25. Normative Requirements</h2>
+      <ul>
+        <li>Codas <span class="must">MUST</span> be agent-agnostic.</li>
+        <li>Codas <span class="must">MUST</span> be language-agnostic at the core layer.</li>
+        <li>Adapters <span class="must">MUST</span> convert ecosystem-specific facts into the shared data model.</li>
+        <li>Findings <span class="must">MUST</span> include evidence.</li>
+        <li>Strict CI mode <span class="must">MUST</span> fail on unresolved error findings.</li>
+        <li>Waivers <span class="must">MUST</span> include owner, reason and expiry.</li>
+        <li>Atlas Wiki <span class="must">MUST NOT</span> be treated as the highest authority.</li>
+        <li>LLM output <span class="must">MUST NOT</span> be stored as fact unless independently verified.</li>
+        <li>Codas implementation work <span class="must">MUST</span> follow the Dogfooding Protocol until Codas can enforce itself.</li>
+        <li>Codas implementation work <span class="must">MUST</span> use Trellis as the repository task system.</li>
+        <li>Agent integrations <span class="should">SHOULD</span> run preflight before code edits.</li>
+        <li>Protected branches <span class="should">SHOULD</span> require Codas CI status checks.</li>
+      </ul>
+    </section>
+
+    <footer>
+      Codas design document. This file is intentionally self-contained so it can be opened locally,
+      reviewed in PRs, or used as the source for future project documentation.
+    </footer>
+  </main>
+</body>
+</html>

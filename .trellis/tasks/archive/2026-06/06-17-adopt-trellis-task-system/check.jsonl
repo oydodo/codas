@@ -1,0 +1,3 @@
+{"file": ".trellis/workflow.md", "reason": "Authoritative Trellis workflow and finish/check rules"}
+{"file": ".trellis/spec/codas/workflow/index.md", "reason": "Codas-specific pre-development and quality checklist"}
+{"file": ".codas/wiki/concepts/trellis-task-system.md", "reason": "Verify wiki claim for Trellis task-system boundary"}

@@ -1,0 +1,6 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/codas/workflow/index.md", "reason": "Codas workflow and quality checklist"}
+{"file": "docs/codas-design.html", "reason": "Authoritative Codas design constraints"}
+{"file": "docs/codas-implementation-plan.html", "reason": "P0 scope and module architecture"}
+{"file": "src/codas/cli.py", "reason": "Codas P0 CLI entrypoint"}
+{"file": "src/codas/app/check.py", "reason": "Codas P0 self-check orchestration"}

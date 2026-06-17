@@ -1,0 +1,4 @@
+{"file": ".trellis/workflow.md", "reason": "Authoritative Trellis finish/check workflow"}
+{"file": ".trellis/spec/codas/workflow/index.md", "reason": "Codas-specific quality checklist"}
+{"file": ".codas/config.yml", "reason": "Verify implementation plan is registered as authoritative source"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Verify implementation plan exists and matches Codas architecture"}

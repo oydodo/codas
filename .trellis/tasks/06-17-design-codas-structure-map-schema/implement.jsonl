@@ -1,0 +1,14 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/codas/workflow/index.md", "reason": "Codas workflow checklist for design and docs changes"}
+{"file": ".trellis/spec/codas/workflow/task-system.md", "reason": "Task-system requirements for persisted PRD/context"}
+{"file": "CONTEXT.md", "reason": "Accepted Codas terminology for Repository Structure, Structure Map and roles"}
+{"file": "docs/codas-design.html", "reason": "Authoritative product and architecture design"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Authoritative implementation architecture and module plan"}
+{"file": ".codas/wiki/index.md", "reason": "Atlas Wiki navigation that must reflect new concepts"}
+{"file": ".codas/wiki/concepts/codas-product.md", "reason": "Existing Codas product concept and synchronization rules"}
+{"file": ".codas/config.yml", "reason": "Authoritative source registry that must include the Structure Map and schema"}
+{"file": ".codas/policies.yml", "reason": "Bootstrap policy set affected by structure governance"}
+{"file": "README.md", "reason": "Repository overview updated with Structure Map schema document"}
+{"file": "docs/codas-structure-map-schema.html", "reason": "New authoritative Structure Map schema design"}
+{"file": ".codas/structure.yml", "reason": "Dogfooded Codas Repository Structure Map"}
+{"file": ".codas/wiki/concepts/repository-structure.md", "reason": "Atlas Wiki concept page for Repository Structure and Structure Map"}

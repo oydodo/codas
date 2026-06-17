@@ -1,0 +1,277 @@
+version: 1
+kind: structure_map
+
+metadata:
+  project: Codas
+  schema: docs/codas-structure-map-schema.html
+  updated: "2026-06-17"
+  authority: authoritative
+  summary: Repo-local Structure Map for the Codas governed workspace.
+
+defaults:
+  status: active
+  required_evidence:
+    - path
+
+roles:
+  structure_architect: Structure Architect
+  structure_steward: Structure Steward
+  orientation_curator: Orientation Curator
+  policy_maintainer: Policy Maintainer
+  task_steward: Task Steward
+  document_steward: Document Steward
+
+units:
+  repo-root:
+    path: .
+    kind: repository
+    owner: Codas Core
+    purpose: Root workspace for Codas product, governance state, docs, source, tests and task records.
+    canonical_placement: Root-only project metadata belongs here. Product implementation belongs under src/codas.
+    allowed_children:
+      - codas-config
+      - atlas-wiki
+      - codas-docs
+      - codas-source
+      - codas-tests
+      - codas-scripts
+      - trellis-workflow
+      - agents-guide
+    must_update_if_changed:
+      - .codas/structure.yml
+      - docs/codas-design.html
+
+  codas-config:
+    path: .codas
+    kind: governance_state
+    owner: Policy Maintainer
+    purpose: Repo-local Codas configuration, policies, waivers, Structure Map and Atlas Wiki.
+    canonical_placement: Codas governance state belongs under .codas.
+    allowed_children:
+      - atlas-wiki
+      - structure-map
+      - program-plan
+    must_update_if_changed:
+      - docs/codas-design.html
+      - docs/codas-implementation-plan.html
+      - .codas/wiki/index.md
+
+  structure-map:
+    path: .codas/structure.yml
+    kind: structure_map
+    owner: Structure Steward
+    purpose: Authoritative claim surface for Repository Structure.
+    canonical_placement: The authored Structure Map lives at .codas/structure.yml.
+    must_update_if_changed:
+      - docs/codas-structure-map-schema.html
+      - .codas/wiki/concepts/repository-structure.md
+
+  program-plan:
+    path: .codas/program.yml
+    kind: program_plan
+    owner: Document Steward
+    purpose: Authoritative claim surface for the project-level Program Plan (phases, work items, dependencies, sequencing and exit criteria).
+    canonical_placement: The authored Program Plan lives at .codas/program.yml.
+    must_update_if_changed:
+      - docs/codas-implementation-plan.html
+      - .codas/wiki/index.md
+
+  atlas-wiki:
+    path: .codas/wiki
+    kind: orientation_layer
+    owner: Orientation Curator
+    purpose: Repo-local Orientation Layer for concepts, evidence pointers and navigation.
+    canonical_placement: Human-readable Codas navigation belongs under .codas/wiki.
+    must_update_if_changed:
+      - .codas/wiki/index.md
+      - docs/codas-design.html
+
+  codas-docs:
+    path: docs
+    kind: authoritative_docs
+    owner: Codas Core
+    purpose: Product design, implementation architecture and schema contracts.
+    canonical_placement: Authoritative product and implementation design documents belong under docs.
+    allowed_children:
+      - structure-schema-doc
+    must_update_if_changed:
+      - .codas/config.yml
+      - .codas/wiki/index.md
+
+  structure-schema-doc:
+    path: docs/codas-structure-map-schema.html
+    kind: schema_doc
+    owner: Structure Architect
+    purpose: Detailed schema contract for Structure Map authored and normalized forms.
+    canonical_placement: Structure Map schema documentation lives in docs/codas-structure-map-schema.html.
+    must_update_if_changed:
+      - .codas/structure.yml
+      - docs/codas-implementation-plan.html
+
+  codas-source:
+    path: src/codas
+    kind: package
+    owner: Codas Core
+    purpose: Agent-agnostic CLI, application services, domain models, policies and reporting.
+    canonical_placement: Runtime implementation for Codas belongs under src/codas.
+    allowed_children:
+      - codas-app
+      - codas-core-models
+      - codas-config-loader
+      - codas-policies
+      - codas-reporting
+      - codas-structure-module
+      - role-contracts
+      - role-integrations
+    must_update_if_changed:
+      - docs/codas-implementation-plan.html
+      - .codas/wiki/concepts/codas-product.md
+
+  codas-app:
+    path: src/codas/app
+    kind: application_services
+    owner: Codas Core
+    purpose: Orchestrates Codas commands such as check, inventory, preflight, wiki, structure and doctor.
+    canonical_placement: Command orchestration and application workflows belong under src/codas/app.
+    must_update_if_changed:
+      - docs/codas-implementation-plan.html
+
+  codas-core-models:
+    path: src/codas/core
+    kind: core_domain
+    owner: Codas Core
+    purpose: Agent-agnostic domain models such as findings, evidence and future facts or claims.
+    canonical_placement: Shared domain models belong under src/codas/core.
+    must_update_if_changed:
+      - CONTEXT.md
+      - docs/codas-implementation-plan.html
+
+  codas-config-loader:
+    path: src/codas/config
+    kind: config_module
+    owner: Policy Maintainer
+    purpose: Loads repo-local Codas configuration, policies and waivers.
+    canonical_placement: Configuration loading code belongs under src/codas/config.
+    must_update_if_changed:
+      - .codas/config.yml
+      - docs/codas-implementation-plan.html
+
+  codas-policies:
+    path: src/codas/policies
+    kind: policy_module
+    owner: Policy Maintainer
+    purpose: Executable policy checks for config sources, dogfooding, Trellis context and waivers.
+    canonical_placement: Policy implementations belong under src/codas/policies.
+    must_update_if_changed:
+      - .codas/policies.yml
+      - docs/codas-implementation-plan.html
+
+  codas-reporting:
+    path: src/codas/reporting
+    kind: reporting_module
+    owner: Codas Core
+    purpose: Converts findings and reports into console, JSON and future markdown output.
+    canonical_placement: Report rendering belongs under src/codas/reporting.
+    must_update_if_changed:
+      - docs/codas-implementation-plan.html
+
+  codas-structure-module:
+    path: src/codas/structure
+    kind: planned_module
+    owner: Structure Steward
+    purpose: Future loader, validator and drift checker for Structure Map.
+    canonical_placement: Structure Map runtime behavior belongs under src/codas/structure.
+    status: planned
+    must_update_if_changed:
+      - docs/codas-structure-map-schema.html
+      - docs/codas-implementation-plan.html
+
+  role-contracts:
+    path: src/codas/roles
+    kind: planned_module
+    owner: Codas Core
+    purpose: Future domain role contracts for Structure Architect, Structure Steward and related roles.
+    canonical_placement: Domain role contracts belong under src/codas/roles.
+    status: planned
+    must_update_if_changed:
+      - CONTEXT.md
+      - docs/codas-implementation-plan.html
+
+  role-integrations:
+    path: src/codas/integrations
+    kind: planned_module
+    owner: Codas Core
+    purpose: Future platform mappings for Codex, Claude Code, hooks, CI, GitHub Actions and human review.
+    canonical_placement: Platform-specific Role Integrations belong under src/codas/integrations.
+    status: planned
+    must_update_if_changed:
+      - docs/codas-implementation-plan.html
+
+  codas-tests:
+    path: tests
+    kind: test_suite
+    owner: Codas Core
+    purpose: Unit and self-check tests for Codas behavior.
+    canonical_placement: Python test files belong under tests.
+    must_update_if_changed:
+      - docs/codas-implementation-plan.html
+
+  codas-scripts:
+    path: scripts
+    kind: cli_wrappers
+    owner: Codas Core
+    purpose: Repository-local command wrappers for Codas.
+    canonical_placement: Human and automation entrypoint scripts belong under scripts.
+    must_update_if_changed:
+      - README.md
+      - docs/codas-design.html
+
+  trellis-workflow:
+    path: .trellis
+    kind: task_system
+    owner: Task Steward
+    purpose: Trellis task system, workflow spec, task records and injected context.
+    canonical_placement: Trellis workflow state belongs under .trellis.
+    must_update_if_changed:
+      - .trellis/workflow.md
+      - .trellis/spec/codas/workflow/task-system.md
+      - .codas/wiki/concepts/trellis-task-system.md
+
+  agents-guide:
+    path: AGENTS.md
+    kind: agent_instructions
+    owner: Task Steward
+    purpose: Trellis-managed root-level instructions orienting AI agents to the .trellis workflow, spec, workspace and tasks.
+    canonical_placement: Root-level agent onboarding instructions live in AGENTS.md, generated and maintained by the Trellis updater.
+    must_update_if_changed:
+      - .trellis/workflow.md
+      - .trellis/.version
+
+dependency_rules:
+  codas-source:
+    may_depend_on:
+      - codas-config
+      - codas-docs
+      - trellis-workflow
+    must_not_depend_on:
+      - role-integrations
+
+  atlas-wiki:
+    may_depend_on:
+      - codas-docs
+      - structure-map
+    must_not_depend_on:
+      - codas-source
+
+deprecated_paths:
+  harness-guard-package:
+    path: src/harness_guard
+    replacement: src/codas
+    status: removed
+    reason: Legacy prototype was removed when the project moved to Codas.
+
+  harness-guard-script:
+    path: scripts/harness-guard
+    replacement: scripts/codas
+    status: removed
+    reason: Legacy CLI wrapper was removed when the project moved to Codas.

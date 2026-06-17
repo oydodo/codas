@@ -1,0 +1,12 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Implementation terminology to challenge against"}
+{"file": "CONTEXT.md", "reason": "Resolved Codas domain terminology"}
+{"file": "docs/codas-design.html", "reason": "Existing product terminology to challenge against"}
+{"file": "CONTEXT.md", "reason": "Recorded Repository Structure, Structure Architect and Structure Steward as resolved domain terms"}
+{"file": ".trellis/tasks/06-17-grill-codas-domain-terminology/prd.md", "reason": "Expanded terminology acceptance criteria for Repository Structure roles"}
+{"file": "CONTEXT.md", "reason": "Recorded Domain Role and Role Integration as the core/integration boundary for agent-specific execution"}
+{"file": ".trellis/tasks/06-17-grill-codas-domain-terminology/prd.md", "reason": "Expanded terminology acceptance criteria for role/integration boundary"}
+{"file": "CONTEXT.md", "reason": "Expanded accepted terminology into product, fact, structure, orientation, governance, task and role layers"}
+{"file": "docs/codas-design.html", "reason": "Updated product terminology, repo-local state and CLI shape to include Structure Map and role terminology"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Updated implementation architecture with domain language boundary, structure modules, role integrations and structure policies"}
+{"file": ".trellis/tasks/06-17-grill-codas-domain-terminology/prd.md", "reason": "Expanded acceptance criteria for full terminology overview and design document synchronization"}

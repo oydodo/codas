@@ -1,0 +1,1 @@
+"""Core Codas domain model."""

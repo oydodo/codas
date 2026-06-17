@@ -1,0 +1,19 @@
+{"file": ".trellis/workflow.md", "reason": "Authoritative finish/check workflow"}
+{"file": ".trellis/spec/codas/workflow/index.md", "reason": "Codas-specific quality checklist"}
+{"file": ".trellis/spec/codas/workflow/task-system.md", "reason": "Task-system validation rules"}
+{"file": "CONTEXT.md", "reason": "Verify terminology remains aligned"}
+{"file": "docs/codas-design.html", "reason": "Verify product design points to the schema"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Verify implementation plan points to the schema"}
+{"file": "docs/codas-structure-map-schema.html", "reason": "Verify schema design exists and is linked"}
+{"file": ".codas/structure.yml", "reason": "Verify dogfooded Structure Map exists"}
+{"file": ".codas/wiki/concepts/repository-structure.md", "reason": "Verify Atlas Wiki concept exists"}
+{"file": "README.md", "reason": "Verify repository overview links the schema document"}
+{"file": "src/codas/app/check.py", "reason": "Run codas self-check and unit tests after docs/state update"}
+{"file": ".codas/structure.yml", "reason": "Parsed Structure Map with the current Codas YAML loader"}
+{"file": ".codas/config.yml", "reason": "Verified schema doc and Structure Map are registered as authoritative sources"}
+{"file": ".codas/policies.yml", "reason": "Parsed policy config after adding structure governance policies"}
+{"file": "src/codas/app/check.py", "reason": "Verified codas check, wrapper check and unit test suite pass"}
+{"file": ".trellis/tasks/06-17-design-codas-structure-map-schema/prd.md", "reason": "Final acceptance sweep after current task was restored"}
+{"file": ".codas/structure.yml", "reason": "Verified Structure Map parses as kind structure_map with 18 units"}
+{"file": ".codas/config.yml", "reason": "Verified Structure Map schema and map remain authoritative sources"}
+{"file": "src/codas/app/check.py", "reason": "Final validation: Trellis context, codas check and unit tests pass"}

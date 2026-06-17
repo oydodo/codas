@@ -1,0 +1,4 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": "docs/codas-design.html", "reason": "Authoritative Codas design; updated to declare Trellis as task system"}
+{"file": ".trellis/spec/codas/workflow/task-system.md", "reason": "Codas-specific Trellis task-system contract"}
+{"file": ".codas/config.yml", "reason": "Codas workflow adapter configuration points to Trellis"}

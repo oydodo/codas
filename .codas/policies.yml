@@ -1,0 +1,43 @@
+version: 1
+mode: bootstrap
+
+policies:
+  duplicate_concept:
+    severity: error
+    description: Do not introduce a second implementation for the same concept without a waiver.
+
+  orphan_artifact:
+    severity: error
+    description: New files must have an owner, purpose and path into the product architecture.
+
+  stale_claim:
+    severity: warning
+    description: Docs and wiki claims must not reference paths, commands or concepts that no longer exist.
+
+  spec_drift:
+    severity: error
+    description: Changes to behavior, architecture, commands, policies or data model must update their authoritative claim source.
+
+  missing_canonical_owner:
+    severity: error
+    description: New concepts must declare their owner before becoming part of the implementation.
+
+  missing_structure_owner:
+    severity: error
+    description: Changed artifacts in governed paths must map to a Structure Map unit with an owner.
+
+  structure_drift:
+    severity: error
+    description: Repository changes must stay aligned with the Structure Map or update it explicitly.
+
+  deprecated_path_used:
+    severity: error
+    description: New artifacts must not be added under deprecated or removed paths in the Structure Map.
+
+  constraint_conflict:
+    severity: error
+    description: Conflicting authoritative claims must be resolved or explicitly waived.
+
+  stale_preflight:
+    severity: warning
+    description: During bootstrap, agents must state the affected concept and read canonical sources before editing.

@@ -1,0 +1,5 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": "docs/codas-design.html", "reason": "Authoritative product architecture to refine into implementation plan"}
+{"file": ".codas/config.yml", "reason": "Codas authoritative source and workflow adapter config"}
+{"file": ".codas/wiki/index.md", "reason": "Atlas wiki canonical sources and dogfooding guide"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Implementation architecture and module design produced by this task"}

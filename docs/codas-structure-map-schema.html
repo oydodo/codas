@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codas Structure Map Schema</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f5;
+      --paper: #ffffff;
+      --ink: #1c232b;
+      --muted: #5e6975;
+      --line: #d9ded8;
+      --accent: #175f63;
+      --accent-2: #7a4a20;
+      --ok: #e8f4ef;
+      --warn: #fff2d6;
+      --danger: #ffe7e2;
+      --code: #15212b;
+      --code-bg: #edf1f3;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-size: 16px;
+      line-height: 1.68;
+    }
+
+    main {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 44px 24px 76px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 28px;
+      margin-bottom: 34px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 40px;
+      margin: 0 0 12px;
+    }
+
+    h2 {
+      font-size: 25px;
+      margin: 42px 0 14px;
+      padding-top: 7px;
+      border-top: 1px solid var(--line);
+    }
+
+    h3 {
+      font-size: 19px;
+      margin: 27px 0 10px;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+
+    code {
+      color: var(--code);
+      background: var(--code-bg);
+      padding: 2px 5px;
+      border-radius: 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .92em;
+    }
+
+    pre {
+      margin: 16px 0 24px;
+      padding: 16px;
+      overflow-x: auto;
+      color: #eef3f5;
+      background: #15212b;
+      border: 1px solid #0d151d;
+      border-radius: 8px;
+      line-height: 1.5;
+    }
+
+    pre code {
+      color: inherit;
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+    }
+
+    ul,
+    ol {
+      padding-left: 22px;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: #eef0ec;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 18px;
+      max-width: 900px;
+      margin: 0;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .meta div,
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .meta div {
+      padding: 12px 14px;
+    }
+
+    .label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 4px;
+    }
+
+    .value {
+      font-weight: 650;
+    }
+
+    .callout {
+      padding: 16px 18px;
+      margin: 18px 0;
+      background: var(--ok);
+      border-color: #bed7cf;
+    }
+
+    .warning {
+      background: var(--warn);
+      border-color: #edcf88;
+    }
+
+    .danger {
+      background: var(--danger);
+      border-color: #efb7ab;
+    }
+
+    .must {
+      color: #8f2d1f;
+      font-weight: 700;
+    }
+
+    .should {
+      color: var(--accent-2);
+      font-weight: 700;
+    }
+
+    footer {
+      margin-top: 52px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 820px) {
+      main {
+        padding: 28px 16px 56px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .meta {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Codas Structure Map Schema</h1>
+      <p class="subtitle">
+        Structure Map 是 Repository Structure 的可验证声明载体。它让 agent 在新增文件、移动模块、
+        抽象组件或实现新能力前，先知道 canonical placement、owner、边界和必须同步的 claim source。
+      </p>
+      <section class="meta" aria-label="文档元信息">
+        <div>
+          <span class="label">Status</span>
+          <span class="value">Schema Design</span>
+        </div>
+        <div>
+          <span class="label">Date</span>
+          <span class="value">2026-06-17</span>
+        </div>
+        <div>
+          <span class="label">Authored Form</span>
+          <span class="value">.codas/structure.yml</span>
+        </div>
+        <div>
+          <span class="label">Normalized Form</span>
+          <span class="value">.codas/inventory/structure.json</span>
+        </div>
+      </section>
+    </header>
+
+    <section>
+      <h2>1. Contract</h2>
+      <div class="callout">
+        <strong>Structure Map is the governed structure claim surface.</strong>
+        It is authored in the repo, reviewed like code, and later reconciled against observed repository facts.
+      </div>
+      <p>
+        Structure Map answers questions that PRD/spec files usually do not answer:
+        where a capability belongs, which module owns it, which paths are canonical, which paths are deprecated,
+        and which documents must change when a structure unit changes.
+      </p>
+      <p>
+        Structure Map is not the repository fact source. The fact source is still the repository itself.
+        Codas turns Structure Map entries into Claims, verifies them against observed facts, and accepts only
+        reconciled claims as Governance Facts.
+      </p>
+    </section>
+
+    <section>
+      <h2>2. Authority Model</h2>
+      <pre><code>Repository files
+  -> Observed Facts
+
+.codas/structure.yml
+  -> Structure Claims
+
+Observed Facts + Structure Claims
+  -> Governance Facts
+  -> structure policies
+  -> Findings
+  -> agent / CI gates</code></pre>
+      <ul>
+        <li><code>.codas/structure.yml</code> <span class="must">MUST</span> be treated as an authoritative claim source.</li>
+        <li><code>.codas/inventory/structure.json</code> <span class="must">MUST</span> be generated or normalized, not hand-authored.</li>
+        <li>Atlas Wiki <span class="must">MUST NOT</span> override Structure Map. Wiki can explain and link to it.</li>
+        <li>Waivers <span class="must">MUST</span> represent temporary exceptions to structure findings, not silent drift.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. Authored YAML Shape</h2>
+      <p>
+        The first schema uses a keyed map instead of a list of anonymous entries. Stable IDs make findings,
+        waivers and future migrations easier to target.
+      </p>
+      <pre><code>version: 1
+kind: structure_map
+metadata:
+  project: Codas
+  schema: docs/codas-structure-map-schema.html
+  updated: 2026-06-17
+
+defaults:
+  status: active
+  required_evidence: [path]
+
+units:
+  codas-core:
+    path: src/codas
+    kind: package
+    owner: Codas Core
+    purpose: Agent-agnostic CLI and governance core.
+    canonical_placement: Codas runtime code lives under src/codas.
+    status: active
+    allowed_children:
+      - codas-app
+      - codas-core-models
+      - codas-config
+      - codas-policies
+      - codas-reporting
+    must_update_if_changed:
+      - docs/codas-implementation-plan.html
+      - .codas/wiki/concepts/codas-product.md
+
+dependency_rules:
+  codas-core:
+    may_depend_on:
+      - codas-docs
+    must_not_depend_on:
+      - agent-integrations
+
+deprecated_paths:
+  harness-guard:
+    path: src/harness_guard
+    replacement: src/codas
+    status: removed</code></pre>
+    </section>
+
+    <section>
+      <h2>4. Structure Unit Fields</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Required</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>path</code></td>
+            <td>Yes</td>
+            <td>Repo-relative path or glob owned by this unit.</td>
+          </tr>
+          <tr>
+            <td><code>kind</code></td>
+            <td>Yes</td>
+            <td>Directory, package, docs area, task area, policy module, adapter, integration or other repo-specific unit kind.</td>
+          </tr>
+          <tr>
+            <td><code>owner</code></td>
+            <td>Yes</td>
+            <td>Responsible module, team, domain role or maintained boundary.</td>
+          </tr>
+          <tr>
+            <td><code>purpose</code></td>
+            <td>Yes</td>
+            <td>Short explanation of what belongs here and why this unit exists.</td>
+          </tr>
+          <tr>
+            <td><code>canonical_placement</code></td>
+            <td>Yes</td>
+            <td>Placement rule that helps agents decide whether new work belongs here.</td>
+          </tr>
+          <tr>
+            <td><code>status</code></td>
+            <td>No</td>
+            <td><code>active</code>, <code>planned</code>, <code>deprecated</code>, <code>removed</code> or <code>external</code>.</td>
+          </tr>
+          <tr>
+            <td><code>allowed_children</code></td>
+            <td>No</td>
+            <td>Child structure units expected under this boundary.</td>
+          </tr>
+          <tr>
+            <td><code>may_depend_on</code></td>
+            <td>No</td>
+            <td>Allowed unit dependencies when dependency rules are local to the unit.</td>
+          </tr>
+          <tr>
+            <td><code>must_not_depend_on</code></td>
+            <td>No</td>
+            <td>Forbidden unit dependencies.</td>
+          </tr>
+          <tr>
+            <td><code>must_update_if_changed</code></td>
+            <td>No</td>
+            <td>Docs, specs, wiki pages or config files that should change when this unit changes materially.</td>
+          </tr>
+          <tr>
+            <td><code>evidence</code></td>
+            <td>No</td>
+            <td>Optional paths or claim anchors that justify the structure claim.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>5. Normalized JSON Shape</h2>
+      <p>
+        Future <code>codas inventory</code> should normalize authored entries into deterministic JSON.
+        The normalized form keeps exact evidence, resolved paths and derived relationships for policy checks.
+      </p>
+      <pre><code>{
+  "schema_version": 1,
+  "source": ".codas/structure.yml",
+  "units": [
+    {
+      "id": "codas-core",
+      "path": "src/codas",
+      "kind": "package",
+      "owner": "Codas Core",
+      "status": "active",
+      "claims": [
+        "claim:structure:codas-core:canonical_placement"
+      ],
+      "observed": {
+        "exists": true,
+        "artifact_count": 14
+      },
+      "must_update_if_changed": [
+        "docs/codas-implementation-plan.html",
+        ".codas/wiki/concepts/codas-product.md"
+      ]
+    }
+  ],
+  "conflicts": []
+}</code></pre>
+    </section>
+
+    <section>
+      <h2>6. Structure Architect Workflow</h2>
+      <ol>
+        <li>Inventory the current top-level repository areas and existing implementation modules.</li>
+        <li>Draft Structure Units with path, kind, owner, purpose and canonical placement.</li>
+        <li>Mark deprecated or removed paths explicitly instead of deleting their history from the map.</li>
+        <li>Define required update obligations for docs, specs, wiki and task-system files.</li>
+        <li>Run available Codas checks and resolve missing source or stale-claim findings.</li>
+      </ol>
+      <p>
+        The Architect optimizes for future agent navigation. A good map is not exhaustive on day one,
+        but every active top-level area should have an owner and placement story.
+      </p>
+    </section>
+
+    <section>
+      <h2>7. Structure Steward Workflow</h2>
+      <ol>
+        <li>Before editing, identify the target Structure Unit for the change.</li>
+        <li>If no unit owns the target path, add a unit, move the work, or create a waiver before implementation.</li>
+        <li>When adding a new capability, check canonical placement and duplicate implementation risks.</li>
+        <li>When moving or deleting files, update deprecated paths, required update obligations and related wiki navigation.</li>
+        <li>After implementation, run <code>codas check</code> and future <code>codas structure</code>.</li>
+      </ol>
+      <p>
+        The Steward is allowed to change the Structure Map, but not silently. A structure change is a claim change
+        and must be reviewed with evidence.
+      </p>
+    </section>
+
+    <section>
+      <h2>8. Policy Checks</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Policy</th>
+            <th>Initial Rule</th>
+            <th>Finding</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>structure_map_loads</code></td>
+            <td><code>.codas/structure.yml</code> parses and has version, kind and units.</td>
+            <td>Error when the map cannot be read.</td>
+          </tr>
+          <tr>
+            <td><code>missing_structure_owner</code></td>
+            <td>Changed artifacts under governed paths match a unit with owner.</td>
+            <td>Error with path evidence and nearest candidate units.</td>
+          </tr>
+          <tr>
+            <td><code>structure_drift</code></td>
+            <td>Changed paths remain inside active structure boundaries and update required claims.</td>
+            <td>Error for unmanaged drift, warning for incomplete synchronization.</td>
+          </tr>
+          <tr>
+            <td><code>duplicate_implementation</code></td>
+            <td>New symbols or concepts require canonical, variant or migration relationship.</td>
+            <td>Error when a second implementation lacks a declared relationship.</td>
+          </tr>
+          <tr>
+            <td><code>deprecated_path_used</code></td>
+            <td>New files must not be added under deprecated or removed paths.</td>
+            <td>Error with replacement path when known.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>9. Non-Goals</h2>
+      <ul>
+        <li>Structure Map does not replace tests, build config, package manifests or language parsers.</li>
+        <li>Structure Map does not decide architecture quality by itself. It makes structure claims explicit and checkable.</li>
+        <li>Structure Map does not bind Codas to Codex, Claude Code or any specific coding agent.</li>
+        <li>Atlas Wiki does not become the authority for structure. It links to the map and explains it.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>10. First Implementation Slice</h2>
+      <ol>
+        <li>Create <code>.codas/structure.yml</code> for this repository.</li>
+        <li>Add <code>docs/codas-structure-map-schema.html</code> to authoritative sources.</li>
+        <li>Add <code>.codas/structure.yml</code> to authoritative sources.</li>
+        <li>Add Atlas Wiki navigation for Repository Structure.</li>
+        <li>Later, implement <code>codas structure .</code> to load the map and emit structure findings.</li>
+      </ol>
+    </section>
+
+    <footer>
+      This schema is an authoritative Codas source. Update it when Structure Map fields, validation behavior,
+      role workflows or repo-local state shape changes.
+    </footer>
+  </main>
+</body>
+</html>

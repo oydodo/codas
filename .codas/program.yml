@@ -1,0 +1,150 @@
+version: 1
+kind: program_plan
+
+metadata:
+  project: Codas
+  source: docs/codas-implementation-plan.html
+  schema: docs/codas-implementation-plan.html#program-plan-work-item
+  updated: "2026-06-17"
+  authority: authoritative
+  owner: Document Steward
+  summary: >-
+    Repo-local Program Plan for Codas. The project-level roadmap above individual
+    Trellis tasks. Phases, deliverables and exit criteria are authored claims
+    derived from docs/codas-implementation-plan.html sections 8 and 6. Trellis
+    governs task-level execution; this file governs project-level sequencing.
+
+defaults:
+  status: planned
+
+work_items:
+  - id: program:P0:cli-core
+    phase: P0
+    title: CLI core and self-check
+    theme: CLI core and self-check
+    status: completed
+    depends_on: []
+    trellis_tasks:
+      - 06-17-p0-codas-cli-core-self-check
+    deliverables:
+      - codas package and CLI command dispatch
+      - Config loader for .codas/config.yml, policies.yml and waivers.yml
+      - Core domain models (Finding, Evidence, CheckReport)
+      - Bootstrap self-check (config-source presence, dogfooding gate, Trellis context, waiver validation)
+      - Legacy prototype removal (src/harness_guard, scripts/harness-guard)
+    exit_criteria:
+      - codas check . reads .codas/config.yml and detects stale authoritative paths
+
+  - id: program:P1:structure-map-foundation
+    phase: P1
+    title: Inventory, Structure Map and document governance foundation
+    theme: Inventory, Structure Map and document governance foundation
+    status: in_progress
+    depends_on:
+      - program:P0:cli-core
+    trellis_tasks:
+      - 06-17-design-codas-structure-map-schema
+      - 06-17-program-plan-artifact
+    deliverables:
+      - Artifact index
+      - Doc claim index
+      - Trellis task facts
+      - Structure Map loader
+      - Document Role Manifest loader
+      - Program Plan loader
+      - JSON inventory
+    exit_criteria:
+      - codas inventory . emits deterministic Atlas JSON and structure/planning facts for this repo
+
+  - id: program:P2:policy-engine-structure-drift
+    phase: P2
+    title: Policy engine and structure drift
+    theme: Policy engine and structure drift
+    status: planned
+    depends_on:
+      - program:P1:structure-map-foundation
+    trellis_tasks: []
+    deliverables:
+      - Stale claim policy
+      - Orphan artifact policy
+      - Duplicate implementation policy
+      - Missing owner policy
+      - Structure drift policy
+      - Waiver validation policy
+      - Trellis context policy
+    exit_criteria:
+      - Known review findings are either fixed or reproduced as Codas findings with evidence
+
+  - id: program:P3:adapter-extraction
+    phase: P3
+    title: Adapter extraction
+    theme: Adapter extraction
+    status: planned
+    depends_on:
+      - program:P2:policy-engine-structure-drift
+    trellis_tasks: []
+    deliverables:
+      - Swift/XcodeGen checks move behind adapters
+      - Core no longer imports ecosystem concepts
+    exit_criteria:
+      - Core tests run without Swift/Ciri assumptions
+
+  - id: program:P4:preflight-receipts
+    phase: P4
+    title: Preflight and receipts
+    theme: Preflight and receipts
+    status: planned
+    depends_on:
+      - program:P3:adapter-extraction
+    trellis_tasks: []
+    deliverables:
+      - Task context pack
+      - Receipt ledger
+      - Inventory hash and policy version provenance
+    exit_criteria:
+      - Agent work can prove which task, inventory and check it used
+
+  - id: program:P5:wiki-reconciliation
+    phase: P5
+    title: Wiki reconciliation
+    theme: Wiki reconciliation
+    status: planned
+    depends_on:
+      - program:P4:preflight-receipts
+    trellis_tasks: []
+    deliverables:
+      - Wiki claim parser
+      - Generated wiki sections
+      - Stale wiki claim policy
+    exit_criteria:
+      - Wiki claims are verified against repo facts
+
+  - id: program:P6:enforcement-integrations
+    phase: P6
+    title: Enforcement integrations
+    theme: Enforcement integrations
+    status: planned
+    depends_on:
+      - program:P5:wiki-reconciliation
+    trellis_tasks: []
+    deliverables:
+      - Pre-commit gate
+      - Pre-push gate
+      - GitHub Action
+      - Trellis hooks
+    exit_criteria:
+      - Codas can block a bad PR or commit with evidence-backed findings
+
+  - id: program:P7:agent-query-interface
+    phase: P7
+    title: Agent query interface
+    theme: Agent query interface
+    status: planned
+    depends_on:
+      - program:P6:enforcement-integrations
+    trellis_tasks: []
+    deliverables:
+      - MCP server
+      - Role Integrations for Codex, Claude Code, hooks, CI and human review
+    exit_criteria:
+      - Codex, Claude and Cursor can query Codas without parsing reports manually

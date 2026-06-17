@@ -1,0 +1,12 @@
+{"file": ".trellis/workflow.md", "reason": "Authoritative Trellis finish/check workflow"}
+{"file": ".trellis/spec/codas/workflow/index.md", "reason": "Codas-specific quality checklist"}
+{"file": "CONTEXT.md", "reason": "Verify resolved terms are captured"}
+{"file": "CONTEXT.md", "reason": "Verified Repository Structure terminology is captured after update"}
+{"file": ".trellis/tasks/06-17-grill-codas-domain-terminology/prd.md", "reason": "Verified task acceptance criteria includes Repository Structure roles"}
+{"file": "src/codas/app/check.py", "reason": "Ran codas self-check and unit tests after terminology update"}
+{"file": "CONTEXT.md", "reason": "Verified Domain Role and Role Integration terminology is captured after update"}
+{"file": ".trellis/tasks/06-17-grill-codas-domain-terminology/prd.md", "reason": "Verified task acceptance criteria includes role/integration boundary"}
+{"file": "CONTEXT.md", "reason": "Verified full terminology overview is captured as the domain glossary"}
+{"file": "docs/codas-design.html", "reason": "Verified design document reflects accepted terminology, Structure Map and role boundary"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Verified implementation plan reflects structure modules, role integrations and structure policies"}
+{"file": "src/codas/app/check.py", "reason": "Ran codas self-check and unit tests after terminology/design synchronization"}

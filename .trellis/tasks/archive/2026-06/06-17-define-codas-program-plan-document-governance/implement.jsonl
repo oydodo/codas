@@ -1,0 +1,11 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/codas/workflow/task-system.md", "reason": "Trellis task-system boundary for Program Plan design"}
+{"file": ".trellis/spec/codas/workflow/index.md", "reason": "Codas workflow checklist for docs and governance changes"}
+{"file": "docs/codas-design.html", "reason": "Product design document containing Program Plan and document role concepts"}
+{"file": "CONTEXT.md", "reason": "Accepted Codas terminology for Program Plan and document governance"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Implementation plan containing future Program and Documents modules"}
+{"file": "CONTEXT.md", "reason": "Added Document Role terminology and relationships for project document governance"}
+{"file": "docs/codas-design.html", "reason": "Added codas plan command shape and project planning document role model"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Added Program/Documents command, modules, policies, phase placement, data contracts and repo-state carriers"}
+{"file": ".trellis/tasks/06-17-define-codas-program-plan-document-governance/prd.md", "reason": "Expanded requirements and acceptance criteria to include Document Role"}
+{"file": ".trellis/spec/codas/workflow/task-system.md", "reason": "Codified that cross-cutting governance changes need their own Trellis task"}

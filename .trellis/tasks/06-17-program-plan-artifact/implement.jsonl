@@ -1,0 +1,3 @@
+{"file": "docs/codas-implementation-plan.html", "reason": "Authoritative phase table (§8) and Program Plan Work Item contract (§6)"}
+{"file": ".codas/program.yml", "reason": "The Program Plan claim surface authored by this task"}
+{"file": ".codas/structure.yml", "reason": "Register program.yml unit + allowed_children"}

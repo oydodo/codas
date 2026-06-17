@@ -1,0 +1,14 @@
+{"file": ".trellis/workflow.md", "reason": "Authoritative Trellis finish/check workflow"}
+{"file": ".trellis/spec/codas/workflow/index.md", "reason": "Codas-specific quality checklist"}
+{"file": ".trellis/spec/codas/workflow/index.md", "reason": "Codas-specific quality checklist"}
+{"file": "docs/codas-design.html", "reason": "Verify product design reflects document governance"}
+{"file": ".trellis/tasks/06-17-define-codas-program-plan-document-governance/prd.md", "reason": "Verify task PRD records scope and acceptance criteria"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Verify implementation plan reflects Program and Documents modules"}
+{"file": "CONTEXT.md", "reason": "Verify accepted terminology is captured"}
+{"file": "docs/codas-design.html", "reason": "Verify design includes codas plan and project planning document roles"}
+{"file": "docs/codas-implementation-plan.html", "reason": "Verify implementation plan includes Program/Documents phases, policies and repo state"}
+{"file": "src/codas/app/check.py", "reason": "Ran codas self-check and unit tests after Program/Documents governance update"}
+{"file": ".trellis/tasks/06-17-define-codas-program-plan-document-governance/prd.md", "reason": "Validated Trellis task context after implementation"}
+{"file": ".trellis/spec/codas/workflow/task-system.md", "reason": "Verify task-system spec captures cross-cutting governance task boundary"}
+{"file": ".trellis/tasks/06-17-define-codas-program-plan-document-governance/check.jsonl", "reason": "Final Trellis validation passed before finish"}
+{"file": "src/codas/app/check.py", "reason": "Final codas self-check and unit tests passed before finish"}

@@ -1,0 +1,4 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": "docs/codas-design.html", "reason": "Authoritative design to compare implementation against"}
+{"file": ".codas/config.yml", "reason": "Codas bootstrap and Trellis workflow adapter config"}
+{"file": ".trellis/spec/codas/workflow/task-system.md", "reason": "Trellis task-system contract"}
