@@ -1,0 +1,4 @@
+{"file": "src/codas/facts/context.py", "reason": "add symbols() accessor + re-export fact types"}
+{"file": "src/codas/policies/duplicate_symbol.py", "reason": "migrate to ctx.symbols(), drop adapter import"}
+{"file": "src/codas/policies/duplicate_implementation.py", "reason": "migrate to ctx.symbols(), keep claim loading via ctx.repo"}
+{"file": "src/codas/app/check.py", "reason": "thread ctx to both symbol policies"}
