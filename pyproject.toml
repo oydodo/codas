@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "oydodo" }]
+dependencies = ["pyyaml>=6.0"]
 
 [project.scripts]
 codas = "codas.__main__:main"
