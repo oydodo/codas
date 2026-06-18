@@ -89,6 +89,7 @@ work_items:
       - program:P2:policy-engine-structure-drift
     trellis_tasks:
       - 06-18-fact-provider-scan-context
+      - 06-18-symbol-policies-scan-context
     deliverables:
       - Swift/XcodeGen checks move behind adapters
       - Core no longer imports ecosystem concepts
