@@ -57,6 +57,24 @@ class StructureDriftPolicyTests(unittest.TestCase):
 
             self.assertEqual(check_structure_drift(repo, _config(repo)), [])
 
+    def test_file_path_unit_existence_is_honored(self) -> None:
+        # Locks that the existence check covers file paths (not just directories),
+        # matching build_artifact_index literal-exists semantics (Path.exists()).
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _write(
+                repo / ".codas" / "structure.yml",
+                _map(
+                    _unit("present-file", "pyproject.toml"),
+                    _unit("absent-file", "missing.toml"),
+                ),
+            )
+            _write(repo / "pyproject.toml")
+
+            findings = check_structure_drift(repo, _config(repo))
+
+            self.assertEqual([f.meta["unit"] for f in findings], ["absent-file"])
+
     def test_planned_unit_with_missing_path_is_exempt(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)

@@ -132,6 +132,33 @@ class NearestCandidateTests(unittest.TestCase):
 
         self.assertEqual(len(nearest_candidate_units("top.md", units)), 3)
 
+    def test_glob_unit_scored_on_literal_head(self) -> None:
+        # src/*/x contributes literal head "src"; the literal src/foo wins on depth.
+        units = (_unit("glob-unit", "src/*/x"), _unit("lit-unit", "src/foo"))
+
+        candidates = nearest_candidate_units("src/foo/bar.py", units)
+
+        self.assertEqual(candidates, ["lit-unit", "glob-unit"])
+
+    def test_pure_glob_unit_has_no_literal_head(self) -> None:
+        # "*" → empty literal head → shared 0; src-unit has real overlap, so the
+        # zero-overlap star is excluded (positive overlap suppresses the fallback).
+        units = (_unit("star", "*"), _unit("src-unit", "src"))
+
+        self.assertEqual(nearest_candidate_units("src/bar.py", units), ["src-unit"])
+
+    def test_single_component_artifact_and_unit(self) -> None:
+        units = (_unit("readme-area", "README.md"), _unit("src-unit", "src"))
+
+        # "top.md" shares no leading component with either → fallback, sorted by id
+        self.assertEqual(
+            nearest_candidate_units("top.md", units), ["readme-area", "src-unit"]
+        )
+        # "README.md" shares its single component with readme-area only
+        self.assertEqual(
+            nearest_candidate_units("README.md", units), ["readme-area"]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
