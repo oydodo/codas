@@ -41,6 +41,7 @@ work_items:
     trellis_tasks:
       - 06-17-design-codas-structure-map-schema
       - 06-17-program-plan-artifact
+      - 06-18-structure-map-foundation
     deliverables:
       - Artifact index
       - Doc claim index
