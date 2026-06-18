@@ -6,6 +6,7 @@ from typing import Any
 from codas.adapters.markdown import extract_doc_claims
 from codas.adapters.python import extract_import_facts, extract_symbol_facts
 from codas.adapters.trellis import extract_task_facts
+from codas.adapters.wiki import extract_wiki_claims
 from codas.config.loader import load_codas_config
 
 from .document_loader import load_document_manifest
@@ -108,6 +109,25 @@ def build_inventory(repo: Path) -> dict[str, Any]:
             }
             for claim in doc_claims
         ],
+    }
+
+    wiki_root = (config.raw.get("wiki") or {}).get("path", ".codas/wiki")
+    wiki_claims = extract_wiki_claims(repo, tuple(files), wiki_root)
+    inventory["wiki_claims"] = {
+        "sources": sorted({claim.source for claim in wiki_claims.claims}),
+        "claims": [
+            {
+                "source": claim.source,
+                "line": claim.line,
+                "concept": claim.concept,
+                "kind": claim.kind,
+                "path": claim.path,
+                "path_kind": claim.path_kind,
+                "exists": claim.exists,
+            }
+            for claim in wiki_claims.claims
+        ],
+        "skipped": list(wiki_claims.skipped),
     }
 
     task_facts = extract_task_facts(repo, config)

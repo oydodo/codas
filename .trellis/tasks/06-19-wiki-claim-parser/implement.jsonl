@@ -1,0 +1,4 @@
+{"file": "src/codas/adapters/wiki.py", "reason": "New wiki adapter: extract_wiki_claims parses structured WikiClaims (canonical_source/concept_page/evidence/sync_target) from .codas/wiki/*.md"}
+{"file": "src/codas/structure/inventory.py", "reason": "Emit wiki_claims block in inventory (bridge)"}
+{"file": "src/codas/facts/context.py", "reason": "ScanContext.wiki_claims() accessor + re-export WikiClaim/WikiClaims"}
+{"file": "tests/test_wiki_claims.py", "reason": "Tests: kinds/path_kind/exists incl dir/extensionless/glob, fence, scoping, determinism, real-repo smoke"}

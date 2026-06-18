@@ -12,6 +12,7 @@ from codas.adapters.python import (
     extract_import_facts,
     extract_symbol_facts,
 )
+from codas.adapters.wiki import WikiClaim, WikiClaims, extract_wiki_claims
 from codas.config.loader import CodasConfig
 from codas.structure.index import discover_files, workspace_roots
 
@@ -27,6 +28,8 @@ __all__ = [
     "SymbolFacts",
     "ImportFact",
     "ImportFacts",
+    "WikiClaim",
+    "WikiClaims",
 ]
 
 
@@ -70,6 +73,15 @@ class ScanContext:
         if "imports" not in self._cache:
             self._cache["imports"] = extract_import_facts(self.repo, self.files)
         return self._cache["imports"]
+
+    def wiki_claims(self) -> WikiClaims:
+        """Atlas Wiki structural claims for the scanned tree (cached, adapter-sorted)."""
+        if "wiki_claims" not in self._cache:
+            wiki_root = (self.config.raw.get("wiki") or {}).get("path", ".codas/wiki")
+            self._cache["wiki_claims"] = extract_wiki_claims(
+                self.repo, self.files, wiki_root
+            )
+        return self._cache["wiki_claims"]
 
 
 def build_scan_context(repo: Path, config: CodasConfig) -> ScanContext:
