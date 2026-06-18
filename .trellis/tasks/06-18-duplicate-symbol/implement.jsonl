@@ -1,0 +1,3 @@
+{"file": "src/codas/adapters/python.py", "reason": "extract_symbol_facts is the fact source"}
+{"file": ".codas/policies.yml", "reason": "Add duplicate_symbol declaration"}
+{"file": "src/codas/app/check.py", "reason": "Wire check_duplicate_symbol"}

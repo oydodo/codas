@@ -6,6 +6,10 @@ policies:
     severity: error
     description: Do not introduce a second implementation for the same concept without a waiver.
 
+  duplicate_symbol:
+    severity: warning
+    description: Public top-level type or function names repeated across src modules are candidate duplicate implementations; consolidate, declare a canonical/variant/migration relationship, or waive. Concept-level semantic detection is later.
+
   orphan_artifact:
     severity: error
     description: New files must have an owner, purpose and path into the product architecture.

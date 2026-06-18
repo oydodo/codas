@@ -6,6 +6,7 @@ from codas.config.loader import ConfigLoadError, load_codas_config, load_policie
 from codas.core.models import CheckReport, Evidence, Finding
 from codas.policies.config_sources import check_config_sources
 from codas.policies.deprecated_path import check_deprecated_path_used
+from codas.policies.duplicate_symbol import check_duplicate_symbol
 from codas.policies.document_set import check_document_set
 from codas.policies.dogfooding import check_dogfooding_protocol
 from codas.policies.missing_owner import check_missing_structure_owner
@@ -44,6 +45,7 @@ def run_check(repo: Path) -> CheckReport:
     findings.extend(check_program_plan(repo, config))
     findings.extend(check_document_set(repo, config))
     findings.extend(check_stale_claim(repo, config))
+    findings.extend(check_duplicate_symbol(repo, config))
 
     policies_path = repo / ".codas" / "policies.yml"
     try:
