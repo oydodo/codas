@@ -1,0 +1,5 @@
+{"file": "src/codas/app/check.py", "reason": "Wire both new policies into run_check"}
+{"file": "src/codas/adapters/markdown.py", "reason": "extract_doc_claims fact source for stale_claim (kind link vs code, exists)"}
+{"file": "src/codas/structure/index.py", "reason": "discover_files + normalize_path; extract shared workspace_roots helper"}
+{"file": "src/codas/structure/loader.py", "reason": "load_structure_map -> deprecated_paths for deprecated_path_used"}
+{"file": ".codas/policies.yml", "reason": "Declared severities; narrow stale_claim description to link-only scope"}

@@ -62,7 +62,8 @@ work_items:
     status: in_progress
     depends_on:
       - program:P1:structure-map-foundation
-    trellis_tasks: []
+    trellis_tasks:
+      - 06-18-stale-claim-and-deprecated-path
     deliverables:
       - Stale claim policy
       - Orphan artifact policy

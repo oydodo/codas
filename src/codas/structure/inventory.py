@@ -8,22 +8,13 @@ from codas.adapters.trellis import extract_task_facts
 from codas.config.loader import load_codas_config
 
 from .document_loader import load_document_manifest
-from .index import build_artifact_index, discover_files
+from .index import build_artifact_index, discover_files, workspace_roots
 from .loader import load_structure_map
 from .program_loader import load_program_plan
 
 STRUCTURE_SOURCE = ".codas/structure.yml"
 PROGRAM_SOURCE = ".codas/program.yml"
 DOCUMENTS_SOURCE = ".codas/documents.yml"
-
-
-def _workspace_roots(config_raw: dict[str, Any]) -> tuple[str, ...]:
-    workspace = config_raw.get("workspace")
-    if isinstance(workspace, dict):
-        roots = workspace.get("roots")
-        if isinstance(roots, list) and roots:
-            return tuple(str(root) for root in roots)
-    return (".",)
 
 
 def build_inventory(repo: Path) -> dict[str, Any]:
@@ -33,7 +24,7 @@ def build_inventory(repo: Path) -> dict[str, Any]:
     top level); program facts are added as a sibling ``program`` block.
     """
     config = load_codas_config(repo / ".codas" / "config.yml")
-    roots = _workspace_roots(config.raw)
+    roots = workspace_roots(config.raw)
 
     structure_map = load_structure_map(
         repo / ".codas" / "structure.yml", source=STRUCTURE_SOURCE

@@ -29,6 +29,17 @@ class CodasCheckTests(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+    def test_codas_self_check_has_no_stale_or_deprecated_findings(self) -> None:
+        # The new P2 policies must stay quiet on this repo (dogfooding invariant).
+        # Assert by check_id, not just severity: stale_claim is a warning, so a
+        # warning-only regression must still fail here.
+        repo = Path.cwd()
+        report = run_check(repo)
+        ids = [finding.check_id for finding in report.findings]
+
+        self.assertNotIn("stale-claim", ids)
+        self.assertNotIn("deprecated-path-used", ids)
+
     def test_missing_declared_authoritative_source_is_error(self) -> None:
         with codas_fixture() as repo:
             config = repo / ".codas" / "config.yml"

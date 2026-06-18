@@ -5,11 +5,26 @@ import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .models import StructureMap, StructureUnit
 
 GLOB_CHARS = ("*", "?", "[")
 _IGNORE_DIRS = {".git", "__pycache__"}
+
+
+def workspace_roots(raw: dict[str, Any]) -> tuple[str, ...]:
+    """Resolve configured workspace roots from raw config, defaulting to ``(".",)``.
+
+    Shared by the inventory and the file-scanning policies so the default-roots
+    rule cannot fork. Pure: takes the raw mapping, never imports the config layer.
+    """
+    workspace = raw.get("workspace")
+    if isinstance(workspace, dict):
+        roots = workspace.get("roots")
+        if isinstance(roots, list) and roots:
+            return tuple(str(root) for root in roots)
+    return (".",)
 
 
 @dataclass(frozen=True)

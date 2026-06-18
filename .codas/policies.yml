@@ -12,7 +12,7 @@ policies:
 
   stale_claim:
     severity: warning
-    description: Docs and wiki claims must not reference paths, commands or concepts that no longer exist.
+    description: Markdown link references must point to existing paths; code-span and fragment-anchor checks are later expansion.
 
   spec_drift:
     severity: error
