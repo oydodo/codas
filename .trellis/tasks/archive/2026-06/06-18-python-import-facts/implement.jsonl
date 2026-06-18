@@ -1,0 +1,2 @@
+{"file": "src/codas/adapters/python.py", "reason": "add extract_import_facts"}
+{"file": "src/codas/structure/inventory.py", "reason": "add imports inventory block"}
