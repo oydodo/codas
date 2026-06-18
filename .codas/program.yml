@@ -122,10 +122,11 @@ work_items:
     phase: P5
     title: Wiki reconciliation
     theme: Wiki reconciliation
-    status: planned
+    status: in_progress
     depends_on:
       - program:P4:preflight-receipts
-    trellis_tasks: []
+    trellis_tasks:
+      - 06-19-wiki-claim-parser
     deliverables:
       - Wiki claim parser
       - Generated wiki sections
