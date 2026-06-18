@@ -68,6 +68,7 @@ work_items:
       - 06-18-structure-drift-boundary
       - 06-18-python-symbol-adapter
       - 06-18-duplicate-symbol
+      - 06-18-duplicate-implementation-claims
     deliverables:
       - Stale claim policy
       - Orphan artifact policy

@@ -20,6 +20,7 @@ constraint_sources:
     - .codas/structure.yml
     - .codas/program.yml
     - .codas/documents.yml
+    - .codas/claims.yml
     - .codas/waivers.yml
     - CONTEXT.md
     - .trellis/workflow.md

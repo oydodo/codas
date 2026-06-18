@@ -90,6 +90,14 @@ documents:
       - waiver_added
       - waiver_expires
 
+  claim_set:
+    path: .codas/claims.yml
+    authority: authoritative
+    owner: Policy Maintainer
+    updates_when:
+      - relationship_claim_added
+      - duplicate_resolved
+
   domain_context:
     path: CONTEXT.md
     authority: authoritative

@@ -77,6 +77,10 @@ def load_policies(path: Path) -> dict[str, Any]:
     return load_yaml_mapping(path)
 
 
+def load_claims(path: Path) -> dict[str, Any]:
+    return load_yaml_mapping(path)
+
+
 def load_yaml_mapping(path: Path) -> dict[str, Any]:
     """Load a YAML file that must contain a top-level mapping.
 

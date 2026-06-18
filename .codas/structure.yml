@@ -52,6 +52,7 @@ units:
       - structure-map
       - program-plan
       - document-manifest
+      - claim-set
     must_update_if_changed:
       - docs/codas-design.html
       - docs/codas-implementation-plan.html
@@ -86,6 +87,16 @@ units:
     must_update_if_changed:
       - docs/codas-implementation-plan.html
       - .codas/wiki/index.md
+
+  claim-set:
+    path: .codas/claims.yml
+    kind: claim_set
+    owner: Policy Maintainer
+    purpose: Authoritative relationship claims (canonical/variant/migration) that govern intentional duplication for the duplicate_implementation policy.
+    canonical_placement: Repo-local relationship claims live at .codas/claims.yml.
+    must_update_if_changed:
+      - .codas/policies.yml
+      - docs/codas-implementation-plan.html
 
   atlas-wiki:
     path: .codas/wiki

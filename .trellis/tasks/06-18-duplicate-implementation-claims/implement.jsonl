@@ -1,0 +1,5 @@
+{"file": "src/codas/config/loader.py", "reason": "claim loader / wiring / registration"}
+{"file": "src/codas/app/check.py", "reason": "claim loader / wiring / registration"}
+{"file": ".codas/policies.yml", "reason": "claim loader / wiring / registration"}
+{"file": ".codas/structure.yml", "reason": "claim loader / wiring / registration"}
+{"file": ".codas/config.yml", "reason": "claim loader / wiring / registration"}

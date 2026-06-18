@@ -8,7 +8,11 @@ policies:
 
   duplicate_symbol:
     severity: warning
-    description: Public top-level type or function names repeated across src modules are candidate duplicate implementations; consolidate, declare a canonical/variant/migration relationship, or waive. Concept-level semantic detection is later.
+    description: Public top-level type or function names repeated across src modules are surfaced as candidate duplicates (detection signal). Enforcement is duplicate_implementation.
+
+  duplicate_implementation:
+    severity: error
+    description: A top-level symbol implemented in two or more src modules must declare a canonical, variant or migration relationship (with the covered modules) in .codas/claims.yml; otherwise it is flagged as an undeclared duplicate implementation. Concept-level semantic detection is later.
 
   orphan_artifact:
     severity: error

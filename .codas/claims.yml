@@ -1,0 +1,52 @@
+version: 1
+kind: claim_set
+
+metadata:
+  project: Codas
+  authority: authoritative
+  summary: Repo-local relationship claims that govern intentional duplication.
+
+# Declared canonical/variant/migration relationships for symbols that the
+# duplicate_implementation policy would otherwise flag. Each entry is a positive
+# governance claim (§6), not a waiver: it asserts the duplication is intentional,
+# names the responsible owner and reason, and lists the EXACT modules it covers so
+# a future copy in a new module is not silently suppressed.
+duplicate_relationships:
+  - symbol: _rel
+    relationship: variant
+    owner: Codas Core
+    reason: Small private repo-relative path helper intentionally kept local to each module to avoid a shared-utility coupling between app, policies and adapters.
+    modules:
+      - src/codas/app/check.py
+      - src/codas/policies/config_sources.py
+      - src/codas/policies/dogfooding.py
+      - src/codas/policies/trellis_context.py
+      - src/codas/policies/waivers.py
+
+  - symbol: _mapping
+    relationship: variant
+    owner: Codas Core
+    reason: Private "coerce to mapping or empty dict" guard intentionally kept local to the config and structure loaders.
+    modules:
+      - src/codas/config/loader.py
+      - src/codas/structure/document_loader.py
+      - src/codas/structure/loader.py
+      - src/codas/structure/program_loader.py
+
+  - symbol: _optional_str
+    relationship: variant
+    owner: Codas Core
+    reason: Private "None or str" coercion helper intentionally kept local to the config loader, structure loader and Trellis adapter.
+    modules:
+      - src/codas/adapters/trellis.py
+      - src/codas/config/loader.py
+      - src/codas/structure/loader.py
+
+  - symbol: _str_tuple
+    relationship: variant
+    owner: Codas Core
+    reason: Private "list to tuple of str" helper intentionally kept local to the structure, document and program loaders.
+    modules:
+      - src/codas/structure/document_loader.py
+      - src/codas/structure/loader.py
+      - src/codas/structure/program_loader.py

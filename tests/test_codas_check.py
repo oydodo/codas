@@ -42,6 +42,8 @@ class CodasCheckTests(unittest.TestCase):
         self.assertNotIn("missing-structure-owner", ids)
         self.assertNotIn("structure-drift", ids)
         self.assertNotIn("duplicate-symbol", ids)
+        self.assertNotIn("duplicate-implementation", ids)
+        self.assertNotIn("claim-schema-invalid", ids)
 
     def test_missing_declared_authoritative_source_is_error(self) -> None:
         with codas_fixture() as repo:
