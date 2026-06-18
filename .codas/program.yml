@@ -103,7 +103,7 @@ work_items:
     phase: P4
     title: Preflight and receipts
     theme: Preflight and receipts
-    status: planned
+    status: in_progress
     depends_on:
       - program:P3:adapter-extraction
     trellis_tasks: []
