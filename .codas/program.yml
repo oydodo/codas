@@ -42,6 +42,7 @@ work_items:
       - 06-17-design-codas-structure-map-schema
       - 06-17-program-plan-artifact
       - 06-18-structure-map-foundation
+      - 06-18-document-role-manifest
     deliverables:
       - Artifact index
       - Doc claim index
