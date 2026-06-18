@@ -467,7 +467,7 @@ deprecated_paths:
         <li>If no unit owns the target path, add a unit, move the work, or create a waiver before implementation.</li>
         <li>When adding a new capability, check canonical placement and duplicate implementation risks.</li>
         <li>When moving or deleting files, update deprecated paths, required update obligations and related wiki navigation.</li>
-        <li>After implementation, run <code>codas check</code> and future <code>codas structure</code>.</li>
+        <li>After implementation, run <code>codas check</code> and <code>codas inventory</code>.</li>
       </ol>
       <p>
         The Steward is allowed to change the Structure Map, but not silently. A structure change is a claim change
@@ -532,7 +532,7 @@ deprecated_paths:
         <li>Add <code>docs/codas-structure-map-schema.html</code> to authoritative sources.</li>
         <li>Add <code>.codas/structure.yml</code> to authoritative sources.</li>
         <li>Add Atlas Wiki navigation for Repository Structure.</li>
-        <li>Later, implement <code>codas structure .</code> to load the map and emit structure findings.</li>
+        <li>Load the map via <code>codas inventory .</code> (normalized Atlas JSON) and the <code>structure_map_loads</code> check; later phases add structure-drift findings.</li>
       </ol>
     </section>
 

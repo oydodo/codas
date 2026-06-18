@@ -177,11 +177,11 @@ units:
 
   codas-structure-module:
     path: src/codas/structure
-    kind: planned_module
+    kind: structure_module
     owner: Structure Steward
-    purpose: Future loader, validator and drift checker for Structure Map.
+    purpose: Structure Map and Program Plan loaders, artifact index and Atlas inventory builder.
     canonical_placement: Structure Map runtime behavior belongs under src/codas/structure.
-    status: planned
+    status: active
     must_update_if_changed:
       - docs/codas-structure-map-schema.html
       - docs/codas-implementation-plan.html

@@ -66,6 +66,17 @@ python3 scripts/codas check .
 
 The CLI exits non-zero when it finds an `error`.
 
+Build the normalized Atlas inventory (Structure Map units mapped to repository
+artifacts, plus Program Plan facts):
+
+```bash
+PYTHONPATH=src python3 -m codas inventory .
+PYTHONPATH=src python3 -m codas inventory . --json
+```
+
+The `--json` output follows the Structure Map schema's normalized JSON shape and
+is deterministic for a given repository state.
+
 ## Current P0 Scope
 
 P0 implements the Codas package, CLI, config loader and first self-check

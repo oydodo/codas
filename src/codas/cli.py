@@ -35,6 +35,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     inventory = subparsers.add_parser("inventory", help="Build a Codas inventory.")
     inventory.add_argument("repo", nargs="?", default=".")
+    inventory.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the normalized Atlas inventory as JSON.",
+    )
 
     preflight = subparsers.add_parser("preflight", help="Generate task preflight context.")
     preflight.add_argument("repo", nargs="?", default=".")
@@ -65,7 +70,21 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         return 0
 
-    if args.command in {"inventory", "preflight", "wiki", "doctor"}:
+    if args.command == "inventory":
+        from .app.inventory import (
+            render_inventory_json,
+            render_inventory_summary,
+            run_inventory,
+        )
+
+        inventory = run_inventory(repo)
+        if args.json:
+            print(render_inventory_json(inventory))
+        else:
+            print(render_inventory_summary(inventory))
+        return 0
+
+    if args.command in {"preflight", "wiki", "doctor"}:
         parser.error(f"{args.command} is planned but not implemented in P0.")
 
     parser.error(f"unknown command: {args.command}")
