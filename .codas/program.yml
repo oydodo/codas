@@ -87,7 +87,8 @@ work_items:
     status: in_progress
     depends_on:
       - program:P2:policy-engine-structure-drift
-    trellis_tasks: []
+    trellis_tasks:
+      - 06-18-fact-provider-scan-context
     deliverables:
       - Swift/XcodeGen checks move behind adapters
       - Core no longer imports ecosystem concepts
