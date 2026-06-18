@@ -132,6 +132,7 @@ units:
       - codas-policies
       - codas-reporting
       - codas-structure-module
+      - codas-adapters
       - role-contracts
       - role-integrations
     must_update_if_changed:
@@ -195,6 +196,16 @@ units:
     status: active
     must_update_if_changed:
       - docs/codas-structure-map-schema.html
+      - docs/codas-implementation-plan.html
+
+  codas-adapters:
+    path: src/codas/adapters
+    kind: adapters_module
+    owner: Codas Core
+    purpose: Markdown and Trellis adapters extracting doc claims and task facts for the Atlas inventory.
+    canonical_placement: Source and format adapters belong under src/codas/adapters.
+    status: active
+    must_update_if_changed:
       - docs/codas-implementation-plan.html
 
   role-contracts:

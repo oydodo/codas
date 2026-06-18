@@ -1,0 +1,2 @@
+{"file": "docs/codas-implementation-plan.html", "reason": "§5 Markdown/Trellis adapters + §6 Fact/Claim"}
+{"file": "src/codas/policies/trellis_context.py", "reason": "realign to 0.6.2"}

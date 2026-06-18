@@ -93,9 +93,13 @@ def _walk_files(repo: Path) -> list[str]:
 
 
 def build_artifact_index(
-    repo: Path, roots: tuple[str, ...], structure_map: StructureMap
+    repo: Path,
+    roots: tuple[str, ...],
+    structure_map: StructureMap,
+    files: list[str] | None = None,
 ) -> ArtifactIndex:
-    files = discover_files(repo, roots)
+    if files is None:
+        files = discover_files(repo, roots)
 
     literal_units: list[tuple[str, StructureUnit]] = []
     glob_units: list[tuple[str, StructureUnit]] = []

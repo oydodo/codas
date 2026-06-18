@@ -3,10 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from codas.adapters.markdown import extract_doc_claims
+from codas.adapters.trellis import extract_task_facts
 from codas.config.loader import load_codas_config
 
 from .document_loader import load_document_manifest
-from .index import build_artifact_index
+from .index import build_artifact_index, discover_files
 from .loader import load_structure_map
 from .program_loader import load_program_plan
 
@@ -36,7 +38,8 @@ def build_inventory(repo: Path) -> dict[str, Any]:
     structure_map = load_structure_map(
         repo / ".codas" / "structure.yml", source=STRUCTURE_SOURCE
     )
-    index = build_artifact_index(repo, roots, structure_map)
+    files = discover_files(repo, roots)
+    index = build_artifact_index(repo, roots, structure_map, files=files)
 
     units = []
     for unit in sorted(structure_map.units, key=lambda item: item.id):
@@ -98,5 +101,38 @@ def build_inventory(repo: Path) -> dict[str, Any]:
                 for document in sorted(manifest.documents, key=lambda doc: doc.role)
             ],
         }
+
+    doc_claims = extract_doc_claims(repo, tuple(files))
+    inventory["doc_claims"] = {
+        "sources": sorted({claim.source for claim in doc_claims}),
+        "references": [
+            {
+                "source": claim.source,
+                "line": claim.line,
+                "path": claim.path,
+                "fragment": claim.fragment,
+                "kind": claim.kind,
+                "exists": claim.exists,
+            }
+            for claim in doc_claims
+        ],
+    }
+
+    task_facts = extract_task_facts(repo, config)
+    inventory["tasks"] = {
+        "source_root": task_facts.source_root,
+        "items": [
+            {
+                "id": task.id,
+                "status": task.status,
+                "package": task.package,
+                "dev_type": task.dev_type,
+                "priority": task.priority,
+                "archived": task.archived,
+            }
+            for task in task_facts.items
+        ],
+        "skipped": list(task_facts.skipped),
+    }
 
     return inventory
