@@ -1,0 +1,2 @@
+{"file": "src/codas/policies/dependency_direction.py", "reason": "dedup findings per importer+forbidden unit"}
+{"file": ".codas/structure.yml", "reason": "broaden must_not_depend_on to core units"}
