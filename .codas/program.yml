@@ -35,7 +35,7 @@ work_items:
     phase: P1
     title: Inventory, Structure Map and document governance foundation
     theme: Inventory, Structure Map and document governance foundation
-    status: in_progress
+    status: completed
     depends_on:
       - program:P0:cli-core
     trellis_tasks:
@@ -43,6 +43,7 @@ work_items:
       - 06-17-program-plan-artifact
       - 06-18-structure-map-foundation
       - 06-18-document-role-manifest
+      - 06-18-p1-facts-and-realign
     deliverables:
       - Artifact index
       - Doc claim index
@@ -58,7 +59,7 @@ work_items:
     phase: P2
     title: Policy engine and structure drift
     theme: Policy engine and structure drift
-    status: planned
+    status: in_progress
     depends_on:
       - program:P1:structure-map-foundation
     trellis_tasks: []
