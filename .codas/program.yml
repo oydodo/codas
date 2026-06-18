@@ -65,6 +65,7 @@ work_items:
     trellis_tasks:
       - 06-18-stale-claim-and-deprecated-path
       - 06-18-missing-structure-owner
+      - 06-18-structure-drift-boundary
     deliverables:
       - Stale claim policy
       - Orphan artifact policy

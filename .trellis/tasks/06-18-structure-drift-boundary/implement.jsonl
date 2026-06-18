@@ -1,0 +1,3 @@
+{"file": "src/codas/structure/index.py", "reason": "normalize_path + GLOB_CHARS; existence check mirrors index literal-exists"}
+{"file": "src/codas/app/check.py", "reason": "Wire check_structure_drift into run_check"}
+{"file": "src/codas/policies/missing_owner.py", "reason": "Sibling structure-policy style: guard + load_structure_map"}
