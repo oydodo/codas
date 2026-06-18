@@ -1,0 +1,5 @@
+{"file": "src/codas/policies/dependency_direction.py", "reason": "new dependency-direction policy"}
+{"file": "src/codas/facts/context.py", "reason": "imports() accessor + re-export"}
+{"file": ".codas/structure.yml", "reason": "codas-policies must_not_depend_on rule"}
+{"file": ".codas/policies.yml", "reason": "declare dependency_direction"}
+{"file": "src/codas/app/check.py", "reason": "wire policy"}
