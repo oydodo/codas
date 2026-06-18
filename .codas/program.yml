@@ -84,18 +84,20 @@ work_items:
     phase: P3
     title: Adapter extraction
     theme: Adapter extraction
-    status: in_progress
+    status: completed
     depends_on:
       - program:P2:policy-engine-structure-drift
     trellis_tasks:
       - 06-18-fact-provider-scan-context
       - 06-18-symbol-policies-scan-context
       - 06-18-python-import-facts
+      - 06-18-dependency-direction-policy
     deliverables:
-      - Swift/XcodeGen checks move behind adapters
-      - Core no longer imports ecosystem concepts
+      - Ecosystem extractors isolated behind adapters; core/policies consume normalized facts via a ScanContext fact-provider (this repo is pure Python, so the §8 Swift/XcodeGen example is realized as the §11 boundary in spirit)
+      - Core no longer imports ecosystem concepts (no codas.policies module imports codas.adapters)
+      - Dependency-direction policy enforces the adapter boundary as an evidence-backed finding over Python import facts
     exit_criteria:
-      - Core tests run without Swift/Ciri assumptions
+      - Core/policy tests run without ecosystem assumptions; the adapter boundary is dogfood-enforced (codas check . = 0)
 
   - id: program:P4:preflight-receipts
     phase: P4
