@@ -1,0 +1,4 @@
+{"file": "src/codas/policies/stale_claim.py", "reason": "migrate to consume ScanContext, drop adapter import"}
+{"file": "src/codas/app/check.py", "reason": "build ScanContext once, thread to stale_claim"}
+{"file": ".codas/structure.yml", "reason": "register codas-facts unit"}
+{"file": "src/codas/facts/context.py", "reason": "new fact-provider ScanContext seam"}
