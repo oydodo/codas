@@ -90,6 +90,7 @@ work_items:
     trellis_tasks:
       - 06-18-fact-provider-scan-context
       - 06-18-symbol-policies-scan-context
+      - 06-18-python-import-facts
     deliverables:
       - Swift/XcodeGen checks move behind adapters
       - Core no longer imports ecosystem concepts
