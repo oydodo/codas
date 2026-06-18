@@ -94,6 +94,37 @@ class MarkdownAdapterTests(unittest.TestCase):
             files = (".trellis/tasks/t/prd.md",)
             self.assertEqual(extract_doc_claims(repo, files), [])
 
+    def test_distinct_fragments_not_collapsed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _write(repo / "docs" / "a.html", "x")
+            _write(repo / "README.md", "`docs/a.html#one` and `docs/a.html#two`\n")
+            frags = sorted(c.fragment for c in self._claims(repo) if c.path == "docs/a.html")
+            self.assertEqual(frags, ["one", "two"])
+
+    def test_query_string_stripped(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _write(repo / "README.md", "[q](docs/q.py?x=1)\n")
+            paths = {c.path for c in self._claims(repo)}
+            self.assertIn("docs/q.py", paths)
+
+    def test_backslash_path_normalized(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _write(repo / "README.md", r"`docs\b.py`" + "\n")
+            paths = {c.path for c in self._claims(repo)}
+            self.assertIn("docs/b.py", paths)
+
+    def test_code_span_source_relative_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _write(repo / "docs" / "sub" / "local.py", "x")
+            _write(repo / "docs" / "guide.md", "see `sub/local.py`\n")
+            claim = next(c for c in self._claims(repo) if c.path.endswith("local.py"))
+            self.assertEqual(claim.path, "docs/sub/local.py")
+            self.assertTrue(claim.exists)
+
     def test_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)

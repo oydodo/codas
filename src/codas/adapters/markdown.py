@@ -51,10 +51,10 @@ def extract_doc_claims(repo: Path, files: tuple[str, ...]) -> list[DocClaim]:
                 if normalized is None:
                     continue
                 raw_path, fragment = normalized
-                path = _resolve(source, raw_path, kind)
+                path = _resolve(repo, source, raw_path, kind)
                 if path is None:  # escapes the repo
                     continue
-                key = (source, lineno, path)
+                key = (source, lineno, path, fragment, kind)
                 if key in seen:
                     continue
                 seen.add(key)
@@ -69,7 +69,9 @@ def extract_doc_claims(repo: Path, files: tuple[str, ...]) -> list[DocClaim]:
                     )
                 )
 
-    claims.sort(key=lambda claim: (claim.source, claim.line, claim.path))
+    claims.sort(
+        key=lambda claim: (claim.source, claim.line, claim.path, claim.fragment, claim.kind)
+    )
     return claims
 
 
@@ -88,29 +90,40 @@ def _candidates(line: str) -> list[tuple[str, str]]:
     return found
 
 
-def _resolve(source: str, path: str, kind: str) -> str | None:
+def _resolve(repo: Path, source: str, path: str, kind: str) -> str | None:
     """Resolve a reference to a repo-relative path.
 
     Markdown links are relative to the source file's directory; a leading `/`
-    means repo root. Backtick code spans are taken as repo-relative by
-    convention. Returns None if the result escapes the repository.
+    means repo root. Backtick code spans are repo-relative by convention, but
+    fall back to source-relative when the repo-relative path does not exist.
+    Returns None if the result escapes the repository.
     """
     if path.startswith("/"):
         resolved = posixpath.normpath(path.lstrip("/"))
     elif kind == "link":
-        resolved = posixpath.normpath(posixpath.join(posixpath.dirname(source), path))
-    else:
-        resolved = posixpath.normpath(path)
-    if resolved == ".." or resolved.startswith("../"):
+        resolved = _join(source, path)
+    else:  # code span: repo-relative, with source-relative fallback
+        repo_rel = posixpath.normpath(path)
+        if (repo / repo_rel).exists():
+            resolved = repo_rel
+        else:
+            src_rel = _join(source, path)
+            resolved = src_rel if (src_rel and (repo / src_rel).exists()) else repo_rel
+    if not resolved or resolved == ".." or resolved.startswith("../"):
         return None
     return resolved
 
 
+def _join(source: str, path: str) -> str:
+    return posixpath.normpath(posixpath.join(posixpath.dirname(source), path))
+
+
 def _normalize(candidate: str, kind: str) -> tuple[str, str] | None:
-    text = candidate.strip()
+    text = candidate.strip().replace("\\", "/")
     if not text or "://" in text or text.startswith("#") or text.startswith("mailto:"):
         return None
-    path, _, fragment = text.partition("#")
+    head, _, fragment = text.partition("#")  # path?query#fragment
+    path, _, _query = head.partition("?")
     if not path or " " in path or "\t" in path or not _PATH_RE.match(path):
         return None
 

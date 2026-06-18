@@ -48,7 +48,7 @@ def extract_task_facts(repo: Path, config: CodasConfig) -> TaskFacts:
             skipped.append(rel)
             continue
 
-        archived = "archive" in task_json.relative_to(tasks_root).parts
+        archived = task_json.relative_to(tasks_root).parts[:1] == ("archive",)
         task_id = data.get("id") or data.get("name") or task_json.parent.name
         items.append(
             TaskFact(
