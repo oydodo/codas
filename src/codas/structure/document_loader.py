@@ -86,7 +86,10 @@ def load_document_manifest(path: Path, source: str | None = None) -> DocumentMan
         )
 
     role_ids = {document.role for document in documents}
-    required_roles = _str_tuple(raw.get("required_roles"))
+    raw_required = raw.get("required_roles")
+    if raw_required is not None and not isinstance(raw_required, list):
+        raise DocumentManifestError("required_roles must be a list", src)
+    required_roles = _str_tuple(raw_required)
     for required in required_roles:
         if required not in role_ids:
             raise DocumentManifestError(

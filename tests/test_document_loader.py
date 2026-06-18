@@ -90,6 +90,37 @@ class DocumentLoaderTests(unittest.TestCase):
         with self.assertRaises(DocumentManifestError):
             _load(VALID.replace("  - plan\n", "  - ghost\n", 1))
 
+    def test_required_roles_scalar_raises(self) -> None:
+        with self.assertRaises(DocumentManifestError):
+            _load(VALID.replace("required_roles:\n  - plan\n", "required_roles: plan\n"))
+
+    def test_required_roles_absent_is_ok(self) -> None:
+        manifest = _load(VALID.replace("required_roles:\n  - plan\n", ""))
+        self.assertEqual(manifest.required_roles, ())
+
+    def test_updates_when_bare_string_raises(self) -> None:
+        with self.assertRaises(DocumentManifestError):
+            _load(VALID.replace("    updates_when: [scope_changes]\n", "    updates_when: scope_changes\n"))
+
+    def test_duplicate_document_key_raises(self) -> None:
+        text = (
+            "version: 1\nkind: document_role_manifest\nrequired_roles: []\n"
+            "documents:\n"
+            "  a:\n    path: x\n    authority: supporting\n    owner: o\n    updates_when: [t]\n"
+            "  a:\n    path: y\n    authority: supporting\n    owner: o\n    updates_when: [t]\n"
+        )
+        with self.assertRaises(DocumentManifestError):
+            _load(text)
+
+    def test_canonical_roles_reconcile_with_manifest(self) -> None:
+        from codas.policies.document_set import CANONICAL_REQUIRED_ROLES
+
+        manifest = load_document_manifest(
+            Path.cwd() / ".codas" / "documents.yml", source=".codas/documents.yml"
+        )
+        self.assertTrue(CANONICAL_REQUIRED_ROLES <= manifest.role_ids())
+        self.assertTrue(CANONICAL_REQUIRED_ROLES <= set(manifest.required_roles))
+
 
 class DocumentSetPolicyTests(unittest.TestCase):
     def test_real_repo_has_no_findings(self) -> None:
@@ -109,7 +140,7 @@ class DocumentSetPolicyTests(unittest.TestCase):
             config = CodasConfig(path=repo / ".codas" / "config.yml", raw={})
             findings = check_document_set(repo, config)
 
-            self.assertIn("implementation_plan", " ".join(f.message for f in findings))
+            self.assertIn("config", " ".join(f.message for f in findings))
             self.assertTrue(all(f.check_id == "document-set-complete" for f in findings))
 
     def test_missing_target_file_yields_finding(self) -> None:
@@ -124,6 +155,25 @@ class DocumentSetPolicyTests(unittest.TestCase):
             config = CodasConfig(path=repo / ".codas" / "config.yml", raw={})
             findings = check_document_set(repo, config)
             self.assertTrue(any("missing file" in f.message for f in findings))
+
+    def test_glob_authority_conflict_yields_finding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            (repo / "src" / "codas").mkdir(parents=True, exist_ok=True)
+            (repo / "src" / "codas" / "x.py").write_text("x")
+            _write_manifest(
+                repo,
+                "version: 1\nkind: document_role_manifest\nrequired_roles: []\n"
+                "documents:\n  code:\n    path: src/codas/x.py\n"
+                "    authority: authoritative\n    owner: Core\n    updates_when: [a]\n",
+            )
+            config = CodasConfig(
+                path=repo / ".codas" / "config.yml",
+                raw={},
+                supporting_sources=("src/**/*.py",),
+            )
+            findings = check_document_set(repo, config)
+            self.assertTrue(any("conflicts with config" in f.message for f in findings))
 
     def test_authority_conflict_yields_finding(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

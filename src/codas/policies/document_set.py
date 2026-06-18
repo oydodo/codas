@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 from pathlib import Path
 
 from codas.config.loader import CodasConfig
@@ -11,20 +12,25 @@ from codas.structure.document_loader import (
 
 DOCUMENTS_SOURCE = ".codas/documents.yml"
 
-# Document roles Codas core depends on; a governed manifest must mark these
-# required so they cannot be silently dropped. The loader already enforces that
-# every required role is declared with an existing path.
+# Document roles whose files the Codas check pipeline itself loads (config,
+# policies, waivers, structure map, program plan). These are code-required, so a
+# governed manifest must mark them required; they cannot be silently dropped.
+# Kept in sync with .codas/documents.yml by test_document_loader's reconciliation
+# test. Broader governance docs (design, plan, schema, ...) are required via the
+# manifest's own required_roles, not this code floor.
 CANONICAL_REQUIRED_ROLES = frozenset(
     {
-        "product_design",
-        "implementation_plan",
-        "structure_map_schema",
+        "config",
+        "policy_set",
+        "waivers",
         "structure_map",
         "program_plan",
-        "policy_set",
-        "config",
     }
 )
+
+
+def _matches_any(path: str, patterns: set[str]) -> bool:
+    return any(fnmatch.fnmatch(path, pattern) for pattern in patterns)
 
 
 def check_document_set(repo: Path, config: CodasConfig) -> list[Finding]:
@@ -84,9 +90,9 @@ def check_document_set(repo: Path, config: CodasConfig) -> list[Finding]:
 
         expected = (
             "authoritative"
-            if document.path in authoritative
+            if _matches_any(document.path, authoritative)
             else "supporting"
-            if document.path in supporting
+            if _matches_any(document.path, supporting)
             else None
         )
         if expected is not None and document.authority != expected:
