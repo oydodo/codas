@@ -32,6 +32,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Always exit 0, even when error findings are present.",
     )
+    check.add_argument(
+        "--receipt",
+        action="store_true",
+        help="Write a durable run receipt under .codas/receipts/.",
+    )
 
     inventory = subparsers.add_parser("inventory", help="Build a Codas inventory.")
     inventory.add_argument("repo", nargs="?", default=".")
@@ -62,14 +67,25 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "check":
         report = run_check(repo)
+
+        receipt_path = None
+        if args.receipt:
+            from .app.receipt import write_receipt
+
+            receipt_path = write_receipt(repo, report)
+
         if args.json:
             from .app.provenance import compute_provenance
 
             payload = report.to_json()
             payload["provenance"] = compute_provenance(repo)
+            if receipt_path is not None:
+                payload["receipt"] = str(receipt_path)
             print(json.dumps(payload, indent=2, sort_keys=True))
         else:
             print_findings(report.findings)
+            if receipt_path is not None:
+                print(f"Receipt written: {receipt_path}")
         if not args.no_exit_code and report.has_errors:
             return 1
         return 0

@@ -11,6 +11,10 @@ from .models import StructureMap, StructureUnit
 
 GLOB_CHARS = ("*", "?", "[")
 _IGNORE_DIRS = {".git", "__pycache__"}
+# Generated-artifact subtrees pruned on the non-git walk fallback (the git path
+# already excludes them via .gitignore / --exclude-standard). Keeps receipts and
+# other generated files out of the scan so check/inventory stay deterministic.
+_IGNORE_PATHS = {".codas/receipts"}
 
 
 def workspace_roots(raw: dict[str, Any]) -> tuple[str, ...]:
@@ -102,7 +106,12 @@ def _git_files(repo: Path) -> list[str] | None:
 def _walk_files(repo: Path) -> list[str]:
     files: list[str] = []
     for dirpath, dirnames, filenames in os.walk(repo):
-        dirnames[:] = [name for name in dirnames if name not in _IGNORE_DIRS]
+        dirnames[:] = [
+            name
+            for name in dirnames
+            if name not in _IGNORE_DIRS
+            and (Path(dirpath) / name).relative_to(repo).as_posix() not in _IGNORE_PATHS
+        ]
         for name in filenames:
             if name.endswith(".pyc"):
                 continue
