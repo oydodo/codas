@@ -35,7 +35,8 @@ def check_dependency_direction(ctx: ScanContext) -> list[Finding]:
     unit_prefix = {unit.id: prefix for prefix, unit in literal_units}
     rules = {rule.unit: rule for rule in structure_map.dependency_rules}
 
-    findings: list[Finding] = []
+    violations = []  # (importer_unit, forbidden_id, edge)
+    targets_by_module: dict[str, set[str]] = {}
     for edge in ctx.imports().imports:
         if edge.target_path is None:
             continue  # external/stdlib import: no unit to govern
@@ -50,6 +51,19 @@ def check_dependency_direction(ctx: ScanContext) -> list[Finding]:
             continue
         forbidden = _first_forbidden(edge.target_path, rule.must_not_depend_on, unit_prefix)
         if forbidden is None:
+            continue
+        violations.append((importer, forbidden, edge))
+        targets_by_module.setdefault(edge.module, set()).add(edge.target)
+
+    findings: list[Finding] = []
+    for importer, forbidden, edge in violations:
+        # A single `from pkg import sub` statement emits both the package and the
+        # submodule edge. Collapse that redundancy by dropping any target that is a
+        # strict dotted-ancestor of another violating target from the same importer,
+        # keeping the most-specific leaf. Distinct submodules (pkg.a and pkg.b) do
+        # not subsume each other, so genuinely separate imports stay separate.
+        siblings = targets_by_module[edge.module]
+        if any(other.startswith(edge.target + ".") for other in siblings):
             continue
         findings.append(
             Finding(

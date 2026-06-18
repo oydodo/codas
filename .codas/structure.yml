@@ -304,6 +304,22 @@ dependency_rules:
     must_not_depend_on:
       - codas-adapters
 
+  codas-app:
+    must_not_depend_on:
+      - codas-adapters
+
+  codas-core-models:
+    must_not_depend_on:
+      - codas-adapters
+
+  codas-reporting:
+    must_not_depend_on:
+      - codas-adapters
+
+  codas-config-loader:
+    must_not_depend_on:
+      - codas-adapters
+
   atlas-wiki:
     may_depend_on:
       - codas-docs

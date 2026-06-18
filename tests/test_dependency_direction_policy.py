@@ -169,6 +169,44 @@ class DependencyDirectionPolicyTests(unittest.TestCase):
             self.assertEqual(findings[0].evidence[0].path, "src/codas/policies/evil.py")
             self.assertEqual(findings[0].evidence[1].path, "src/codas/adapters/python.py")
 
+    def test_from_package_import_submodule_yields_one_finding(self) -> None:
+        # `from adp import a` emits two import facts (the package + the submodule);
+        # both violate pol->adp, but the policy reports one finding per (importer,
+        # forbidden unit), citing the most-specific (submodule) target.
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _structure(repo, UNITS, {"pol": ["adp"]})
+            _write(repo / "src" / "pol" / "__init__.py", "")
+            _write(repo / "src" / "pol" / "p.py", "from adp import a\n")
+            _write(repo / "src" / "adp" / "__init__.py", "")
+            _write(repo / "src" / "adp" / "a.py", "x = 1\n")
+
+            findings = _findings(repo)
+
+            self.assertEqual(len(findings), 1)
+            self.assertEqual(findings[0].meta["target_path"], "src/adp/a.py")
+            self.assertEqual(findings[0].evidence[1].path, "src/adp/a.py")
+
+    def test_distinct_submodules_of_forbidden_unit_are_separate_findings(self) -> None:
+        # `from adp import a, b` emits the package edge plus two submodule edges; the
+        # package collapses into its descendants, but a and b are distinct imports and
+        # must each produce a finding (dedup must not be per-forbidden-unit).
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _structure(repo, UNITS, {"pol": ["adp"]})
+            _write(repo / "src" / "pol" / "__init__.py", "")
+            _write(repo / "src" / "pol" / "p.py", "from adp import a, b\n")
+            _write(repo / "src" / "adp" / "__init__.py", "")
+            _write(repo / "src" / "adp" / "a.py", "x = 1\n")
+            _write(repo / "src" / "adp" / "b.py", "x = 1\n")
+
+            findings = _findings(repo)
+
+            self.assertEqual(
+                [f.meta["target_path"] for f in findings],
+                ["src/adp/a.py", "src/adp/b.py"],
+            )
+
     def test_missing_structure_map_returns_empty(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
