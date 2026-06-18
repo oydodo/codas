@@ -104,18 +104,19 @@ work_items:
     phase: P4
     title: Preflight and receipts
     theme: Preflight and receipts
-    status: in_progress
+    status: completed
     depends_on:
       - program:P3:adapter-extraction
     trellis_tasks:
       - 06-18-provenance-hashes
       - 06-18-receipt-ledger
+      - 06-19-preflight-context-pack
     deliverables:
-      - Task context pack
-      - Receipt ledger
-      - Inventory hash and policy version provenance
+      - Inventory hash and policy version provenance (codas check --json provenance block; deterministic content hashes)
+      - Receipt ledger (Receipt core model; codas check --receipt writes .codas/receipts/<ts>.json with provenance, findings and result)
+      - Task context pack (codas preflight assembles task + read-first sources + active policies + provenance, adapter-free and deterministic)
     exit_criteria:
-      - Agent work can prove which task, inventory and check it used
+      - Agent work can prove which task, inventory and check it used (provenance hashes pin inventory+policy; the receipt records them; preflight reports them)
 
   - id: program:P5:wiki-reconciliation
     phase: P5
