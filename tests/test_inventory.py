@@ -49,6 +49,18 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(inventory["tasks"]["source_root"], ".trellis/tasks")
         self.assertTrue(inventory["tasks"]["items"])
 
+        self.assertIn("symbols", inventory)
+        definitions = inventory["symbols"]["definitions"]
+        self.assertTrue(definitions)
+        for definition in definitions:
+            self.assertIn(definition["kind"], {"class", "function"})
+        # build_inventory itself is a top-level function fact in the inventory module
+        self.assertIn(
+            ("src/codas/structure/inventory.py", "build_inventory", "function"),
+            {(d["module"], d["name"], d["kind"]) for d in definitions},
+        )
+        self.assertEqual(inventory["symbols"]["skipped"], [])
+
     def test_json_serializable(self) -> None:
         # Guards against datetime.date leaking from YAML metadata.
         json.dumps(build_inventory(Path.cwd()))

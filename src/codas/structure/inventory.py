@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from codas.adapters.markdown import extract_doc_claims
+from codas.adapters.python import extract_symbol_facts
 from codas.adapters.trellis import extract_task_facts
 from codas.config.loader import load_codas_config
 
@@ -124,6 +125,21 @@ def build_inventory(repo: Path) -> dict[str, Any]:
             for task in task_facts.items
         ],
         "skipped": list(task_facts.skipped),
+    }
+
+    symbols = extract_symbol_facts(repo, tuple(files))
+    inventory["symbols"] = {
+        "sources": sorted({definition.module for definition in symbols.definitions}),
+        "definitions": [
+            {
+                "module": definition.module,
+                "name": definition.name,
+                "kind": definition.kind,
+                "line": definition.line,
+            }
+            for definition in symbols.definitions
+        ],
+        "skipped": list(symbols.skipped),
     }
 
     return inventory

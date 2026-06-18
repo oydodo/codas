@@ -1,0 +1,2 @@
+{"file": "src/codas/adapters/trellis.py", "reason": "Adapter pattern to mirror: frozen facts, skipped list, deterministic sort"}
+{"file": "src/codas/structure/inventory.py", "reason": "Wire symbols block after tasks block"}

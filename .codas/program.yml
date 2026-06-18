@@ -66,6 +66,7 @@ work_items:
       - 06-18-stale-claim-and-deprecated-path
       - 06-18-missing-structure-owner
       - 06-18-structure-drift-boundary
+      - 06-18-python-symbol-adapter
     deliverables:
       - Stale claim policy
       - Orphan artifact policy
