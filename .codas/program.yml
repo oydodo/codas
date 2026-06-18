@@ -106,7 +106,8 @@ work_items:
     status: in_progress
     depends_on:
       - program:P3:adapter-extraction
-    trellis_tasks: []
+    trellis_tasks:
+      - 06-18-provenance-hashes
     deliverables:
       - Task context pack
       - Receipt ledger
