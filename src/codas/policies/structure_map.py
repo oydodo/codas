@@ -14,7 +14,8 @@ def check_structure_map(repo: Path, config: CodasConfig) -> list[Finding]:
 
     Reference-integrity failures (dangling allowed_children, unknown dependency
     targets, missing required fields) surface here too, since they make the map
-    malformed.
+    malformed. A missing structure.yml returns no finding here; the absent file
+    is reported by check_config_sources (it is a declared authoritative source).
     """
     path = repo / ".codas" / "structure.yml"
     if not path.exists():

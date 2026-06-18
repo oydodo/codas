@@ -9,7 +9,7 @@ from codas.config.loader import ConfigLoadError, load_yaml_mapping
 from .models import ProgramPlan, WorkItem
 
 WORK_ITEM_ID = re.compile(r"^program:P\d+:[a-z0-9-]+$")
-REQUIRED_ITEM_FIELDS = ("phase", "title", "status")
+REQUIRED_ITEM_FIELDS = ("phase", "title")
 
 
 class ProgramPlanError(RuntimeError):
@@ -40,6 +40,9 @@ def load_program_plan(path: Path, source: str | None = None) -> ProgramPlan:
     if not isinstance(items_raw, list) or not items_raw:
         raise ProgramPlanError("program plan has no 'work_items' list", src)
 
+    defaults = _mapping(raw.get("defaults"))
+    default_status = defaults.get("status")
+
     items: list[WorkItem] = []
     for entry in items_raw:
         if not isinstance(entry, dict):
@@ -53,12 +56,18 @@ def load_program_plan(path: Path, source: str | None = None) -> ProgramPlan:
                 raise ProgramPlanError(
                     f"work_item {work_id!r} missing required field {field_name!r}", src
                 )
+        status = entry.get("status", default_status)
+        if not isinstance(status, str) or not status.strip():
+            raise ProgramPlanError(
+                f"work_item {work_id!r} missing 'status' (no item value or defaults.status)",
+                src,
+            )
         items.append(
             WorkItem(
                 id=work_id,
                 phase=entry["phase"],
                 title=entry["title"],
-                status=entry["status"],
+                status=status,
                 depends_on=_str_tuple(entry.get("depends_on")),
                 trellis_tasks=_str_tuple(entry.get("trellis_tasks")),
                 theme=str(entry.get("theme", "")),
@@ -90,23 +99,38 @@ def load_program_plan(path: Path, source: str | None = None) -> ProgramPlan:
 
 
 def _assert_acyclic(items: list[WorkItem], src: str) -> None:
+    """Iterative DFS cycle check (no recursion-depth limit on long chains).
+
+    GRAY = on the current path, BLACK = fully explored. A GRAY neighbour is a
+    back edge (cycle); a BLACK neighbour (e.g. a diamond's shared dependency) is
+    already done and skipped.
+    """
     graph = {item.id: item.depends_on for item in items}
     WHITE, GRAY, BLACK = 0, 1, 2
     color = dict.fromkeys(graph, WHITE)
 
-    def visit(node: str, stack: list[str]) -> None:
-        color[node] = GRAY
-        for dep in graph[node]:
-            if color[dep] == GRAY:
-                cycle = " -> ".join([*stack, node, dep])
-                raise ProgramPlanError(f"dependency cycle: {cycle}", src)
-            if color[dep] == WHITE:
-                visit(dep, [*stack, node])
-        color[node] = BLACK
-
-    for node in graph:
-        if color[node] == WHITE:
-            visit(node, [])
+    for start in graph:
+        if color[start] != WHITE:
+            continue
+        color[start] = GRAY
+        stack: list[tuple[str, list[str]]] = [(start, list(graph[start]))]
+        while stack:
+            node, pending = stack[-1]
+            advanced = False
+            while pending:
+                dep = pending.pop()
+                if color[dep] == GRAY:
+                    raise ProgramPlanError(
+                        f"dependency cycle through {dep!r}", src
+                    )
+                if color[dep] == WHITE:
+                    color[dep] = GRAY
+                    stack.append((dep, list(graph[dep])))
+                    advanced = True
+                    break
+            if not advanced:
+                color[node] = BLACK
+                stack.pop()
 
 
 def _mapping(value: Any) -> dict[str, Any]:

@@ -7,6 +7,28 @@ from typing import Any
 import yaml
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """SafeLoader that rejects duplicate mapping keys.
+
+    Authored governance claim surfaces must not silently last-write-wins a
+    duplicated unit, source or rule; that would drop a claim without warning.
+    """
+
+    def construct_mapping(self, node, deep=False):  # type: ignore[override]
+        seen: set[object] = set()
+        for key_node, _value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in seen:
+                raise yaml.constructor.ConstructorError(
+                    "while constructing a mapping",
+                    node.start_mark,
+                    f"found duplicate key {key!r}",
+                    key_node.start_mark,
+                )
+            seen.add(key)
+        return super().construct_mapping(node, deep)
+
+
 class ConfigLoadError(RuntimeError):
     """Raised when Codas configuration cannot be loaded."""
 
@@ -64,7 +86,7 @@ def load_yaml_mapping(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise ConfigLoadError(f"Required config file does not exist: {path}")
     try:
-        data = yaml.safe_load(path.read_text())
+        data = yaml.load(path.read_text(), Loader=_UniqueKeyLoader)
     except yaml.YAMLError as error:
         raise ConfigLoadError(f"Failed to parse {path}: {error}") from error
     if data is None:

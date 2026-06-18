@@ -7,6 +7,7 @@ from pathlib import Path
 
 from codas.app.inventory import render_inventory_json
 from codas.config.loader import CodasConfig
+from codas.policies.program_plan import check_program_plan
 from codas.policies.structure_map import check_structure_map
 from codas.structure.inventory import build_inventory
 
@@ -56,6 +57,29 @@ class StructureMapPolicyTests(unittest.TestCase):
     def test_valid_repo_structure_map_has_no_findings(self) -> None:
         config = CodasConfig(path=Path.cwd() / ".codas" / "config.yml", raw={})
         self.assertEqual(check_structure_map(Path.cwd(), config), [])
+
+
+class ProgramPlanPolicyTests(unittest.TestCase):
+    def test_malformed_program_plan_yields_error_finding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            program = repo / ".codas" / "program.yml"
+            program.parent.mkdir(parents=True, exist_ok=True)
+            program.write_text(
+                "version: 1\nkind: program_plan\n"
+                "work_items:\n  - id: bad-id\n    phase: P0\n    title: X\n    status: planned\n"
+            )
+
+            config = CodasConfig(path=repo / ".codas" / "config.yml", raw={})
+            findings = check_program_plan(repo, config)
+
+            self.assertEqual(len(findings), 1)
+            self.assertEqual(findings[0].check_id, "program-plan-loads")
+            self.assertEqual(findings[0].severity, "error")
+
+    def test_valid_repo_program_plan_has_no_findings(self) -> None:
+        config = CodasConfig(path=Path.cwd() / ".codas" / "config.yml", raw={})
+        self.assertEqual(check_program_plan(Path.cwd(), config), [])
 
 
 if __name__ == "__main__":

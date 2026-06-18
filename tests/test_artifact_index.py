@@ -67,6 +67,37 @@ class ArtifactIndexTests(unittest.TestCase):
             index = build_artifact_index(repo, (".",), MAP)
             self.assertNotIn("src/__pycache__/cli.cpython.pyc", index.files)
 
+    def test_walk_fallback_when_git_missing(self) -> None:
+        import codas.structure.index as index_mod
+
+        original = index_mod.subprocess.run
+
+        def boom(*args, **kwargs):
+            raise FileNotFoundError("git")
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _write(repo / "src" / "cli.py")
+            index_mod.subprocess.run = boom
+            try:
+                index = build_artifact_index(repo, (".",), MAP)
+            finally:
+                index_mod.subprocess.run = original
+            self.assertIn("src/cli.py", index.files)
+
+    def test_unowned_when_no_root_unit(self) -> None:
+        no_root = StructureMap(
+            version=1, kind="structure_map", units=(_unit("src", "src"),)
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _write(repo / "README.md")
+            _write(repo / "src" / "cli.py")
+
+            index = build_artifact_index(repo, (".",), no_root)
+            self.assertIn("README.md", index.unowned)
+            self.assertNotIn("src/cli.py", index.unowned)
+
     @unittest.skipUnless(shutil.which("git"), "git not available")
     def test_gitignored_file_excluded(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

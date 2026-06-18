@@ -60,6 +60,60 @@ class ProgramLoaderTests(unittest.TestCase):
         with self.assertRaises(ProgramPlanError):
             _load(broken)
 
+    def test_diamond_does_not_raise(self) -> None:
+        diamond = """\
+version: 1
+kind: program_plan
+work_items:
+  - id: program:P0:a
+    phase: P0
+    title: A
+    status: planned
+    depends_on: ["program:P1:b", "program:P1:c"]
+  - id: program:P1:b
+    phase: P1
+    title: B
+    status: planned
+    depends_on: ["program:P2:d"]
+  - id: program:P1:c
+    phase: P1
+    title: C
+    status: planned
+    depends_on: ["program:P2:d"]
+  - id: program:P2:d
+    phase: P2
+    title: D
+    status: planned
+"""
+        plan = _load(diamond)
+        self.assertEqual(len(plan.work_items), 4)
+
+    def test_defaults_status_applied(self) -> None:
+        text = """\
+version: 1
+kind: program_plan
+defaults:
+  status: planned
+work_items:
+  - id: program:P0:a
+    phase: P0
+    title: A
+"""
+        plan = _load(text)
+        self.assertEqual(plan.work_items[0].status, "planned")
+
+    def test_missing_status_without_default_raises(self) -> None:
+        text = """\
+version: 1
+kind: program_plan
+work_items:
+  - id: program:P0:a
+    phase: P0
+    title: A
+"""
+        with self.assertRaises(ProgramPlanError):
+            _load(text)
+
     def test_cycle_raises(self) -> None:
         cyclic = """\
 version: 1

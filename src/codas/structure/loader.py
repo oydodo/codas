@@ -117,7 +117,10 @@ def _load_dependency_rules(
             raise StructureMapError(
                 f"dependency_rules references unknown unit {rule_unit!r}", src
             )
-        body = body if isinstance(body, dict) else {}
+        if not isinstance(body, dict):
+            raise StructureMapError(
+                f"dependency_rules[{rule_unit!r}] body is not a mapping", src
+            )
         may = _str_tuple(body.get("may_depend_on"))
         must_not = _str_tuple(body.get("must_not_depend_on"))
         for target in (*may, *must_not):

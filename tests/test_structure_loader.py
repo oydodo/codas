@@ -98,6 +98,18 @@ class StructureLoaderTests(unittest.TestCase):
         with self.assertRaises(StructureMapError):
             _load(broken)
 
+    def test_non_mapping_dependency_rule_raises(self) -> None:
+        broken = VALID_MAP.replace(
+            "dependency_rules:\n  app:\n    may_depend_on:\n      - root\n",
+            "dependency_rules:\n  app: not-a-mapping\n",
+        )
+        with self.assertRaises(StructureMapError):
+            _load(broken)
+
+    def test_duplicate_top_level_key_raises(self) -> None:
+        with self.assertRaises(StructureMapError):
+            _load("version: 1\n" + VALID_MAP)
+
 
 if __name__ == "__main__":
     unittest.main()
