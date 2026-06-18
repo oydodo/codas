@@ -76,3 +76,29 @@ class ProgramPlan:
 
     def work_item_ids(self) -> frozenset[str]:
         return frozenset(item.id for item in self.work_items)
+
+
+DOCUMENT_AUTHORITIES = frozenset({"authoritative", "supporting"})
+
+
+@dataclass(frozen=True)
+class DocumentRole:
+    role: str
+    path: str
+    authority: str
+    owner: str
+    updates_when: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class DocumentManifest:
+    version: int
+    kind: str
+    documents: tuple[DocumentRole, ...]
+    required_roles: tuple[str, ...] = ()
+    source: str = ".codas/documents.yml"
+    metadata: Mapping[str, object] = field(default_factory=dict)
+    defaults: Mapping[str, object] = field(default_factory=dict)
+
+    def role_ids(self) -> frozenset[str]:
+        return frozenset(document.role for document in self.documents)

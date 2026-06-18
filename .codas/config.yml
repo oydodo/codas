@@ -19,6 +19,9 @@ constraint_sources:
     - .codas/policies.yml
     - .codas/structure.yml
     - .codas/program.yml
+    - .codas/documents.yml
+    - .codas/waivers.yml
+    - CONTEXT.md
     - .trellis/workflow.md
     - .trellis/config.yaml
     - .trellis/spec/**/*.md
@@ -27,6 +30,8 @@ constraint_sources:
   supporting:
     - README.md
     - pyproject.toml
+    - .codas/wiki/index.md
+    - AGENTS.md
     - tests/**/*.py
     - src/**/*.py
     - scripts/*

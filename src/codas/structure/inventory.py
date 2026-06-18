@@ -5,12 +5,14 @@ from typing import Any
 
 from codas.config.loader import load_codas_config
 
+from .document_loader import load_document_manifest
 from .index import build_artifact_index
 from .loader import load_structure_map
 from .program_loader import load_program_plan
 
 STRUCTURE_SOURCE = ".codas/structure.yml"
 PROGRAM_SOURCE = ".codas/program.yml"
+DOCUMENTS_SOURCE = ".codas/documents.yml"
 
 
 def _workspace_roots(config_raw: dict[str, Any]) -> tuple[str, ...]:
@@ -77,6 +79,23 @@ def build_inventory(repo: Path) -> dict[str, Any]:
                     "trellis_tasks": list(item.trellis_tasks),
                 }
                 for item in sorted(program.work_items, key=lambda item: item.id)
+            ],
+        }
+
+    documents_path = repo / ".codas" / "documents.yml"
+    if documents_path.exists():
+        manifest = load_document_manifest(documents_path, source=DOCUMENTS_SOURCE)
+        inventory["documents"] = {
+            "source": manifest.source,
+            "roles": [
+                {
+                    "role": document.role,
+                    "path": document.path,
+                    "authority": document.authority,
+                    "owner": document.owner,
+                    "observed": {"exists": (repo / document.path).exists()},
+                }
+                for document in sorted(manifest.documents, key=lambda doc: doc.role)
             ],
         }
 

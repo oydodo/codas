@@ -51,6 +51,7 @@ units:
       - atlas-wiki
       - structure-map
       - program-plan
+      - document-manifest
     must_update_if_changed:
       - docs/codas-design.html
       - docs/codas-implementation-plan.html
@@ -72,6 +73,16 @@ units:
     owner: Document Steward
     purpose: Authoritative claim surface for the project-level Program Plan (phases, work items, dependencies, sequencing and exit criteria).
     canonical_placement: The authored Program Plan lives at .codas/program.yml.
+    must_update_if_changed:
+      - docs/codas-implementation-plan.html
+      - .codas/wiki/index.md
+
+  document-manifest:
+    path: .codas/documents.yml
+    kind: document_role_manifest
+    owner: Document Steward
+    purpose: Authoritative claim surface for the Document Role Manifest binding document roles to files, authority, owners and update triggers.
+    canonical_placement: The authored Document Role Manifest lives at .codas/documents.yml.
     must_update_if_changed:
       - docs/codas-implementation-plan.html
       - .codas/wiki/index.md

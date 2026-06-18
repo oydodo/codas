@@ -15,6 +15,7 @@ and source anchors that agents must read before implementation.
 - `.codas/policies.yml`: bootstrap policy set.
 - `.codas/structure.yml`: authored Repository Structure claims.
 - `.codas/program.yml`: authored Program Plan claims (project-level roadmap P0–P7).
+- `.codas/documents.yml`: authored Document Role Manifest (Project Document Set: roles, paths, authority, owners, update triggers).
 - `.codas/waivers.yml`: explicit waivers. Empty means no active waivers.
 - `.trellis/workflow.md`: canonical development workflow.
 - `.trellis/spec/codas/workflow/task-system.md`: Codas-specific Trellis task-system rules.

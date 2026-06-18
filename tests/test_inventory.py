@@ -34,6 +34,12 @@ class InventoryTests(unittest.TestCase):
         self.assertIn("program", inventory)
         self.assertEqual(len(inventory["program"]["work_items"]), 8)
 
+        self.assertIn("documents", inventory)
+        roles = {role["role"] for role in inventory["documents"]["roles"]}
+        self.assertIn("implementation_plan", roles)
+        for role in inventory["documents"]["roles"]:
+            self.assertIn("exists", role["observed"])
+
     def test_json_serializable(self) -> None:
         # Guards against datetime.date leaking from YAML metadata.
         json.dumps(build_inventory(Path.cwd()))

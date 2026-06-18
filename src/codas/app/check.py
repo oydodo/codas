@@ -5,6 +5,7 @@ from pathlib import Path
 from codas.config.loader import ConfigLoadError, load_codas_config, load_policies, load_waivers
 from codas.core.models import CheckReport, Evidence, Finding
 from codas.policies.config_sources import check_config_sources
+from codas.policies.document_set import check_document_set
 from codas.policies.dogfooding import check_dogfooding_protocol
 from codas.policies.program_plan import check_program_plan
 from codas.policies.structure_map import check_structure_map
@@ -34,6 +35,7 @@ def run_check(repo: Path) -> CheckReport:
     findings.extend(check_trellis_context(repo, config))
     findings.extend(check_structure_map(repo, config))
     findings.extend(check_program_plan(repo, config))
+    findings.extend(check_document_set(repo, config))
 
     policies_path = repo / ".codas" / "policies.yml"
     try:
