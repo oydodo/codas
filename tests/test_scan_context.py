@@ -8,7 +8,7 @@ from pathlib import Path
 import codas.policies as policies_package
 import codas.policies.stale_claim as stale_claim_module
 from codas.adapters.markdown import extract_doc_claims
-from codas.adapters.python import extract_symbol_facts
+from codas.adapters.python import extract_import_facts, extract_symbol_facts
 from codas.config.loader import CodasConfig
 from codas.facts.context import ScanContext, build_scan_context
 
@@ -92,6 +92,19 @@ class ScanContextTests(unittest.TestCase):
             self.assertEqual([d.name for d in facts.definitions], ["handle"])
             # Second read returns the identical cached object (one adapter call).
             self.assertIs(ctx.symbols(), facts)
+
+    def test_imports_matches_adapter_and_is_cached(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _write(repo / "pkg" / "__init__.py", "")
+            _write(repo / "pkg" / "a.py", "import os\n")
+
+            ctx = build_scan_context(repo, _config(repo))
+            facts = ctx.imports()
+
+            self.assertEqual(facts, extract_import_facts(repo, ctx.files))
+            self.assertEqual([f.target for f in facts.imports], ["os"])
+            self.assertIs(ctx.imports(), facts)
 
     def test_context_is_frozen(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

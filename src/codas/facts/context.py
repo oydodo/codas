@@ -4,20 +4,29 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from codas.adapters.markdown import DocClaim, extract_doc_claims
-from codas.adapters.python import SymbolFact, SymbolFacts, extract_symbol_facts
+from codas.adapters.python import (
+    ImportFact,
+    ImportFacts,
+    SymbolFact,
+    SymbolFacts,
+    extract_import_facts,
+    extract_symbol_facts,
+)
 from codas.config.loader import CodasConfig
 from codas.structure.index import discover_files, workspace_roots
 
 # The facts seam surfaces the normalized fact vocabulary so policies can name the
-# fact types (DocClaim/SymbolFact) without importing an ecosystem adapter. The
-# dataclasses physically live in codas.adapters today; relocating them into a
-# neutral codas.facts types module is a later cleanup (P3-follow-up).
+# fact types (DocClaim/SymbolFact/ImportFact) without importing an ecosystem
+# adapter. The dataclasses physically live in codas.adapters today; relocating them
+# into a neutral codas.facts types module is a later cleanup (P3-follow-up).
 __all__ = [
     "ScanContext",
     "build_scan_context",
     "DocClaim",
     "SymbolFact",
     "SymbolFacts",
+    "ImportFact",
+    "ImportFacts",
 ]
 
 
@@ -55,6 +64,12 @@ class ScanContext:
         if "symbols" not in self._cache:
             self._cache["symbols"] = extract_symbol_facts(self.repo, self.files)
         return self._cache["symbols"]
+
+    def imports(self) -> ImportFacts:
+        """Python import (reference) facts for the scanned tree (cached, adapter-sorted)."""
+        if "imports" not in self._cache:
+            self._cache["imports"] = extract_import_facts(self.repo, self.files)
+        return self._cache["imports"]
 
 
 def build_scan_context(repo: Path, config: CodasConfig) -> ScanContext:

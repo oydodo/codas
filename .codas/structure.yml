@@ -300,6 +300,10 @@ dependency_rules:
     must_not_depend_on:
       - role-integrations
 
+  codas-policies:
+    must_not_depend_on:
+      - codas-adapters
+
   atlas-wiki:
     may_depend_on:
       - codas-docs

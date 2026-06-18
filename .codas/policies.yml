@@ -42,6 +42,10 @@ policies:
     severity: error
     description: New artifacts must not be added under deprecated or removed paths in the Structure Map.
 
+  dependency_direction:
+    severity: error
+    description: A module must not import a Structure Map unit declared in its owning unit's must_not_depend_on (e.g. codas-policies must not import codas-adapters); evidence is the offending Python import.
+
   constraint_conflict:
     severity: error
     description: Conflicting authoritative claims must be resolved or explicitly waived.

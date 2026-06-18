@@ -45,6 +45,7 @@ class CodasCheckTests(unittest.TestCase):
         self.assertNotIn("duplicate-symbol", ids)
         self.assertNotIn("duplicate-implementation", ids)
         self.assertNotIn("claim-schema-invalid", ids)
+        self.assertNotIn("dependency-direction", ids)
 
     def test_scan_context_built_once_and_forwarded_to_policies(self) -> None:
         # P3 orchestration contract: run_check builds exactly one ScanContext and
@@ -56,11 +57,13 @@ class CodasCheckTests(unittest.TestCase):
             "codas.app.check.check_duplicate_symbol", return_value=[]
         ) as dup_symbol, mock.patch(
             "codas.app.check.check_duplicate_implementation", return_value=[]
-        ) as dup_impl:
+        ) as dup_impl, mock.patch(
+            "codas.app.check.check_dependency_direction", return_value=[]
+        ) as dep_dir:
             run_check(repo)
 
         self.assertEqual(build.call_count, 1)
-        for spy in (stale, dup_symbol, dup_impl):
+        for spy in (stale, dup_symbol, dup_impl, dep_dir):
             self.assertEqual(spy.call_count, 1)
             self.assertIs(spy.call_args.args[0], build.return_value)
 
