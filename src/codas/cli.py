@@ -63,7 +63,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "check":
         report = run_check(repo)
         if args.json:
-            print(json.dumps(report.to_json(), indent=2, sort_keys=True))
+            from .app.provenance import compute_provenance
+
+            payload = report.to_json()
+            payload["provenance"] = compute_provenance(repo)
+            print(json.dumps(payload, indent=2, sort_keys=True))
         else:
             print_findings(report.findings)
         if not args.no_exit_code and report.has_errors:
