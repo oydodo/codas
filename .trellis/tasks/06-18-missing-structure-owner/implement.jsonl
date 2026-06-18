@@ -1,0 +1,3 @@
+{"file": "src/codas/structure/index.py", "reason": "build_artifact_index.unowned is the firing set; normalize_path for candidate scoring"}
+{"file": "src/codas/app/check.py", "reason": "Wire check_missing_structure_owner into run_check"}
+{"file": "src/codas/policies/deprecated_path.py", "reason": "Sibling policy style: guard + load_structure_map + discover_files"}

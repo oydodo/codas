@@ -64,6 +64,7 @@ work_items:
       - program:P1:structure-map-foundation
     trellis_tasks:
       - 06-18-stale-claim-and-deprecated-path
+      - 06-18-missing-structure-owner
     deliverables:
       - Stale claim policy
       - Orphan artifact policy

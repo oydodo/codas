@@ -39,6 +39,7 @@ class CodasCheckTests(unittest.TestCase):
 
         self.assertNotIn("stale-claim", ids)
         self.assertNotIn("deprecated-path-used", ids)
+        self.assertNotIn("missing-structure-owner", ids)
 
     def test_missing_declared_authoritative_source_is_error(self) -> None:
         with codas_fixture() as repo:
