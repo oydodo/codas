@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from .app.check import run_check
-from .reporting.console import print_findings
+from .reporting.console import print_context_pack, print_findings
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,7 +48,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     preflight = subparsers.add_parser("preflight", help="Generate task preflight context.")
     preflight.add_argument("repo", nargs="?", default=".")
-    preflight.add_argument("--task", help="Task path or name.")
+    preflight.add_argument("--task", help="Task id to assemble context for.")
+    preflight.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the context pack as JSON.",
+    )
 
     wiki = subparsers.add_parser("wiki", help="Generate or verify Atlas Wiki.")
     wiki.add_argument("repo", nargs="?", default=".")
@@ -104,7 +109,26 @@ def main(argv: list[str] | None = None) -> int:
             print(render_inventory_summary(inventory))
         return 0
 
-    if args.command in {"preflight", "wiki", "doctor"}:
+    if args.command == "preflight":
+        import sys
+
+        from .app.preflight import build_context_pack
+        from .config.loader import ConfigLoadError
+        from .structure.loader import StructureMapError
+
+        try:
+            pack = build_context_pack(repo, task_id=args.task)
+        except (ConfigLoadError, StructureMapError) as error:
+            # preflight is a precondition tool: a broken .codas can't be preflighted.
+            print(f"preflight: {error}", file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(pack, indent=2, sort_keys=True))
+        else:
+            print_context_pack(pack)
+        return 0
+
+    if args.command in {"wiki", "doctor"}:
         parser.error(f"{args.command} is planned but not implemented in P0.")
 
     parser.error(f"unknown command: {args.command}")

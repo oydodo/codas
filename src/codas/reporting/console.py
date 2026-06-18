@@ -23,3 +23,23 @@ def print_findings(findings: list[Finding]) -> None:
         if finding.recommendation:
             print(f"  Fix: {finding.recommendation}")
         print()
+
+
+def print_context_pack(pack: dict) -> None:
+    """Human summary of a preflight Context Pack."""
+    task = pack.get("task")
+    print(f"Task: {task['id']} ({task['status']})" if task else "Task: (none)")
+
+    provenance = pack.get("provenance", {})
+    print(f"Inventory: {provenance.get('inventory_hash')}")
+    print(f"Policies:  {provenance.get('policy_version')}")
+
+    print("Read first:")
+    for source in pack.get("read_first", []):
+        print(f"  - {source}")
+    if pack.get("dogfooding_protocol"):
+        print(f"  - {pack['dogfooding_protocol']}")
+
+    print(f"Active policies: {len(pack.get('policies', []))}")
+    for policy in pack.get("policies", []):
+        print(f"  - {policy['id']} ({policy['severity']})")

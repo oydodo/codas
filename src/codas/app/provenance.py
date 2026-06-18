@@ -27,13 +27,21 @@ def compute_provenance(repo: Path) -> dict[str, str | None]:
     broken ``policies.yml``/``structure.yml`` must not abort the report (``run_check``
     already surfaces that as a load-error finding).
     """
+    inventory_json = _safe(lambda: render_inventory_json(run_inventory(repo)))
+    policies = _safe(lambda: load_policies(repo / ".codas" / "policies.yml"))
+    return provenance_block(inventory_json, policies)
+
+
+def provenance_block(inventory_json: str | None, policies_raw: dict | None) -> dict[str, str | None]:
+    """Build the provenance dict from already-loaded inputs (the single shape).
+
+    Shared by ``compute_provenance`` (best-effort, may pass ``None`` inputs) and the
+    preflight context pack (which passes its own single inventory snapshot), so the
+    two cannot drift in shape or hashing.
+    """
     return {
-        "inventory_hash": _safe(
-            lambda: inventory_hash(render_inventory_json(run_inventory(repo)))
-        ),
-        "policy_version": _safe(
-            lambda: policy_version(load_policies(repo / ".codas" / "policies.yml"))
-        ),
+        "inventory_hash": inventory_hash(inventory_json) if inventory_json is not None else None,
+        "policy_version": policy_version(policies_raw) if policies_raw is not None else None,
     }
 
 
