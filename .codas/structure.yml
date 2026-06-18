@@ -144,6 +144,7 @@ units:
       - codas-reporting
       - codas-structure-module
       - codas-adapters
+      - codas-facts
       - role-contracts
       - role-integrations
     must_update_if_changed:
@@ -215,6 +216,16 @@ units:
     owner: Codas Core
     purpose: Markdown and Trellis adapters extracting doc claims and task facts for the Atlas inventory.
     canonical_placement: Source and format adapters belong under src/codas/adapters.
+    status: active
+    must_update_if_changed:
+      - docs/codas-implementation-plan.html
+
+  codas-facts:
+    path: src/codas/facts
+    kind: facts_module
+    owner: Codas Core
+    purpose: Fact-provider seam (ScanContext) normalizing adapter output into facts the policy engine consumes without importing adapters.
+    canonical_placement: The fact-provider layer between adapters and the policy engine belongs under src/codas/facts.
     status: active
     must_update_if_changed:
       - docs/codas-implementation-plan.html

@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from codas.app.check import run_check
 from codas.config.loader import load_codas_config
@@ -44,6 +45,19 @@ class CodasCheckTests(unittest.TestCase):
         self.assertNotIn("duplicate-symbol", ids)
         self.assertNotIn("duplicate-implementation", ids)
         self.assertNotIn("claim-schema-invalid", ids)
+
+    def test_scan_context_built_once_and_forwarded_to_stale_claim(self) -> None:
+        # P3 orchestration contract: run_check builds exactly one ScanContext and
+        # threads that same object into the migrated stale_claim policy.
+        repo = Path.cwd()
+        with mock.patch("codas.app.check.build_scan_context") as build, mock.patch(
+            "codas.app.check.check_stale_claim", return_value=[]
+        ) as stale:
+            run_check(repo)
+
+        self.assertEqual(build.call_count, 1)
+        self.assertEqual(stale.call_count, 1)
+        self.assertIs(stale.call_args.args[0], build.return_value)
 
     def test_missing_declared_authoritative_source_is_error(self) -> None:
         with codas_fixture() as repo:

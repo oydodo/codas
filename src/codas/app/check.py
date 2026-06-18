@@ -4,6 +4,7 @@ from pathlib import Path
 
 from codas.config.loader import ConfigLoadError, load_codas_config, load_policies, load_waivers
 from codas.core.models import CheckReport, Evidence, Finding
+from codas.facts.context import build_scan_context
 from codas.policies.config_sources import check_config_sources
 from codas.policies.deprecated_path import check_deprecated_path_used
 from codas.policies.duplicate_implementation import check_duplicate_implementation
@@ -36,6 +37,8 @@ def run_check(repo: Path) -> CheckReport:
         )
         return CheckReport(repo=repo.as_posix(), findings=findings)
 
+    ctx = build_scan_context(repo, config)
+
     findings.extend(check_config_sources(repo, config))
     findings.extend(check_dogfooding_protocol(repo, config))
     findings.extend(check_trellis_context(repo, config))
@@ -45,7 +48,7 @@ def run_check(repo: Path) -> CheckReport:
     findings.extend(check_deprecated_path_used(repo, config))
     findings.extend(check_program_plan(repo, config))
     findings.extend(check_document_set(repo, config))
-    findings.extend(check_stale_claim(repo, config))
+    findings.extend(check_stale_claim(ctx))
     findings.extend(check_duplicate_symbol(repo, config))
     findings.extend(check_duplicate_implementation(repo, config))
 

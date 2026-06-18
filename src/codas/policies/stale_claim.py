@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from codas.adapters.markdown import extract_doc_claims
-from codas.config.loader import CodasConfig
 from codas.core.models import Evidence, Finding
-from codas.structure.index import discover_files, workspace_roots
+from codas.facts.context import ScanContext
 
 
-def check_stale_claim(repo: Path, config: CodasConfig) -> list[Finding]:
+def check_stale_claim(ctx: ScanContext) -> list[Finding]:
     """Flag Markdown link references whose target path no longer exists (stale_claim).
 
     First Implementation (plan §10): "Markdown path references point to existing
@@ -16,10 +12,11 @@ def check_stale_claim(repo: Path, config: CodasConfig) -> list[Finding]:
     commitment, whereas a backtick code span is a prose mention that is routinely
     illustrative and produces false positives. Code-span path mentions and fragment
     anchors are the §10 Later Expansion. Whole working tree, no diff, deterministic.
+
+    Consumes normalized doc-claim facts from the `ScanContext` (plan §11 Adapter
+    Boundary) — it does not import the Markdown adapter itself.
     """
-    roots = workspace_roots(config.raw)
-    files = discover_files(repo, roots)
-    claims = extract_doc_claims(repo, tuple(files))
+    claims = ctx.doc_claims()
 
     findings = [
         Finding(
