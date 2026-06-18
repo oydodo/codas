@@ -46,18 +46,23 @@ class CodasCheckTests(unittest.TestCase):
         self.assertNotIn("duplicate-implementation", ids)
         self.assertNotIn("claim-schema-invalid", ids)
 
-    def test_scan_context_built_once_and_forwarded_to_stale_claim(self) -> None:
+    def test_scan_context_built_once_and_forwarded_to_policies(self) -> None:
         # P3 orchestration contract: run_check builds exactly one ScanContext and
-        # threads that same object into the migrated stale_claim policy.
+        # threads that same object into every fact-consuming policy.
         repo = Path.cwd()
         with mock.patch("codas.app.check.build_scan_context") as build, mock.patch(
             "codas.app.check.check_stale_claim", return_value=[]
-        ) as stale:
+        ) as stale, mock.patch(
+            "codas.app.check.check_duplicate_symbol", return_value=[]
+        ) as dup_symbol, mock.patch(
+            "codas.app.check.check_duplicate_implementation", return_value=[]
+        ) as dup_impl:
             run_check(repo)
 
         self.assertEqual(build.call_count, 1)
-        self.assertEqual(stale.call_count, 1)
-        self.assertIs(stale.call_args.args[0], build.return_value)
+        for spy in (stale, dup_symbol, dup_impl):
+            self.assertEqual(spy.call_count, 1)
+            self.assertIs(spy.call_args.args[0], build.return_value)
 
     def test_missing_declared_authoritative_source_is_error(self) -> None:
         with codas_fixture() as repo:

@@ -49,8 +49,8 @@ def run_check(repo: Path) -> CheckReport:
     findings.extend(check_program_plan(repo, config))
     findings.extend(check_document_set(repo, config))
     findings.extend(check_stale_claim(ctx))
-    findings.extend(check_duplicate_symbol(repo, config))
-    findings.extend(check_duplicate_implementation(repo, config))
+    findings.extend(check_duplicate_symbol(ctx))
+    findings.extend(check_duplicate_implementation(ctx))
 
     policies_path = repo / ".codas" / "policies.yml"
     try:

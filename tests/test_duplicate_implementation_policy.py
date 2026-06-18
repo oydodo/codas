@@ -5,11 +5,16 @@ import unittest
 from pathlib import Path
 
 from codas.config.loader import CodasConfig
+from codas.facts.context import ScanContext, build_scan_context
 from codas.policies.duplicate_implementation import check_duplicate_implementation
 
 
 def _config(repo: Path) -> CodasConfig:
     return CodasConfig(path=repo / ".codas" / "config.yml", raw={})
+
+
+def _ctx(repo: Path) -> ScanContext:
+    return build_scan_context(repo, _config(repo))
 
 
 def _write(path: Path, text: str) -> None:
@@ -40,7 +45,7 @@ class DuplicateImplementationPolicyTests(unittest.TestCase):
             _write(repo / "src" / "a.py", "def handle():\n    pass\n\n\ndef _helper():\n    pass\n")
             _write(repo / "src" / "b.py", "def handle():\n    pass\n\n\ndef _helper():\n    pass\n")
 
-            findings = check_duplicate_implementation(repo, _config(repo))
+            findings = check_duplicate_implementation(_ctx(repo))
 
             self.assertEqual({f.check_id for f in findings}, {"duplicate-implementation"})
             self.assertEqual([f.meta["name"] for f in findings], ["_helper", "handle"])
@@ -56,7 +61,7 @@ class DuplicateImplementationPolicyTests(unittest.TestCase):
                 _claims(_claim("_helper", ["src/a.py", "src/b.py"])),
             )
 
-            findings = check_duplicate_implementation(repo, _config(repo))
+            findings = check_duplicate_implementation(_ctx(repo))
 
             # _helper claimed for exactly these modules → suppressed; other errors
             self.assertEqual([f.meta["name"] for f in findings], ["other"])
@@ -72,7 +77,7 @@ class DuplicateImplementationPolicyTests(unittest.TestCase):
                 _claims(_claim("dup", ["src/a.py", "src/c.py"])),
             )
 
-            findings = check_duplicate_implementation(repo, _config(repo))
+            findings = check_duplicate_implementation(_ctx(repo))
 
             self.assertEqual([f.meta["name"] for f in findings], ["dup"])
 
@@ -87,7 +92,7 @@ class DuplicateImplementationPolicyTests(unittest.TestCase):
                 "  - symbol: dup\n    relationship: variant\n    owner: Core\n    reason: y\n",
             )
 
-            ids = [f.check_id for f in check_duplicate_implementation(repo, _config(repo))]
+            ids = [f.check_id for f in check_duplicate_implementation(_ctx(repo))]
 
             # one schema error for the modules-less claim, and dup is still flagged
             self.assertEqual(ids, ["claim-schema-invalid", "duplicate-implementation"])
@@ -101,7 +106,7 @@ class DuplicateImplementationPolicyTests(unittest.TestCase):
             _write(repo / ".trellis" / "scripts" / "p.py", "def go():\n    pass\n")
             _write(repo / ".trellis" / "scripts" / "q.py", "def go():\n    pass\n")
 
-            self.assertEqual(check_duplicate_implementation(repo, _config(repo)), [])
+            self.assertEqual(check_duplicate_implementation(_ctx(repo)), [])
 
     def test_missing_claims_file_does_not_crash(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -109,7 +114,7 @@ class DuplicateImplementationPolicyTests(unittest.TestCase):
             _write(repo / "src" / "a.py", "def dup():\n    pass\n")
             _write(repo / "src" / "b.py", "def dup():\n    pass\n")
 
-            findings = check_duplicate_implementation(repo, _config(repo))
+            findings = check_duplicate_implementation(_ctx(repo))
 
             self.assertEqual([f.meta["name"] for f in findings], ["dup"])
 
@@ -118,7 +123,7 @@ class DuplicateImplementationPolicyTests(unittest.TestCase):
             repo = Path(directory)
             _write(repo / ".codas" / "claims.yml", "version: 1\nkind: claim_set\nduplicate_relationships: nope\n")
 
-            findings = check_duplicate_implementation(repo, _config(repo))
+            findings = check_duplicate_implementation(_ctx(repo))
 
             self.assertEqual([f.check_id for f in findings], ["claim-schema-invalid"])
 
@@ -132,7 +137,7 @@ class DuplicateImplementationPolicyTests(unittest.TestCase):
                 "  - relationship: variant\n    owner: Core\n    reason: y\n",
             )
 
-            ids = [f.check_id for f in check_duplicate_implementation(repo, _config(repo))]
+            ids = [f.check_id for f in check_duplicate_implementation(_ctx(repo))]
 
             self.assertEqual(ids, ["claim-schema-invalid", "claim-schema-invalid"])
 
@@ -141,7 +146,7 @@ class DuplicateImplementationPolicyTests(unittest.TestCase):
             repo = Path(directory)
             _write(repo / ".codas" / "claims.yml", "version: 1\n  bad: indent\n")
 
-            findings = check_duplicate_implementation(repo, _config(repo))
+            findings = check_duplicate_implementation(_ctx(repo))
 
             self.assertEqual([f.check_id for f in findings], ["claims-load-error"])
 

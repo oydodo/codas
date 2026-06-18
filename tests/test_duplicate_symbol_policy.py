@@ -5,11 +5,16 @@ import unittest
 from pathlib import Path
 
 from codas.config.loader import CodasConfig
+from codas.facts.context import ScanContext, build_scan_context
 from codas.policies.duplicate_symbol import check_duplicate_symbol
 
 
 def _config(repo: Path) -> CodasConfig:
     return CodasConfig(path=repo / ".codas" / "config.yml", raw={})
+
+
+def _ctx(repo: Path) -> ScanContext:
+    return build_scan_context(repo, _config(repo))
 
 
 def _write(path: Path, text: str) -> None:
@@ -24,7 +29,7 @@ class DuplicateSymbolPolicyTests(unittest.TestCase):
             _write(repo / "src" / "a.py", "def handle():\n    pass\n")
             _write(repo / "src" / "b.py", "def handle():\n    pass\n")
 
-            findings = check_duplicate_symbol(repo, _config(repo))
+            findings = check_duplicate_symbol(_ctx(repo))
 
             self.assertEqual(len(findings), 1)
             finding = findings[0]
@@ -43,7 +48,7 @@ class DuplicateSymbolPolicyTests(unittest.TestCase):
             _write(repo / "src" / "a.py", "class Widget:\n    pass\n")
             _write(repo / "src" / "pkg" / "b.py", "class Widget:\n    pass\n")
 
-            findings = check_duplicate_symbol(repo, _config(repo))
+            findings = check_duplicate_symbol(_ctx(repo))
 
             self.assertEqual(len(findings), 1)
             self.assertEqual(findings[0].meta["name"], "Widget")
@@ -55,14 +60,14 @@ class DuplicateSymbolPolicyTests(unittest.TestCase):
             _write(repo / "src" / "a.py", "def _rel():\n    pass\n")
             _write(repo / "src" / "b.py", "def _rel():\n    pass\n")
 
-            self.assertEqual(check_duplicate_symbol(repo, _config(repo)), [])
+            self.assertEqual(check_duplicate_symbol(_ctx(repo)), [])
 
     def test_single_definition_is_not_flagged(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             _write(repo / "src" / "a.py", "def only():\n    pass\n")
 
-            self.assertEqual(check_duplicate_symbol(repo, _config(repo)), [])
+            self.assertEqual(check_duplicate_symbol(_ctx(repo)), [])
 
     def test_test_helpers_are_out_of_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -70,7 +75,7 @@ class DuplicateSymbolPolicyTests(unittest.TestCase):
             _write(repo / "tests" / "x.py", "def helper():\n    pass\n")
             _write(repo / "tests" / "y.py", "def helper():\n    pass\n")
 
-            self.assertEqual(check_duplicate_symbol(repo, _config(repo)), [])
+            self.assertEqual(check_duplicate_symbol(_ctx(repo)), [])
 
     def test_vendored_trellis_scripts_out_of_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -78,7 +83,7 @@ class DuplicateSymbolPolicyTests(unittest.TestCase):
             _write(repo / ".trellis" / "scripts" / "a.py", "def go():\n    pass\n")
             _write(repo / ".trellis" / "scripts" / "b.py", "def go():\n    pass\n")
 
-            self.assertEqual(check_duplicate_symbol(repo, _config(repo)), [])
+            self.assertEqual(check_duplicate_symbol(_ctx(repo)), [])
 
     def test_cross_kind_same_name_groups_into_one_finding(self) -> None:
         # class Foo in one module + def Foo in another → one duplicate-symbol
@@ -88,7 +93,7 @@ class DuplicateSymbolPolicyTests(unittest.TestCase):
             _write(repo / "src" / "a.py", "class Foo:\n    pass\n")
             _write(repo / "src" / "b.py", "def Foo():\n    pass\n")
 
-            findings = check_duplicate_symbol(repo, _config(repo))
+            findings = check_duplicate_symbol(_ctx(repo))
 
             self.assertEqual(len(findings), 1)
             self.assertEqual(
@@ -103,14 +108,14 @@ class DuplicateSymbolPolicyTests(unittest.TestCase):
             _write(repo / "src" / "a.py", "def Thing():\n    pass\n")
             _write(repo / "src" / "pkg.py", "from .a import Thing\n")
 
-            self.assertEqual(check_duplicate_symbol(repo, _config(repo)), [])
+            self.assertEqual(check_duplicate_symbol(_ctx(repo)), [])
 
     def test_same_name_twice_in_one_module_is_not_cross_module(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             _write(repo / "src" / "a.py", "def dup():\n    pass\n\n\ndef dup():\n    pass\n")
 
-            self.assertEqual(check_duplicate_symbol(repo, _config(repo)), [])
+            self.assertEqual(check_duplicate_symbol(_ctx(repo)), [])
 
     def test_findings_sorted_by_name(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -118,7 +123,7 @@ class DuplicateSymbolPolicyTests(unittest.TestCase):
             _write(repo / "src" / "a.py", "def zeta():\n    pass\n\n\ndef alpha():\n    pass\n")
             _write(repo / "src" / "b.py", "def zeta():\n    pass\n\n\ndef alpha():\n    pass\n")
 
-            findings = check_duplicate_symbol(repo, _config(repo))
+            findings = check_duplicate_symbol(_ctx(repo))
 
             self.assertEqual([f.meta["name"] for f in findings], ["alpha", "zeta"])
 

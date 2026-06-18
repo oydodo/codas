@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from pathlib import Path
 
-from codas.adapters.python import SymbolFact, extract_symbol_facts
-from codas.config.loader import CodasConfig, ConfigLoadError, load_claims
+from codas.config.loader import ConfigLoadError, load_claims
 from codas.core.models import Evidence, Finding
-from codas.structure.index import discover_files, workspace_roots
+from codas.facts.context import ScanContext, SymbolFact
 
 CLAIMS_SOURCE = ".codas/claims.yml"
 SCOPE_PREFIX = "src/"
 VALID_RELATIONSHIPS = frozenset({"canonical", "variant", "migration"})
 
 
-def check_duplicate_implementation(repo: Path, config: CodasConfig) -> list[Finding]:
+def check_duplicate_implementation(ctx: ScanContext) -> list[Finding]:
     """Flag top-level symbols implemented in 2+ src modules without a declared claim.
 
     Schema §8 / plan §10 ``duplicate_implementation``: "Repeated symbols ... require
@@ -23,8 +21,12 @@ def check_duplicate_implementation(repo: Path, config: CodasConfig) -> list[Find
     a symbol named in a valid ``.codas/claims.yml`` ``duplicate_relationships``
     entry is suppressed. Deterministic, no LLM (§17). Supersedes the warning-only
     ``duplicate_symbol`` first cut now that a claim suppression surface exists.
+
+    Symbol facts come from the `ScanContext` (plan §11 Adapter Boundary) — the
+    policy imports no adapter. Claim loading stays policy-local: claims are
+    governance input, not a scanned fact, so the facts provider never absorbs it.
     """
-    claims_path = repo / ".codas" / "claims.yml"
+    claims_path = ctx.repo / ".codas" / "claims.yml"
     claimed: dict[str, set[frozenset[str]]] = {}
     findings: list[Finding] = []
 
@@ -43,9 +45,7 @@ def check_duplicate_implementation(repo: Path, config: CodasConfig) -> list[Find
         schema_findings, claimed = _read_relationships(claims_doc)
         findings.extend(schema_findings)
 
-    roots = workspace_roots(config.raw)
-    files = discover_files(repo, roots)
-    facts = extract_symbol_facts(repo, tuple(files))
+    facts = ctx.symbols()
 
     by_name: dict[str, list[SymbolFact]] = defaultdict(list)
     for definition in facts.definitions:
