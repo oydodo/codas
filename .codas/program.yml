@@ -109,6 +109,7 @@ work_items:
       - program:P3:adapter-extraction
     trellis_tasks:
       - 06-18-provenance-hashes
+      - 06-18-receipt-ledger
     deliverables:
       - Task context pack
       - Receipt ledger
