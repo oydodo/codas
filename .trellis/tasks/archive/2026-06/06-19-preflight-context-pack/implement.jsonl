@@ -1,0 +1,2 @@
+{"file": "src/codas/cli.py", "reason": "implement preflight command"}
+{"file": "src/codas/reporting/console.py", "reason": "print_context_pack summary"}
