@@ -152,17 +152,20 @@ work_items:
     phase: P6
     title: Enforcement integrations
     theme: Enforcement integrations
-    status: planned
+    status: completed
     depends_on:
       - program:P5:wiki-reconciliation
-    trellis_tasks: []
+    trellis_tasks:
+      - 06-20-codas-doctor
+      - 06-20-enforcement-gates
+      - 06-20-codas-init
     deliverables:
-      - Pre-commit gate
-      - Pre-push gate
-      - GitHub Action
-      - Trellis hooks
+      - "Installation diagnostics (S1): codas doctor [--json] -- read-only health check (config/policies/waivers/structure load, config-declared optional sources, Trellis tasks root, git work tree, removed-prototype leftovers); exits 1 on any fail. Distinct from check's governance policies."
+      - "Enforcement gates (S2): committed GitHub Action .github/workflows/codas.yml runs the bootstrap tests + codas check on push/PR (blocks a bad PR); codas hooks --install writes pre-commit/pre-push hooks that run codas check (blocks a bad commit) -- honors core.hooksPath, preserves foreign hooks, --command overrides the runner. Backed by src/codas/integrations (role-integrations unit, now active); enforcement.py shells out to codas check (never imports the core, §11), routed via app/hooks.py so the CLI does not cross the codas-source -> role-integrations boundary."
+      - "Scaffold (S3): codas init [--force] scaffolds a minimal valid .codas/ skeleton (config/policies/structure/waivers) -- the inverse of doctor; no-clobber + symlink-safe."
+      - "Trellis hooks: Trellis lifecycle hooks are non-blocking by design (warn, never block), so the blocking enforcement is the git hooks + GitHub Action above; a documented opt-in recipe for wiring codas preflight/check into .trellis/config.yaml hooks is provided (commented) rather than self-activated."
     exit_criteria:
-      - Codas can block a bad PR or commit with evidence-backed findings
+      - Codas can block a bad PR or commit with evidence-backed findings (GitHub Action gates the PR; the installed pre-commit/pre-push hooks gate the commit/push)
 
   - id: program:P7:agent-query-interface
     phase: P7

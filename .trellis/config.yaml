@@ -49,6 +49,17 @@ max_journal_lines: 2000
 #     - "echo 'Task finished'"
 #   after_archive:
 #     - "echo 'Task archived'"
+#
+# Codas integration recipe (P6, opt-in). Trellis hooks are non-blocking (a failure
+# warns, does not block), so use them for advisory context/verification; the BLOCKING
+# gates are the git pre-commit/pre-push hooks (`codas hooks --install`) and the GitHub
+# Action (.github/workflows/codas.yml). In a source checkout, prefix with
+# `PYTHONPATH=src python3 -m codas`; with codas on PATH, just `codas`.
+# hooks:
+#   after_start:
+#     - "PYTHONPATH=src python3 -m codas preflight . --task \"$(basename \"$(dirname \"$TASK_JSON_PATH\")\")\""
+#   after_archive:
+#     - "PYTHONPATH=src python3 -m codas check ."
 
 #-------------------------------------------------------------------------------
 # Monorepo / Packages

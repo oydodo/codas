@@ -1448,8 +1448,8 @@ git status --short</code></pre>
           </tr>
           <tr>
             <td>P6</td>
-            <td>强化执行边界（enforcement integrations，<em>planned</em>）。</td>
-            <td>GitHub Action（committed <code>.github/workflows/codas.yml</code>，gate <code>codas check</code>）与 git pre-commit/pre-push hook installer（<code>codas hooks --install</code>）已实现（P6 S2）；<code>codas doctor</code>（P6 S1，只读诊断）+ <code>codas init</code>（P6 S3，scaffold <code>.codas/</code>）已实现。Trellis-native hooks 仍待建。</td>
+            <td>强化执行边界（enforcement integrations，<em>completed</em>；status owned by <code>.codas/program.yml</code>）。</td>
+            <td>GitHub Action（committed <code>.github/workflows/codas.yml</code>，gate <code>codas check</code>）与 git pre-commit/pre-push hook installer（<code>codas hooks --install</code>）已实现（P6 S2）；<code>codas doctor</code>（P6 S1，只读诊断）+ <code>codas init</code>（P6 S3，scaffold <code>.codas/</code>）已实现。Trellis lifecycle hooks 是 non-blocking 设计，故阻断式 gate 由 git hooks + Action 承担；Trellis 集成以注释 recipe 形式提供（<code>.trellis/config.yaml</code> hooks）。</td>
           </tr>
           <tr>
             <td>P7</td>
