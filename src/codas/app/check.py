@@ -14,6 +14,7 @@ from codas.policies.document_set import check_document_set
 from codas.policies.dogfooding import check_dogfooding_protocol
 from codas.policies.missing_owner import check_missing_structure_owner
 from codas.policies.program_plan import check_program_plan
+from codas.policies.spec_drift import check_spec_drift
 from codas.policies.stale_claim import check_stale_claim
 from codas.policies.stale_wiki_claim import check_stale_wiki_claim
 from codas.policies.structure_drift import check_structure_drift
@@ -55,6 +56,7 @@ def run_check(repo: Path) -> CheckReport:
     findings.extend(check_duplicate_implementation(ctx))
     findings.extend(check_dependency_direction(ctx))
     findings.extend(check_stale_wiki_claim(ctx))
+    findings.extend(check_spec_drift(ctx))
 
     policies_path = repo / ".codas" / "policies.yml"
     try:

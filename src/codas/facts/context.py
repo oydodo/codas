@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from codas.adapters.git import extract_changed_paths
 from codas.adapters.markdown import DocClaim, extract_doc_claims
 from codas.adapters.callgraph import CallFact, CallFacts, extract_call_facts
 from codas.adapters.python import (
@@ -91,6 +92,17 @@ class ScanContext:
         if "calls" not in self._cache:
             self._cache["calls"] = extract_call_facts(self.repo, self.files)
         return self._cache["calls"]
+
+    def changed_paths(self) -> tuple[str, ...]:
+        """Working-tree paths differing from HEAD (cached; git diff substrate).
+
+        Policy-time fact consumed by ``spec_drift``; deliberately *not* serialized
+        into ``inventory`` — it reflects dirty working-tree state and would break the
+        byte-identical inventory invariant.
+        """
+        if "changed_paths" not in self._cache:
+            self._cache["changed_paths"] = extract_changed_paths(self.repo)
+        return self._cache["changed_paths"]
 
 
 def build_scan_context(repo: Path, config: CodasConfig) -> ScanContext:

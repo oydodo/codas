@@ -62,11 +62,13 @@ class CodasCheckTests(unittest.TestCase):
             "codas.app.check.check_dependency_direction", return_value=[]
         ) as dep_dir, mock.patch(
             "codas.app.check.check_stale_wiki_claim", return_value=[]
-        ) as stale_wiki:
+        ) as stale_wiki, mock.patch(
+            "codas.app.check.check_spec_drift", return_value=[]
+        ) as spec_drift:
             run_check(repo)
 
         self.assertEqual(build.call_count, 1)
-        for spy in (stale, dup_symbol, dup_impl, dep_dir, stale_wiki):
+        for spy in (stale, dup_symbol, dup_impl, dep_dir, stale_wiki, spec_drift):
             self.assertEqual(spy.call_count, 1)
             self.assertIs(spy.call_args.args[0], build.return_value)
 

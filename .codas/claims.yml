@@ -50,3 +50,20 @@ duplicate_relationships:
       - src/codas/structure/document_loader.py
       - src/codas/structure/loader.py
       - src/codas/structure/program_loader.py
+
+# Vouched drift couplings for the spec_drift policy (§ change propagation). A
+# coupling is a *gating* co-change rule whose materiality an agent or human has
+# judged and recorded here: when a change site appears in the working-tree-vs-HEAD
+# diff, the required reactions must appear in the same diff or spec_drift reports an
+# error. This is the deterministic half of drift control — Codas grounds the diff and
+# verifies the coupling; the host agent supplies the semantic judgment by authoring
+# the coupling. The coarse structure.yml `must_update_if_changed` stays advisory and
+# is NOT gated; promote a genuinely material hint into a coupling here when it earns a
+# hard gate. No couplings are declared yet (the policy returns nothing until one is).
+#
+# drift_couplings:
+#   - when_changed: src/codas/policies/duplicate_implementation.py
+#     requires:
+#       - .codas/claims.yml
+#     owner: Policy Maintainer
+#     reason: The duplicate_implementation suppression schema is defined by its claims.
