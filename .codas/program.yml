@@ -127,6 +127,7 @@ work_items:
       - program:P4:preflight-receipts
     trellis_tasks:
       - 06-19-wiki-claim-parser
+      - 06-19-stale-wiki-claim
     deliverables:
       - Wiki claim parser
       - Generated wiki sections
