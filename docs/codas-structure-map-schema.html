@@ -237,11 +237,11 @@
       <section class="meta" aria-label="文档元信息">
         <div>
           <span class="label">Status</span>
-          <span class="value">Schema Design</span>
+          <span class="value">Implemented (stable)</span>
         </div>
         <div>
           <span class="label">Date</span>
-          <span class="value">2026-06-17</span>
+          <span class="value">2026-06-20</span>
         </div>
         <div>
           <span class="label">Authored Form</span>
@@ -401,7 +401,7 @@ deprecated_paths:
           <tr>
             <td><code>must_update_if_changed</code></td>
             <td>No</td>
-            <td>Docs, specs, wiki pages or config files that should change when this unit changes materially.</td>
+            <td>Docs, specs, wiki pages or config files that should change when this unit changes <em>materially</em>. Direction: the unit change is the trigger; the listed paths are the required reactions. Because materiality is a per-coupling judgment, the <code>spec_drift</code> policy treats this list as <strong>advisory</strong> (it is not auto-gated); the gating co-change rule is a vouched <code>drift_couplings</code> entry in <code>.codas/claims.yml</code>, verified against the working-tree diff. See the decision record <code>.trellis/tasks/archive/2026-06/06-19-spec-drift/design.md</code>.</td>
           </tr>
           <tr>
             <td><code>evidence</code></td>
@@ -415,7 +415,7 @@ deprecated_paths:
     <section>
       <h2>5. Normalized JSON Shape</h2>
       <p>
-        Future <code>codas inventory</code> should normalize authored entries into deterministic JSON.
+        <code>codas inventory --json</code> normalizes authored entries into deterministic JSON.
         The normalized form keeps exact evidence, resolved paths and derived relationships for policy checks.
       </p>
       <pre><code>{
@@ -511,6 +511,11 @@ deprecated_paths:
             <td>New files must not be added under deprecated or removed paths.</td>
             <td>Error with replacement path when known.</td>
           </tr>
+          <tr>
+            <td><code>dependency_direction</code></td>
+            <td>A module must not import a unit listed in its owning unit's <code>must_not_depend_on</code>.</td>
+            <td>Error with the offending Python import as evidence.</td>
+          </tr>
         </tbody>
       </table>
     </section>
@@ -532,7 +537,7 @@ deprecated_paths:
         <li>Add <code>docs/codas-structure-map-schema.html</code> to authoritative sources.</li>
         <li>Add <code>.codas/structure.yml</code> to authoritative sources.</li>
         <li>Add Atlas Wiki navigation for Repository Structure.</li>
-        <li>Load the map via <code>codas inventory .</code> (normalized Atlas JSON) and the <code>structure_map_loads</code> check; later phases add structure-drift findings.</li>
+        <li>Load the map via <code>codas inventory --json</code> (normalized Atlas JSON) and the <code>structure_map_loads</code> check; the <code>structure_drift</code>, <code>missing_structure_owner</code>, <code>deprecated_path_used</code> and <code>dependency_direction</code> findings are now implemented. The Structure Map runtime lives in the <code>codas.structure</code> module (loader, program loader, index and inventory builder); <code>.codas/program.yml</code> owns phase status.</li>
       </ol>
     </section>
 

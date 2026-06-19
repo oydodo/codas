@@ -261,15 +261,18 @@
       <p class="subtitle">
         本文把 Codas 从产品设计推进到工程实施：明确核心架构、模块边界、数据流、包结构、实施阶段和验收标准。
         它不替代 <code>docs/codas-design.html</code>，而是把那份设计拆成可交付的系统切片。
+        This is a <strong>design record</strong>: the narrative architecture below remains authoritative, but the
+        live phase and deliverable <em>status</em> is owned by <code>.codas/program.yml</code>. Phases P0&ndash;P5
+        have shipped; P6&ndash;P7 are still planned. Consult <code>.codas/program.yml</code> for current status.
       </p>
       <section class="meta" aria-label="文档元信息">
         <div>
           <span class="label">Status</span>
-          <span class="value">Implementation Plan</span>
+          <span class="value">Design record &mdash; live phase status in <code>.codas/program.yml</code></span>
         </div>
         <div>
           <span class="label">Date</span>
-          <span class="value">2026-06-17</span>
+          <span class="value">2026-06-17 (design); phases P0&ndash;P5 since shipped</span>
         </div>
         <div>
           <span class="label">Scope</span>
@@ -373,7 +376,11 @@ Engines
   Config | Scanner | Inventory | Claim Reconciliation | Structure | Program | Documents | Policy | Reporting
 
 Adapters
-  Filesystem | Git | Markdown | Trellis | Python | Swift | XcodeGen | TypeScript
+  Filesystem | Git | Markdown | Trellis | Python | Wiki | Callgraph
+
+Fact-Provider Seam
+  ScanContext (codas.facts.context) normalizes adapter output into facts/claims
+  for core/policies; adapters are NEVER imported by core or policies
 
 Role Integrations
   Codex skills | Claude Code subagents | hooks | CI | GitHub Actions | human review
@@ -386,7 +393,10 @@ Validation Corpus
       <p>
         Dependencies point downward. Interfaces may call application services. Application services orchestrate engines.
         Engines depend on core domain models and adapter protocols. Core domain must not import Swift, Trellis, GitHub,
-        Codex, Claude Code or any product-specific integration.
+        Codex, Claude Code or any product-specific integration. The <code>ScanContext</code> fact-provider seam
+        (<code>codas.facts.context</code>) is the single normalization layer between adapters and core/policies: it
+        runs the adapters and exposes their output as facts and claims, so that <strong>core and policies never import
+        <code>codas.adapters</code></strong>. The <code>dependency_direction</code> policy dogfood-enforces this boundary.
       </p>
     </section>
 
@@ -612,10 +622,10 @@ scripts/
           </tr>
           <tr>
             <td>Wiki</td>
-            <td>Generate readable summaries and reconcile authored wiki claims with repo facts.</td>
-            <td>inventory, concept index, wiki files</td>
-            <td>wiki pages, stale wiki findings</td>
-            <td>P3</td>
+            <td>Ground an agent-driven governance map: emit a deterministic grounding pack, render/verify committed generated sections, and reconcile authored wiki claims with repo facts. Exposes <code>codas wiki --emit-pack/--write/--verify</code>.</td>
+            <td>inventory, concept index, wiki files, structure/program facts</td>
+            <td>grounding pack, committed generated pages (with <code>atlas:claims</code> + <code>source_inventory_hash</code>), stale/drift wiki findings</td>
+            <td>P5</td>
           </tr>
           <tr>
             <td>Hooks / CI</td>
@@ -735,6 +745,22 @@ scripts/
   "resolution": ["Add the fragment id or update the config claim."]
 }</code></pre>
 
+      <h3>Source Inventory Hash</h3>
+      <pre><code>{
+  "source_inventory_hash": "sha256:...",
+  "computed_over": "inventory EXCLUDING .codas/wiki/generated/",
+  "embedded_in": ".codas/wiki/generated/*.md (atlas:claims block)",
+  "verified_by": ["generated_wiki_drift policy", "codas wiki --verify"]
+}</code></pre>
+      <p>
+        A <code>source_inventory_hash</code> pins a generated wiki page to the inventory it was rendered from. It is
+        computed over the inventory <strong>excluding <code>.codas/wiki/generated/</code></strong> to avoid a
+        self-reference loop (the inventory ingests <code>.codas/wiki/</code>). The committed page narrows the hash
+        further to only the fields it renders, so unrelated edits do not restale it. The
+        <code>generated_wiki_drift</code> policy checks that each committed page carries a nonempty
+        <code>atlas:claims</code> block with this hash; <code>codas wiki --verify</code> verifies its freshness.
+      </p>
+
       <p>
         These contracts should start as Python dataclasses. JSON schema can follow once the shape stabilizes.
       </p>
@@ -787,9 +813,9 @@ scripts/
             <td>Later.</td>
           </tr>
           <tr>
-            <td><code>codas doctor .</code></td>
+            <td><code>codas doctor .</code> <em>(stub)</em></td>
             <td>Diagnose Codas installation and integration gaps.</td>
-            <td>Check config, Trellis presence and removed-prototype leftovers.</td>
+            <td><strong>Planned / not implemented</strong> &mdash; currently a stub (the CLI raises "doctor is planned but not implemented"); the diagnostic behavior (config, Trellis presence, removed-prototype leftovers) lands with the P6 scaffold.</td>
           </tr>
         </tbody>
       </table>
@@ -797,6 +823,13 @@ scripts/
 
     <section>
       <h2>8. Implementation Phases</h2>
+      <p>
+        This table records the <strong>theme and intended deliverables</strong> of each phase. It is not the status
+        board: the authoritative, per-phase/per-deliverable <em>status</em> is owned by
+        <code>.codas/program.yml</code> (the living Program Plan). As of this writing, <strong>P0&ndash;P5 are
+        completed</strong> and <strong>P6&ndash;P7 are planned</strong>; always consult
+        <code>.codas/program.yml</code> for current status rather than this prose.
+      </p>
       <table>
         <thead>
           <tr>
@@ -839,9 +872,9 @@ scripts/
           </tr>
           <tr>
             <td>P5</td>
-            <td>Wiki reconciliation</td>
-            <td>wiki claim parser, generated sections, stale wiki claim policy.</td>
-            <td>Wiki claims are verified against repo facts.</td>
+            <td>Wiki reconciliation (deterministic wiki spine)</td>
+            <td>Wiki adapter + claim parser (<code>codas.adapters.wiki</code>); <code>stale_wiki_claim</code> policy; deterministic call-graph facts (<code>codas.adapters.callgraph</code>, stdlib <code>ast</code>, first-party, resolution-tagged &mdash; pyan rejected for cross-process nondeterminism); <code>spec_drift</code> policy (materiality-as-claim: coarse <code>must_update_if_changed</code> stays advisory, vouched <code>.codas/claims.yml</code> <code>drift_couplings</code> gate diff-based co-change via <code>codas.adapters.git</code> <code>changed_paths</code>); atlas grounding pack (<code>codas wiki --emit-pack</code>); committed generated governance page (<code>codas wiki --write</code> &rarr; <code>.codas/wiki/generated/governance.md</code>, carrying an <code>atlas:claims</code> block + <code>source_inventory_hash</code>); <code>codas wiki --verify</code>; <code>generated_wiki_drift</code> policy; <code>CONTRACT.md</code> authoring contract.</td>
+            <td>Wiki claims and committed generated pages are verified against repo facts; the correctness core stays deterministic and LLM-free. (Status in <code>.codas/program.yml</code>.)</td>
           </tr>
           <tr>
             <td>P6</td>
@@ -981,27 +1014,52 @@ scripts/
             <td>workflow facts, task facts, requirement claims.</td>
           </tr>
           <tr>
-            <td>Swift</td>
-            <td>Swift files, declarations, extensions, imports.</td>
-            <td>symbol facts, reference facts.</td>
-          </tr>
-          <tr>
-            <td>XcodeGen</td>
-            <td>project.yml targets and source roots.</td>
-            <td>build inclusion facts.</td>
-          </tr>
-          <tr>
             <td>Python</td>
             <td>modules, classes, functions, imports, pyproject.</td>
             <td>symbol facts, package facts.</td>
           </tr>
           <tr>
-            <td>TypeScript</td>
+            <td>Wiki</td>
+            <td>Markdown wiki pages, <code>atlas:claims</code> fences, authored unit/roadmap claims.</td>
+            <td>wiki_claims facts (authority + evidence for reconciliation).</td>
+          </tr>
+          <tr>
+            <td>Callgraph</td>
+            <td>first-party Python call edges via stdlib <code>ast</code> (resolution-tagged; pyan rejected for cross-process nondeterminism).</td>
+            <td>deterministic call facts (the inventory dependency graph; substrate for impact and <code>spec_drift</code>).</td>
+          </tr>
+          <tr>
+            <td>Git</td>
+            <td>working-tree diff and changed paths, without mutating the repo.</td>
+            <td><code>changed_paths</code> substrate (diff grounding for <code>spec_drift</code>).</td>
+          </tr>
+          <tr>
+            <th colspan="3">Planned per-language adapters (future &mdash; illustrate the boundary; not built today)</th>
+          </tr>
+          <tr>
+            <td>Swift <em>(future)</em></td>
+            <td>Swift files, declarations, extensions, imports.</td>
+            <td>symbol facts, reference facts.</td>
+          </tr>
+          <tr>
+            <td>XcodeGen <em>(future)</em></td>
+            <td>project.yml targets and source roots.</td>
+            <td>build inclusion facts.</td>
+          </tr>
+          <tr>
+            <td>TypeScript <em>(future)</em></td>
             <td>tsconfig, package.json, exports, components.</td>
             <td>symbol facts, dependency facts.</td>
           </tr>
         </tbody>
       </table>
+      <p>
+        The rows above the divider are the adapters that ship today
+        (<code>markdown</code>, <code>trellis</code>, <code>python</code>, <code>wiki</code>, <code>callgraph</code>,
+        <code>git</code> &mdash; only Python carries per-language symbol extraction). The
+        <code>Swift</code>/<code>XcodeGen</code>/<code>TypeScript</code> rows are illustrative: the §11 boundary is
+        multi-language by design, but those per-language adapters are not yet built.
+      </p>
       <div class="danger">
         <strong>Boundary rule:</strong> if a concept only makes sense in one ecosystem, it belongs in an adapter.
         Core may only receive normalized facts and claims.
@@ -1032,7 +1090,10 @@ scripts/
     index.md
     concepts/
     modules/
-    risks/</code></pre>
+    risks/
+    generated/            # committed, deterministic generated pages
+      governance.md       #   carries an atlas:claims block + source_inventory_hash;
+                          #   rendered by `codas wiki --write`, verified by generated_wiki_drift</code></pre>
       <p>
         Generated inventory and reports may be either committed or ignored per repo policy. Receipts are usually local
         or CI artifacts. <code>documents.yml</code> is the authored Document Role Manifest claim surface;

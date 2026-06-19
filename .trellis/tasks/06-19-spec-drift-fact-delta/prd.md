@@ -69,6 +69,25 @@ facts), and the materiality judgment stays zero.
   sequencing fact-cache first (or co-designing).
 - Scope is a real spec_drift v2 refactor, not a tweak.
 
+## Concrete coupling example found in the wild (2026-06-20 doc audit)
+
+The doc-reconciliation audit surfaced a real, currently-uncaught drift that is the
+*ideal* fact-delta coupling: **`.codas/policies.yml` declarations vs the `check_*`
+functions wired in `src/codas/app/check.py` are out of sync.** policies.yml still
+declares unwired/planned policies (`duplicate_concept`, `orphan_artifact`,
+`missing_canonical_owner`, `constraint_conflict`, `stale_preflight`) and omits
+bootstrap/load checks that check.py does wire (`config_sources`, `dogfooding`,
+`trellis_context`, `structure_map`, `program_plan`, `document_set`, `waivers`). Whether
+each gap is intentional (a roadmap declaration / a bootstrap meta-check kept out of the
+governance set) is a judgment — but the *coupling* "a wired `check_*` should have a
+policies.yml entry (or an explicit planned/bootstrap marker), and vice versa" is a
+deterministic fact-delta over `imports`/`symbols` + the policies.yml claim set. v2 should
+ship this as a worked `policy_registry` coupling (a new `check_*` wired without a
+declaration → finding; a declared policy with no impl and no `planned:` marker →
+finding). It needs zero materiality judgment — pure set-equality over facts — exactly the
+v2 thesis. (For now the authoritative docs were corrected to NOT claim policies.yml
+mirrors the wired set; reconciling policies.yml itself + this coupling is v2's job.)
+
 ## Acceptance criteria (draft)
 
 - [ ] Couplings expressed over deterministic fact-deltas (symbol/import/call), not file

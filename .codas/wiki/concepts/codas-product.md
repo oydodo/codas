@@ -23,9 +23,14 @@ Evidence:
 
 ## Current Implementation State
 
-The current implementation is the P0 `codas` CLI core and self-check path.
-Legacy `harness_guard` prototype code has been removed. Future Swift, Ciri or
-XcodeGen behavior must be implemented through adapters, not the core model.
+Codas ships a deterministic Atlas inventory, roughly seventeen governance
+policies enforced by `codas check`, preflight context packs and run receipts,
+and the verified Atlas wiki spine (grounding pack, committed generated pages and
+a freshness gate) — all dogfooded on this repository. Current per-phase and
+per-deliverable status lives in `.codas/program.yml`; consult it rather than any
+fixed summary here. Legacy `harness_guard` prototype code has been removed.
+Future Swift, Ciri or XcodeGen behavior must be implemented through adapters, not
+the core model.
 
 Evidence:
 

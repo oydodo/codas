@@ -301,11 +301,11 @@
       <section class="meta" aria-label="文档元信息">
         <div>
           <span class="label">Status</span>
-          <span class="value">Draft for Implementation</span>
+          <span class="value">Design record (P0–P5 implemented)</span>
         </div>
         <div>
           <span class="label">Date</span>
-          <span class="value">2026-06-17</span>
+          <span class="value">2026-06-17 (authored); phase status lives in <code>.codas/program.yml</code></span>
         </div>
         <div>
           <span class="label">Audience</span>
@@ -861,6 +861,19 @@ codas doctor .</code></pre>
     <section>
       <h2>11. Policy and Gates</h2>
       <h3>11.1 基础 Policy</h3>
+      <p>
+        权威的<strong>实现</strong>——即实际接线运行的检查集合——是 <code>src/codas/app/check.py</code>。
+        <code>.codas/policies.yml</code> 声明治理 policy 及其 severity，但并不等于“已接线集合”：它<em>没有</em>声明 <code>check.py</code> 同样接线的
+        bootstrap / meta 与 load 检查（<code>config_sources</code>、<code>dogfooding</code>、<code>trellis_context</code>、<code>structure_map</code>、
+        <code>program_plan</code>、<code>document_set</code>、<code>waivers</code>），而且它仍声明了一些<strong>尚未实现</strong>（declared-but-planned）的 policy
+        （<code>duplicate_concept</code>、<code>orphan_artifact</code>、<code>missing_canonical_owner</code>、<code>constraint_conflict</code>、<code>stale_preflight</code>）。
+        因此本节不再枚举完整清单以避免再次漂移；当前<strong>实际接线并运行</strong>的治理与 meta 检查包括：
+        <code>config_sources</code>、<code>dogfooding</code>、<code>trellis_context</code>、<code>structure_map</code>、<code>missing_structure_owner</code>、
+        <code>structure_drift</code>、<code>deprecated_path_used</code>、<code>program_plan</code>、<code>document_set</code>、<code>stale_claim</code>、
+        <code>duplicate_symbol</code>、<code>duplicate_implementation</code>、<code>dependency_direction</code>、<code>stale_wiki_claim</code>、
+        <code>spec_drift</code>、<code>generated_wiki_drift</code>、<code>waivers</code>。
+      </p>
+      <p>headline policy（severity 请以 <code>.codas/policies.yml</code> 为准；接线状态以 <code>check.py</code> 为准）：</p>
       <table>
         <thead>
           <tr>
@@ -871,13 +884,18 @@ codas doctor .</code></pre>
         </thead>
         <tbody>
           <tr>
-            <td><code>duplicate_concept</code></td>
-            <td>阻止同一 concept 出现多个未解释实现。</td>
+            <td><code>duplicate_implementation</code></td>
+            <td>同一 top-level symbol 在多个 src 模块实现时，必须在 <code>.codas/claims.yml</code> 声明 canonical/variant/migration 关系，否则按未声明重复实现报错。</td>
             <td>Error</td>
           </tr>
           <tr>
-            <td><code>orphan_artifact</code></td>
-            <td>阻止新增文件没有 build、引用、task 或文档解释。</td>
+            <td><code>structure_drift</code></td>
+            <td>仓库变更必须与 Structure Map 对齐，或显式更新它。</td>
+            <td>Error</td>
+          </tr>
+          <tr>
+            <td><code>spec_drift</code></td>
+            <td>behavior、架构、命令、policy 或 data model 的变更必须更新其权威 claim 源（materiality-as-claim）。</td>
             <td>Error</td>
           </tr>
           <tr>
@@ -886,27 +904,24 @@ codas doctor .</code></pre>
             <td>Warning</td>
           </tr>
           <tr>
-            <td><code>spec_drift</code></td>
-            <td>代码改变 concept 但没有同步约束源。</td>
-            <td>Error for public behavior, warning otherwise</td>
+            <td><code>stale_wiki_claim</code></td>
+            <td>Atlas Wiki claim 必须对照仓库 facts 验证（canonical-source / evidence / sync_target 路径存在性）。</td>
+            <td>Warning</td>
           </tr>
           <tr>
-            <td><code>missing_canonical_owner</code></td>
-            <td>新增 concept 没有主实现归属。</td>
+            <td><code>generated_wiki_drift</code></td>
+            <td>committed generated Atlas page 的 <code>atlas:claims</code> 必须与 Structure Map / Program Plan facts 一致；被 facts 反驳的 claim 报错。</td>
             <td>Error</td>
-          </tr>
-          <tr>
-            <td><code>constraint_conflict</code></td>
-            <td>多个约束源对同一 concept 给出冲突声明。</td>
-            <td>Error</td>
-          </tr>
-          <tr>
-            <td><code>stale_preflight</code></td>
-            <td>agent 没有基于当前 inventory 做过开工检查。</td>
-            <td>Error in CI when enabled</td>
           </tr>
         </tbody>
       </table>
+
+      <div class="callout">
+        <strong>spec_drift = materiality-as-claim（决策记录）：</strong>
+        materiality 本身被当作一种 claim 来表达——粗粒度的 <code>must_update_if_changed</code> 是 advisory 信号；
+        真正的 gate 是 <code>.codas/claims.yml</code> 中经过 vouch 的 <code>drift_couplings</code>，基于 diff 触发。
+        这样“代码变了但权威约束源没同步”既能被声明、也能被强制。
+      </div>
 
       <h3>11.2 Gate Levels</h3>
       <table>
@@ -1065,6 +1080,16 @@ required resolution:
 
 ## Last Verified
 - Generated from .codas/inventory/atlas.json at 2026-06-17T12:00:00Z</code></pre>
+
+      <div class="callout">
+        <strong>Atlas wiki 架构（决策记录）：</strong>
+        分工是 <em>“Codas grounds it（facts），an LLM renders it（host agent），Codas verifies it（policies）。”</em>
+        Wiki spine 是确定性、agent-driven 的，<strong>不内嵌 LLM、也不依赖 MCP</strong>。
+        生成页中的 <code>atlas:claims</code> 块携带 <code>unit:</code> / <code>roadmap:</code> claims 及一个 <code>source_inventory_hash</code>；
+        <code>generated_wiki_drift</code> 对照 Structure Map / Program Plan facts 验证它们（被 facts 反驳即 error），
+        <code>codas wiki --verify</code> 另行校验 source-hash 新鲜度。
+        完整设计见决策记录 <code>.trellis/tasks/06-19-wiki-architecture/{prd,design}.md</code>。
+      </div>
     </section>
 
     <section>
@@ -1403,8 +1428,8 @@ git status --short</code></pre>
           </tr>
           <tr>
             <td>P2</td>
-            <td>加入首批 adapter。</td>
-            <td>Swift、TypeScript、Python、Markdown、Git、Trellis adapter。</td>
+            <td>policy engine、structure drift，并落地 adapter 边界。</td>
+            <td>structure / policy 工作；adapter 边界以 pure-Python 形式实现（Python、Markdown、Trellis、Git adapter；§8 的 Swift/XcodeGen 示例只是 §11 边界的“in spirit”范例，未构建 Swift/TS adapter）。</td>
           </tr>
           <tr>
             <td>P3</td>
@@ -1413,23 +1438,38 @@ git status --short</code></pre>
           </tr>
           <tr>
             <td>P4</td>
-            <td>强化执行边界。</td>
-            <td>pre-commit hook、GitHub Action、CI strict mode、receipt ledger。</td>
+            <td>preflight 与 receipts（让 agent 工作可证明）。</td>
+            <td>preflight context pack（<code>codas preflight</code>，adapter-free、确定性）、receipt ledger、provenance hashes（pin inventory + policy）。</td>
           </tr>
           <tr>
             <td>P5</td>
-            <td>加入 LLM-assisted 聚类和 MCP。</td>
-            <td>MCP server、concept similarity suggestions、agent query API。</td>
+            <td>Wiki reconciliation：确定性、agent-driven 的 wiki spine，<strong>不内嵌 LLM、不用 MCP</strong>。</td>
+            <td>wiki-claim parser、<code>stale_wiki_claim</code>、确定性 call-graph facts（pyan 因不确定性被否决）、<code>spec_drift</code>、atlas grounding pack（<code>codas wiki --emit-pack</code>）、committed generated governance page（<code>codas wiki --write</code> / <code>--verify</code>）、<code>generated_wiki_drift</code> policy、<code>CONTRACT.md</code> authoring contract。</td>
+          </tr>
+          <tr>
+            <td>P6</td>
+            <td>强化执行边界（enforcement integrations，<em>planned</em>）。</td>
+            <td>pre-commit / pre-push hook、GitHub Action、Trellis hooks（均 gate <code>codas check</code>）；<code>codas init</code> / <code>doctor</code> scaffold 亦属 P6 但<strong>尚未构建</strong>（无 <code>codas init</code> 命令，<code>doctor</code> 仍是 stub）。</td>
+          </tr>
+          <tr>
+            <td>P7</td>
+            <td>加入 query interface 和 LLM-assisted 能力。</td>
+            <td>MCP query interface、OSS LLM-wiki backend adapters、concept similarity suggestions、agent query API。</td>
           </tr>
         </tbody>
       </table>
+      <div class="callout">
+        <strong>当前阶段以 <code>.codas/program.yml</code> 为准。</strong>
+        该 program plan 是 phase status 的 living source of truth；P0–P5 已实现，P6/P7 尚未构建。
+        本表给出路线图意图，不再硬编码“当前阶段”。
+      </div>
     </section>
 
     <section>
       <h2>22. Acceptance Criteria</h2>
       <ul>
         <li><code>codas inventory</code> 能在无语言 adapter 的情况下生成基础 artifact 和 doc claim 索引。</li>
-        <li><code>codas check</code> 能阻止新增 orphan artifact、stale doc path、明显 duplicate symbol。</li>
+        <li><code>codas check</code> 能阻止 structure drift、未声明的 duplicate implementation、stale doc path / wiki claim、spec drift 等已接线的违规（<code>orphan_artifact</code> 为 declared-but-planned，尚未接线，不在当前强制范围内）。</li>
         <li><code>codas preflight</code> 能基于 task 输出 read-first 文件、相关 concepts 和 duplicate risks。</li>
         <li><code>codas wiki</code> 生成的页面每条 canonical 结论都包含 evidence。</li>
         <li>strict mode 下 error finding 会导致非零退出码。</li>

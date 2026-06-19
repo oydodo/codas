@@ -53,6 +53,10 @@ _Avoid_: Explanation without path, LLM rationale
 **Conflict**:
 A contradiction between Claims or Governance Facts about ownership, canonical placement, state, responsibility or allowed dependency direction.
 
+**Drift** (change-triggered) and **Staleness** (state-based):
+Two ways a Claim diverges from the Facts. **Drift** is a Claim source diverging because a change was not propagated — detected at the moment of change (diff-based). **Staleness** is a Claim's content falling behind current Facts with no single trigger — detected by re-verifying the Claim against Facts at any time. Codas must catch both.
+_Avoid_: treating "out of date" as one undifferentiated condition
+
 ## Structure Layer
 
 **Repository Structure**:
@@ -96,6 +100,10 @@ An index that answers what a concept is, where it is implemented, which modules 
 
 **Decision Index**:
 An index of important product, architecture and structure decisions that points to ADRs, PRDs, specs, tasks or code evidence.
+
+**Grounding**:
+Codas emitting verified Facts for an external author — a coding agent or an LLM-wiki generator — to consume: "Codas grounds it, an author renders it, Codas verifies it." The author writes prose or generated pages; Codas verifies their checkable Claims against Facts before any are accepted as Governance Facts. The correctness core stays deterministic and authors no prose itself.
+_Avoid_: Codas writing prose, an embedded LLM in the correctness core
 
 ## Governance Layer
 

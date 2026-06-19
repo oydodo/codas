@@ -83,6 +83,19 @@ Assemble the read-first context pack for a task:
 PYTHONPATH=src python3 -m codas preflight . --task <id>
 ```
 
+Work with the Atlas wiki spine — emit the verified grounding pack, render the
+committed generated sections, and gate their freshness:
+
+```bash
+PYTHONPATH=src python3 -m codas wiki . --emit-pack
+PYTHONPATH=src python3 -m codas wiki . --write
+PYTHONPATH=src python3 -m codas wiki . --verify
+```
+
+`--emit-pack` emits the verified grounding pack, `--write` renders the committed
+generated sections, and `--verify` checks that the committed pages are fresh and
+exits non-zero when they are stale.
+
 ## Atlas Wiki
 
 Atlas is Codas's **live governance map**, not a post-hoc documentation generator.
@@ -91,18 +104,15 @@ readers, Atlas serves **agents and humans during development**: it guides an age
 before it edits (what to read, where new code belongs, what it may depend on) and
 lets a human track plan progress and control deviation. It is prescriptive and
 **verified** — every wiki claim is checked against repository facts
-(`stale_wiki_claim`, and the planned `generated_wiki_drift`), and the correctness
-core stays deterministic and LLM-free. Codas can also emit a verified **grounding
+(`stale_wiki_claim`, and `generated_wiki_drift` for committed generated pages),
+and the correctness core stays deterministic and LLM-free. Codas can also emit a verified **grounding
 pack** that an external LLM-wiki generator consumes to produce an optional
 human-prose doc-site, whose output Codas then verifies. The architecture decision
 is recorded in `.trellis/tasks/06-19-wiki-architecture`.
 
 ## Status
 
-P0–P4 are complete: the `codas` package and CLI; config / structure-map /
-program-plan / document-manifest loaders; a deterministic Atlas **inventory**
-(`codas inventory --json`); 15 wired governance **policies** (`codas check`,
-currently zero findings on this repo); a **preflight** context pack; and run
-**provenance** plus a **receipt** ledger (`codas check --json` / `--receipt`). P5
-(wiki reconciliation) is in progress. Swift/Ciri-specific prototype code was
-removed; ecosystem-specific extraction lives behind adapters.
+Phases P0–P5 are complete. The living source of truth for per-phase and
+per-deliverable status is `.codas/program.yml`; consult it rather than any
+hardcoded summary here. Swift/Ciri-specific prototype code was removed;
+ecosystem-specific extraction lives behind adapters.
