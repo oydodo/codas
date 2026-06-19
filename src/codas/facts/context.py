@@ -5,15 +5,16 @@ from pathlib import Path
 
 from codas.adapters.git import extract_changed_paths
 from codas.adapters.markdown import DocClaim, extract_doc_claims
-from codas.adapters.callgraph import CallFact, CallFacts, extract_call_facts
+from codas.adapters.callgraph import CallFact, CallFacts, extract_call_facts_from_parsed
 from codas.adapters.python import (
     ImportFact,
     ImportFacts,
     SymbolFact,
     SymbolFacts,
-    extract_import_facts,
-    extract_symbol_facts,
+    extract_import_facts_from_parsed,
+    extract_symbol_facts_from_parsed,
 )
+from codas.adapters.python_parse import ParsedModules, parse_python_modules
 from codas.adapters.wiki import (
     GeneratedClaim,
     GeneratedClaims,
@@ -77,16 +78,27 @@ class ScanContext:
             self._cache["doc_claims"] = tuple(extract_doc_claims(self.repo, self.files))
         return self._cache["doc_claims"]
 
+    def _parsed(self) -> ParsedModules:
+        """Single per-run ``ast.parse`` pass over the scanned ``.py`` files (cached).
+
+        The shared substrate for ``symbols``/``imports``/``calls`` — one parse per
+        file per run instead of one per accessor (previously 3× parse). The
+        ``parse_python_modules`` call is the Slice-2 content-hash cache seam.
+        """
+        if "parsed" not in self._cache:
+            self._cache["parsed"] = parse_python_modules(self.repo, self.files)
+        return self._cache["parsed"]
+
     def symbols(self) -> SymbolFacts:
         """Python top-level symbol facts for the scanned tree (cached, adapter-sorted)."""
         if "symbols" not in self._cache:
-            self._cache["symbols"] = extract_symbol_facts(self.repo, self.files)
+            self._cache["symbols"] = extract_symbol_facts_from_parsed(self._parsed())
         return self._cache["symbols"]
 
     def imports(self) -> ImportFacts:
         """Python import (reference) facts for the scanned tree (cached, adapter-sorted)."""
         if "imports" not in self._cache:
-            self._cache["imports"] = extract_import_facts(self.repo, self.files)
+            self._cache["imports"] = extract_import_facts_from_parsed(self._parsed())
         return self._cache["imports"]
 
     def wiki_claims(self) -> WikiClaims:
@@ -101,7 +113,7 @@ class ScanContext:
     def calls(self) -> CallFacts:
         """Deterministic first-party Python call-graph facts (cached, stdlib ast)."""
         if "calls" not in self._cache:
-            self._cache["calls"] = extract_call_facts(self.repo, self.files)
+            self._cache["calls"] = extract_call_facts_from_parsed(self.repo, self._parsed())
         return self._cache["calls"]
 
     def changed_paths(self) -> tuple[str, ...]:

@@ -3,12 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from codas.adapters.callgraph import extract_call_facts
-from codas.adapters.markdown import extract_doc_claims
-from codas.adapters.python import extract_import_facts, extract_symbol_facts
 from codas.adapters.trellis import extract_task_facts
-from codas.adapters.wiki import extract_wiki_claims
 from codas.config.loader import load_codas_config
+from codas.facts.context import ScanContext
 
 from .document_loader import load_document_manifest
 from .index import build_artifact_index, discover_files, workspace_roots
@@ -21,39 +18,62 @@ DOCUMENTS_SOURCE = ".codas/documents.yml"
 
 
 def build_inventory(
-    repo: Path, exclude_under: tuple[str, ...] = ()
+    repo: Path,
+    exclude_under: tuple[str, ...] = (),
+    ctx: ScanContext | None = None,
 ) -> dict[str, Any]:
     """Build the deterministic normalized Atlas inventory for a repository.
 
     Structure portion follows the schema §5 normalized JSON shape (flat at the
     top level); program facts are added as a sibling ``program`` block.
 
-    ``exclude_under`` drops tracked files under the given repo-relative directory
-    prefixes from every FILE-SCOPED extractor (and the artifact index). Default
-    ``()`` performs no filtering, so ``codas inventory`` / provenance stay
-    byte-identical. The Atlas pack (``app/wiki.build_atlas_pack``) passes
-    ``(".codas/wiki/generated",)`` so the ``source_inventory_hash`` it pins is not
-    self-referential (the inventory ingests ``.codas/wiki/``; a generated page that
-    embeds the full inventory hash would chase its own bytes). NB ``extract_task_facts``
-    is trellis-rooted, not file-scoped, so the ``tasks`` block is unaffected — harmless,
-    since the excluded dir only holds ``.md``.
-    """
-    config = load_codas_config(repo / ".codas" / "config.yml")
-    roots = workspace_roots(config.raw)
+    The file-scoped facts (doc claims, symbols, imports, wiki claims, calls) are
+    PROJECTED from a single :class:`~codas.facts.context.ScanContext` — the same
+    fact-provider the policy engine consumes — so a run scans (and parses) once. The
+    inventory is the structure/planning projection of that shared scan plus the
+    Trellis task facts (trellis-rooted, not file-scoped).
 
+    ``ctx`` lets a caller that already built a ScanContext (``check --json`` for its
+    provenance block) reuse it instead of triggering a second scan. When ``ctx`` is
+    given it is authoritative: it already carries the resolved config/roots/files
+    (any ``exclude_under`` is assumed already applied to it) and ``exclude_under`` is
+    ignored.
+
+    ``exclude_under`` (self-built path only) drops tracked files under the given
+    repo-relative directory prefixes from the scanned file set BEFORE the
+    ScanContext is built, so Python import/call resolution — which depends on the
+    file set — and the artifact index both see the filtered set. It must pre-filter,
+    never post-filter rows. Default ``()`` performs no filtering, so ``codas
+    inventory`` / provenance stay byte-identical. The Atlas pack
+    (``app/wiki.build_atlas_pack``) passes ``(".codas/wiki/generated",)`` so the
+    ``source_inventory_hash`` it pins is not self-referential (the inventory ingests
+    ``.codas/wiki/``; a generated page that embeds the full inventory hash would chase
+    its own bytes). NB ``extract_task_facts`` is trellis-rooted, not file-scoped, so
+    the ``tasks`` block is unaffected — harmless, since the excluded dir only holds
+    ``.md``.
+    """
+    if ctx is None:
+        config = load_codas_config(repo / ".codas" / "config.yml")
+        roots = workspace_roots(config.raw)
+        files = discover_files(repo, roots)
+        if exclude_under:
+            files = [
+                path
+                for path in files
+                if not any(
+                    path == prefix or path.startswith(prefix + "/")
+                    for prefix in exclude_under
+                )
+            ]
+        ctx = ScanContext(repo=repo, config=config, roots=roots, files=tuple(files))
+    else:
+        config = ctx.config
+        roots = ctx.roots
+
+    files = list(ctx.files)
     structure_map = load_structure_map(
         repo / ".codas" / "structure.yml", source=STRUCTURE_SOURCE
     )
-    files = discover_files(repo, roots)
-    if exclude_under:
-        files = [
-            path
-            for path in files
-            if not any(
-                path == prefix or path.startswith(prefix + "/")
-                for prefix in exclude_under
-            )
-        ]
     index = build_artifact_index(repo, roots, structure_map, files=files)
 
     units = []
@@ -117,7 +137,7 @@ def build_inventory(
             ],
         }
 
-    doc_claims = extract_doc_claims(repo, tuple(files))
+    doc_claims = ctx.doc_claims()
     inventory["doc_claims"] = {
         "sources": sorted({claim.source for claim in doc_claims}),
         "references": [
@@ -133,8 +153,7 @@ def build_inventory(
         ],
     }
 
-    wiki_root = (config.raw.get("wiki") or {}).get("path", ".codas/wiki")
-    wiki_claims = extract_wiki_claims(repo, tuple(files), wiki_root)
+    wiki_claims = ctx.wiki_claims()
     inventory["wiki_claims"] = {
         "sources": sorted({claim.source for claim in wiki_claims.claims}),
         "claims": [
@@ -169,7 +188,7 @@ def build_inventory(
         "skipped": list(task_facts.skipped),
     }
 
-    symbols = extract_symbol_facts(repo, tuple(files))
+    symbols = ctx.symbols()
     inventory["symbols"] = {
         "sources": sorted({definition.module for definition in symbols.definitions}),
         "definitions": [
@@ -184,7 +203,7 @@ def build_inventory(
         "skipped": list(symbols.skipped),
     }
 
-    imports = extract_import_facts(repo, tuple(files))
+    imports = ctx.imports()
     inventory["imports"] = {
         "sources": sorted({fact.module for fact in imports.imports}),
         "edges": [
@@ -199,7 +218,7 @@ def build_inventory(
         "skipped": list(imports.skipped),
     }
 
-    call_facts = extract_call_facts(repo, tuple(files))
+    call_facts = ctx.calls()
     inventory["calls"] = {
         "sources": sorted({edge.caller_path for edge in call_facts.edges}),
         "edges": [

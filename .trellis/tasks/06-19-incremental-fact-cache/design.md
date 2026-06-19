@@ -137,6 +137,36 @@ Folded SHOULDs:
 - Name `ScanContext._parsed()` / `*_from_parsed` as the non-redundant path; the `(repo,
   files)` wrappers stay for back-compat (and become the Slice-2 cache seam).
 
+## Implemented (Slice 1, 2026-06-20) + codex impl-review fold
+
+Shipped exactly as the resolved contract above: `adapters/python_parse.py`
+(`parse_python_modules` → `ParsedModules`/`ParsedModule`, one parse per `.py`), the
+three extractors split into `*_from_parsed` cores + `(repo, files)` wrappers,
+`ScanContext._parsed()` memoized, `build_inventory(repo, exclude_under=(), ctx=None)`
+projecting from a ScanContext (pre-filtered file set for `exclude_under`),
+`run_check_with_context` + `compute_provenance(repo, ctx=...)` so `check --json` scans
+once. 271 tests, `codas check .` = 0, inventory byte-identical across processes, `codas
+wiki --verify` clean.
+
+Codex impl review (`--effort xhigh`) — 3 findings, folded:
+- **F1 (task.json status, dismissed):** the staged diff flips this task's status
+  `planning→in_progress`, which `extract_task_facts` serializes into the inventory.
+  Not a refactor regression — it is the normal task-lifecycle metadata change every
+  task commit carries; byte-identical-across-processes on a fixed tree still holds.
+- **F2 (OSError divergence, FIXED):** legacy `symbols`/`imports` caught `OSError` (→
+  skipped) while `callgraph` caught only `SyntaxError`/`ValueError` (→ `OSError`
+  propagated, leaving `inventory_hash` null via `_safe`). The first cut collapsed both
+  into a skipped module, which would promote a null hash to a concrete one. Fixed by
+  giving `ParsedModule` a distinct `read_error`: `symbols`/`imports` skip any
+  `tree is None`; `callgraph` re-raises `read_error` for an in-scope file — exact
+  legacy crash-vs-skip semantics. Locked by
+  `test_unreadable_package_file_preserves_legacy_error_divergence`.
+- **F3 (eager out-of-scope read, documented):** the shared parser reads every `.py`,
+  including files the call extractor later treats as out-of-scope. No new exposure in
+  any real run — `symbols`/`imports` already read every `.py`; only a standalone
+  `extract_call_facts` reads more than its legacy self. Noted in
+  `parse_python_modules`' docstring; output (`edges`/`skipped`) is unchanged.
+
 ## Open questions for review
 
 1. Slice 1-only scope for this task (cache = follow-up) — agree, or do both here?

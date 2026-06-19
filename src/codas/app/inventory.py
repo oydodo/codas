@@ -2,13 +2,20 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from codas.structure.inventory import build_inventory
 
+if TYPE_CHECKING:
+    from codas.facts.context import ScanContext
 
-def run_inventory(repo: Path, exclude_under: tuple[str, ...] = ()) -> dict[str, Any]:
-    return build_inventory(repo, exclude_under=exclude_under)
+
+def run_inventory(
+    repo: Path,
+    exclude_under: tuple[str, ...] = (),
+    ctx: "ScanContext | None" = None,
+) -> dict[str, Any]:
+    return build_inventory(repo, exclude_under=exclude_under, ctx=ctx)
 
 
 def render_inventory_json(inventory: dict[str, Any]) -> str:

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from codas.config.loader import ConfigLoadError, load_codas_config, load_policies, load_waivers
 from codas.core.models import CheckReport, Evidence, Finding
-from codas.facts.context import build_scan_context
+from codas.facts.context import ScanContext, build_scan_context
 from codas.policies.config_sources import check_config_sources
 from codas.policies.dependency_direction import check_dependency_direction
 from codas.policies.deprecated_path import check_deprecated_path_used
@@ -25,6 +25,18 @@ from codas.policies.waivers import check_waivers
 
 
 def run_check(repo: Path) -> CheckReport:
+    """Run all policies and return the report (the public check entry point)."""
+    report, _ = run_check_with_context(repo)
+    return report
+
+
+def run_check_with_context(repo: Path) -> tuple[CheckReport, ScanContext | None]:
+    """Run all policies, returning the report and the run's ``ScanContext``.
+
+    The ctx is exposed so ``check --json`` can reuse the single scan its policies ran
+    for the provenance inventory instead of triggering a second full scan/parse. It
+    is ``None`` only when config failed to load (an early return before any scan).
+    """
     findings: list[Finding] = []
     config_path = repo / ".codas" / "config.yml"
 
@@ -39,7 +51,7 @@ def run_check(repo: Path) -> CheckReport:
                 evidence=[Evidence(path=_rel(repo, config_path))],
             )
         )
-        return CheckReport(repo=repo.as_posix(), findings=findings)
+        return CheckReport(repo=repo.as_posix(), findings=findings), None
 
     ctx = build_scan_context(repo, config)
 
@@ -88,7 +100,7 @@ def run_check(repo: Path) -> CheckReport:
     else:
         findings.extend(check_waivers(repo, waivers_path, waivers))
 
-    return CheckReport(repo=repo.as_posix(), findings=findings)
+    return CheckReport(repo=repo.as_posix(), findings=findings), ctx
 
 
 def _rel(repo: Path, path: Path) -> str:

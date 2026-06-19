@@ -4,6 +4,8 @@ import ast
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from codas.adapters.python_parse import ParsedModules, parse_python_modules
+
 
 @dataclass(frozen=True)
 class CallFact:
@@ -45,8 +47,22 @@ def extract_call_facts(repo: Path, files: tuple[str, ...]) -> CallFacts:
     dropped (not guessed). Fidelity is intentionally lower than a type-resolving
     analyzer (no MRO/super/cross-class instance dispatch); determinism is the
     requirement.
+
+    Back-compat wrapper over :func:`extract_call_facts_from_parsed`: parses the file
+    set once then projects. The single-parse seam is ``parse_python_modules``.
     """
-    modules = _parse_modules(repo, files)
+    return extract_call_facts_from_parsed(repo, parse_python_modules(repo, files))
+
+
+def extract_call_facts_from_parsed(repo: Path, parsed: ParsedModules) -> CallFacts:
+    """Project deterministic first-party call edges from pre-parsed modules.
+
+    Same contract as :func:`extract_call_facts`; consumes the shared parse instead of
+    re-reading. Call-graph scope is narrower than symbols/imports — only ``.py`` files
+    that resolve to a package module (``_module_name``) participate; the rest are out
+    of scope (not ``skipped``). A parsed-failed file inside a package is ``skipped``.
+    """
+    modules = _modules_from_parsed(repo, parsed)
     by_name = {m.dotted: m for m in modules if not m.error}
     for module in modules:
         if not module.error:
@@ -89,20 +105,24 @@ class _Module:
     bindings: dict[str, tuple] = field(default_factory=dict)
 
 
-def _parse_modules(repo: Path, files: tuple[str, ...]) -> list[_Module]:
+def _modules_from_parsed(repo: Path, parsed: ParsedModules) -> list[_Module]:
     out: list[_Module] = []
-    for rel in sorted(files):
-        if not rel.endswith(".py"):
-            continue
+    for parsed_module in parsed.modules:
+        rel = parsed_module.path
         dotted = _module_name(repo, rel)
         if dotted is None:  # not inside a package -> out of scope
             continue
         is_package = Path(rel).name == "__init__.py"
-        try:
-            tree = ast.parse((repo / rel).read_text(errors="ignore"))
-        except (SyntaxError, ValueError):
+        if parsed_module.read_error is not None:
+            # Legacy read happened inside this extractor and caught only
+            # SyntaxError/ValueError, so an OSError propagated. Re-raise it (only for
+            # an in-scope package file — out-of-scope files already `continue`d above)
+            # to preserve that exact crash semantics rather than silently skip.
+            raise parsed_module.read_error
+        if parsed_module.tree is None:  # parse failed -> skipped (errored module)
             out.append(_Module(path=rel, dotted=dotted, is_package=is_package, tree=None, error=True))
             continue
+        tree = parsed_module.tree
         module = _Module(path=rel, dotted=dotted, is_package=is_package, tree=tree, error=False)
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):

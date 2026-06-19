@@ -2,10 +2,20 @@
 
 ## Status
 
-PLANNING / queued. Performance + scan-architecture rework, below the policy layer.
-Captured from a 2026-06-19 design discussion. Not yet sequenced into a phase (see
-"Phase placement"). Subsumes the standing P3-follow-up backlog item **S1** (unify
-`build_inventory` ↔ `ScanContext`).
+**Slice 1 SHIPPED (2026-06-20).** This task delivers **Slice 1 only** (see
+`design.md` slice decomposition): single parse pass (`adapters/python_parse.py` →
+one `ast.parse` per `.py` per run; the three Python extractors split into
+`*_from_parsed` cores + back-compat wrappers) **and** the `build_inventory` ↔
+`ScanContext` unify (the standing P3-follow-up **S1**) so a run scans once and
+`check --json` scans once instead of twice. Pure work-deduplication: fact outputs +
+inventory stay byte-identical (270 tests, `codas check .` = 0, inventory
+byte-identical across processes, `codas wiki --verify` clean).
+
+**Slice 2 = follow-up task** (`06-20-fact-cache-persistent`): the content-hash
+persistent cache (the cross-run win + the `inventory@HEAD` substrate
+`spec-drift-fact-delta` v2 needs). It carries the real cache complexity and gets its
+own rhythm pass. The acceptance criteria below that mention the persistent cache,
+`.codas/cache/`, blob-SHA keys and `--no-cache` belong to Slice 2.
 
 ## Problem
 

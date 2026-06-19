@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .app.check import run_check
+from .app.check import run_check_with_context
 from .reporting.console import print_context_pack, print_findings
 
 
@@ -87,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
     repo = Path(args.repo).expanduser().resolve()
 
     if args.command == "check":
-        report = run_check(repo)
+        report, ctx = run_check_with_context(repo)
 
         receipt_path = None
         if args.receipt:
@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
             from .app.provenance import compute_provenance
 
             payload = report.to_json()
-            payload["provenance"] = compute_provenance(repo)
+            payload["provenance"] = compute_provenance(repo, ctx=ctx)
             if receipt_path is not None:
                 payload["receipt"] = str(receipt_path)
             print(json.dumps(payload, indent=2, sort_keys=True))
