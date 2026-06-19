@@ -19,3 +19,10 @@ If you're using Codex or another agent-capable tool, additional project-scoped h
 Managed by Trellis. Edits outside this block are preserved; edits inside may be overwritten by a future `trellis update`.
 
 <!-- TRELLIS:END -->
+
+## Atlas Wiki
+
+Before authoring or editing Atlas Wiki content, read `CONTRACT.md` — the authoring
+contract (what is governed vs supporting, the `atlas:claims` grammar, and the
+`codas wiki --emit-pack` / `--write` / `--verify` workflow). Generated pages under
+`.codas/wiki/generated/` are machine-rendered; never hand-edit them.

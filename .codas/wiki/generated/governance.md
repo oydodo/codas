@@ -49,7 +49,7 @@ VERIFIED GOVERNANCE FACTS (prefer over inferred structure). Rendered determinist
 | `program:P7:agent-query-interface` | P7 | planned |
 
 ```atlas:claims
-source_inventory_hash: sha256:8743b1ca26c522ef5a360b3306b7ed61fc24faa34f3ea35b624128a630d88253
+source_inventory_hash: sha256:be1d9c32065f4724e7a207b8045cb8f239a358c39d02c6bc3db843116e6f7095
 unit: agents-guide -> AGENTS.md
 unit: atlas-wiki -> .codas/wiki
 unit: claim-set -> .codas/claims.yml

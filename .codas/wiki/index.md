@@ -36,3 +36,10 @@ read the relevant canonical source, and report the bootstrap gate result:
 PYTHONPATH=src python3 -m unittest discover -s tests
 git status --short
 ```
+
+## Authoring
+
+The Atlas Wiki authoring contract lives at [CONTRACT.md](../../CONTRACT.md): what is
+governed vs supporting, the `atlas:claims` grammar, and the `codas wiki` workflow.
+Generated pages under `concepts/` are hand-authored; pages under `generated/` are
+machine-rendered by `codas wiki --write` and must not be hand-edited.

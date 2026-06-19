@@ -30,6 +30,7 @@ constraint_sources:
     - .trellis/tasks/**/task.json
   supporting:
     - README.md
+    - CONTRACT.md
     - pyproject.toml
     - .codas/wiki/index.md
     - AGENTS.md

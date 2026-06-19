@@ -137,6 +137,13 @@ documents:
       - usage_changes
       - commands_change
 
+  wiki_contract:
+    path: CONTRACT.md
+    authority: supporting
+    owner: Orientation Curator
+    updates_when:
+      - wiki_authoring_rules_change
+
   agent_instructions:
     path: AGENTS.md
     authority: supporting

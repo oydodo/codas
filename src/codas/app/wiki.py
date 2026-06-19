@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -219,20 +220,61 @@ def render_generated_overview(
     return "\n".join(lines)
 
 
-def write_generated_sections(repo: Path) -> list[Path]:
-    """Render and write the committed governance page; return the written paths.
+def _generated_pages(repo: Path) -> dict[Path, str]:
+    """The deterministic ``{path: rendered content}`` for every committed generated
+    page — the single render source shared by ``--write`` and ``--verify``.
 
     Builds the generated-excluded inventory (so the embedded ``source_inventory_hash``
-    is stable across writes — the page never feeds its own hash input), renders, and
-    writes ``.codas/wiki/generated/governance.md``. Idempotent: identical bytes on a
-    re-run when the source facts are unchanged.
+    is stable across writes — the page never feeds its own hash input). The hash pins
+    ONLY the exact fields this page renders (each unit's id/path/kind/owner + each
+    work-item's id/phase/status), so the page's bytes move exactly when its rendered
+    content moves — never on an unrelated source edit (e.g. a unit's volatile
+    ``observed.artifact_count`` changing when a file is added under it). Otherwise the
+    committed page would restale on every commit and ``--verify`` would be perpetually
+    red. (A narrower, more honest freshness anchor than the §4 whole-inventory hash; the
+    pack keeps the whole-inventory hash, the page pins its own rendered source.)
     """
     inventory = run_inventory(repo, exclude_under=(_GENERATED_DIR,))
-    source_hash = inventory_hash(render_inventory_json(inventory))
+    units = inventory.get("units") or []
+    work_items = (inventory.get("program") or {}).get("work_items") or []
+    rendered_source = {
+        "units": sorted([u["id"], u["path"], u["kind"], u["owner"]] for u in units),
+        "roadmap": sorted([w["id"], w["phase"], w["status"]] for w in work_items),
+    }
+    source_hash = inventory_hash(
+        json.dumps(rendered_source, sort_keys=True, separators=(",", ":"), default=str)
+    )
     page = repo / _GENERATED_DIR / _GENERATED_PAGE
-    page.parent.mkdir(parents=True, exist_ok=True)
-    page.write_text(render_generated_overview(inventory, source_hash))
-    return [page]
+    return {page: render_generated_overview(inventory, source_hash)}
+
+
+def write_generated_sections(repo: Path) -> list[Path]:
+    """Render and write the committed generated pages; return the written paths.
+
+    Idempotent: identical bytes on a re-run when the source facts are unchanged.
+    """
+    written: list[Path] = []
+    for page, content in _generated_pages(repo).items():
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text(content)
+        written.append(page)
+    return written
+
+
+def verify_generated_sections(repo: Path) -> list[Path]:
+    """Generated pages whose on-disk bytes differ from a fresh render (stale or
+    hand-edited); empty == all up to date.
+
+    The freshness check rides in the bytes: a stale ``source_inventory_hash`` or any
+    hand-edit surfaces as a mismatch, so no separate hash bookkeeping is needed. This is
+    the home for the source-hash freshness deliberately kept out of the always-on
+    ``check`` gate (the committed page's hash churns on every unrelated source change).
+    """
+    stale: list[Path] = []
+    for page, content in _generated_pages(repo).items():
+        if not page.exists() or page.read_text() != content:
+            stale.append(page)
+    return sorted(stale)
 
 
 def _code(value: str) -> str:

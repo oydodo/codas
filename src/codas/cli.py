@@ -68,6 +68,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Write the deterministic generated Atlas sections under .codas/wiki/generated/.",
     )
+    wiki_mode.add_argument(
+        "--verify",
+        action="store_true",
+        help="Verify committed generated Atlas sections match a fresh render (exit 1 if stale).",
+    )
 
     doctor = subparsers.add_parser("doctor", help="Diagnose Codas installation.")
     doctor.add_argument("repo", nargs="?", default=".")
@@ -140,16 +145,28 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "wiki":
-        from .app.wiki import build_atlas_pack, write_generated_sections
+        from .app.wiki import (
+            build_atlas_pack,
+            verify_generated_sections,
+            write_generated_sections,
+        )
 
         if args.write:
             for path in write_generated_sections(repo):
                 print(f"wrote {path.relative_to(repo).as_posix()}")
             return 0
+        if args.verify:
+            stale = verify_generated_sections(repo)
+            if stale:
+                for path in stale:
+                    print(f"stale {path.relative_to(repo).as_posix()}")
+                return 1
+            print("generated sections up to date")
+            return 0
         if args.emit_pack:
             print(json.dumps(build_atlas_pack(repo), indent=2, sort_keys=True))
             return 0
-        parser.error("wiki: use --emit-pack or --write (--verify lands in a later D3 slice).")
+        parser.error("wiki: use --emit-pack, --write or --verify.")
 
     if args.command == "doctor":
         parser.error("doctor is planned but not implemented in P0.")
