@@ -243,11 +243,11 @@ units:
 
   role-integrations:
     path: src/codas/integrations
-    kind: planned_module
+    kind: integration_module
     owner: Codas Core
-    purpose: Future platform mappings for Codex, Claude Code, hooks, CI, GitHub Actions and human review.
+    purpose: Platform mappings that enforce Codas — git hooks and the GitHub Action CI gate (codas check), with Codex/Claude Code/human-review mappings to follow.
     canonical_placement: Platform-specific Role Integrations belong under src/codas/integrations.
-    status: planned
+    status: active
     must_update_if_changed:
       - docs/codas-implementation-plan.html
 

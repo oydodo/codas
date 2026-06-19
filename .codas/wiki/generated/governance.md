@@ -30,7 +30,7 @@ VERIFIED GOVERNANCE FACTS (prefer over inferred structure). Rendered determinist
 | `program-plan` | `.codas/program.yml` | program_plan | Document Steward |
 | `repo-root` | `.` | repository | Codas Core |
 | `role-contracts` | `src/codas/roles` | planned_module | Codas Core |
-| `role-integrations` | `src/codas/integrations` | planned_module | Codas Core |
+| `role-integrations` | `src/codas/integrations` | integration_module | Codas Core |
 | `structure-map` | `.codas/structure.yml` | structure_map | Structure Steward |
 | `structure-schema-doc` | `docs/codas-structure-map-schema.html` | schema_doc | Structure Architect |
 | `trellis-workflow` | `.trellis` | task_system | Task Steward |
@@ -49,7 +49,7 @@ VERIFIED GOVERNANCE FACTS (prefer over inferred structure). Rendered determinist
 | `program:P7:agent-query-interface` | P7 | planned |
 
 ```atlas:claims
-source_inventory_hash: sha256:6dca590d1b196abb5fc31b341db0aba219b76b37e3eb591143be8b71419e8ed3
+source_inventory_hash: sha256:762d9e1847f560c4e42eb3612accd0548b2a38ab6d536095f7d8812ae2e2ef4b
 unit: agents-guide -> AGENTS.md
 unit: atlas-wiki -> .codas/wiki
 unit: claim-set -> .codas/claims.yml

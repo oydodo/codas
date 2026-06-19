@@ -82,6 +82,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the diagnostics as JSON.",
     )
 
+    hooks = subparsers.add_parser("hooks", help="Install Codas git enforcement hooks.")
+    hooks.add_argument("repo", nargs="?", default=".")
+    hooks.add_argument(
+        "--install",
+        action="store_true",
+        help="Install pre-commit/pre-push hooks that run `codas check`.",
+    )
+    hooks.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing non-Codas hook of the same name.",
+    )
+    hooks.add_argument(
+        "--command",
+        default="codas check .",
+        help=(
+            "Check command the hooks run. Default 'codas check .' assumes codas is on "
+            "PATH; in a source checkout use e.g. "
+            "'PYTHONPATH=src python3 -m codas check .'."
+        ),
+    )
+
     return parser
 
 
@@ -172,6 +194,28 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(build_atlas_pack(repo), indent=2, sort_keys=True))
             return 0
         parser.error("wiki: use --emit-pack, --write or --verify.")
+
+    if args.command == "hooks":
+        import sys
+
+        from .app.hooks import install_git_hooks
+
+        if not args.install:
+            parser.error("hooks: use --install to install the git enforcement hooks.")
+        result = install_git_hooks(repo, force=args.force, command=args.command)
+        if result is None:
+            print(
+                "hooks: no usable git hooks directory (not a git repo, or core.hooksPath is invalid).",
+                file=sys.stderr,
+            )
+            return 1
+        for name in result.installed:
+            print(f"installed {name} -> {result.hooks_dir}/{name}")
+        for name in result.skipped:
+            print(f"skipped {name} (existing non-Codas hook; pass --force to overwrite)")
+        if not result.installed and not result.skipped:
+            print("no hooks installed")
+        return 0
 
     if args.command == "doctor":
         from .app.doctor import doctor_has_failures, run_doctor

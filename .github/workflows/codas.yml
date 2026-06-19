@@ -1,0 +1,18 @@
+name: codas
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: python -m pip install pyyaml
+      - name: Bootstrap tests
+        run: PYTHONPATH=src python -m unittest discover -s tests
+      - name: Codas check
+        run: PYTHONPATH=src python -m codas check .
