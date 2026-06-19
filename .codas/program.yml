@@ -133,13 +133,14 @@ work_items:
       - 06-19-spec-drift
       - 06-19-atlas-pack
       - 06-19-generated-sections
+      - 06-19-generated-wiki-drift
     deliverables:
       - Wiki claim parser (codas.adapters.wiki -> wiki_claims facts)
       - Stale wiki claim policy (verifies wiki claims authority + evidence vs repo facts)
       - Deterministic call-graph facts (codas.adapters.callgraph -> inventory `calls`; stdlib-ast, first-party, resolution-tagged; enables precise impact, the atlas dependency graph, and spec_drift; pyan was rejected for cross-process nondeterminism)
       - Spec-drift policy (codas.adapters.git -> ScanContext.changed_paths diff substrate + codas.policies.spec_drift; diff-grounded, materiality-as-claim: coarse must_update_if_changed stays advisory while vouched .codas/claims.yml drift_couplings gate co-change against the working-tree diff; Codas grounds + verifies, the host agent judges materiality)
       - Atlas grounding pack and deterministic generated sections (dependency graph, symbol index, structure units, roadmap; projected from inventory, byte-identical, no LLM). D3a shipped the grounding pack (codas wiki --emit-pack; pure projection + source_inventory_hash, generated-excluded to avoid the self-reference loop). D3b shipped the committed generated governance page (codas wiki --write -> .codas/wiki/generated/governance.md; structure-units + roadmap panels + a fenced atlas:claims block carrying source_inventory_hash and unit/roadmap claims; idempotent, dogfood-clean). Freshness verification of the committed page is D3d (generated_wiki_drift).
-      - Generated-wiki drift verification policy (cross-checks generated-page claims against import/symbol/owner facts and a source_inventory_hash; a hallucinated claim is an error finding)
+      - Generated-wiki drift verification policy (generated_wiki_drift, shipped D3d): parses each committed generated page's fenced atlas:claims block (a dedicated parser, since extract_wiki_claims skips fences) and verifies unit/roadmap claims against Structure Map + Program Plan facts -- a contradiction or an ungrounded page (no nonempty atlas:claims block with a source_inventory_hash) is an error. source_inventory_hash freshness is verified by codas wiki --verify (D3c), not the check gate.
       - codas wiki command (emit grounding pack, render sections, verify)
       - Wiki contract / schema layer (CONTRACT.md + AGENTS.md pointer; the host-agent authoring protocol)
     exit_criteria:
