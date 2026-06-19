@@ -10,9 +10,9 @@ The Structure Map schema lives in `docs/codas-structure-map-schema.html`.
 
 ## Dogfooding
 
-This repository is the first Codas-governed workspace. Until the `codas` CLI can
-enforce its own rules, agents working here follow the bootstrap protocol in
-`.codas/config.yml` and `.codas/wiki/index.md`:
+This repository is the first Codas-governed workspace: `codas check .` runs the
+full policy set here and stays green. Agents working here also follow the
+bootstrap gate in `.codas/config.yml` and `.codas/wiki/index.md`:
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests
@@ -77,8 +77,32 @@ PYTHONPATH=src python3 -m codas inventory . --json
 The `--json` output follows the Structure Map schema's normalized JSON shape and
 is deterministic for a given repository state.
 
-## Current P0 Scope
+Assemble the read-first context pack for a task:
 
-P0 implements the Codas package, CLI, config loader and first self-check
-policies for this repository. Swift/Ciri-specific prototype code has been
-removed; future ecosystem-specific checks must be implemented through adapters.
+```bash
+PYTHONPATH=src python3 -m codas preflight . --task <id>
+```
+
+## Atlas Wiki
+
+Atlas is Codas's **live governance map**, not a post-hoc documentation generator.
+Where a tool like CodeWiki or DeepWiki describes a finished codebase for human
+readers, Atlas serves **agents and humans during development**: it guides an agent
+before it edits (what to read, where new code belongs, what it may depend on) and
+lets a human track plan progress and control deviation. It is prescriptive and
+**verified** — every wiki claim is checked against repository facts
+(`stale_wiki_claim`, and the planned `generated_wiki_drift`), and the correctness
+core stays deterministic and LLM-free. Codas can also emit a verified **grounding
+pack** that an external LLM-wiki generator consumes to produce an optional
+human-prose doc-site, whose output Codas then verifies. The architecture decision
+is recorded in `.trellis/tasks/06-19-wiki-architecture`.
+
+## Status
+
+P0–P4 are complete: the `codas` package and CLI; config / structure-map /
+program-plan / document-manifest loaders; a deterministic Atlas **inventory**
+(`codas inventory --json`); 15 wired governance **policies** (`codas check`,
+currently zero findings on this repo); a **preflight** context pack; and run
+**provenance** plus a **receipt** ledger (`codas check --json` / `--receipt`). P5
+(wiki reconciliation) is in progress. Swift/Ciri-specific prototype code was
+removed; ecosystem-specific extraction lives behind adapters.

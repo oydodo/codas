@@ -5,7 +5,7 @@ metadata:
   project: Codas
   source: docs/codas-implementation-plan.html
   schema: docs/codas-implementation-plan.html#program-plan-work-item
-  updated: "2026-06-18"
+  updated: "2026-06-19"
   authority: authoritative
   owner: Document Steward
   summary: Repo-local Program Plan for Codas. Project-level roadmap above individual Trellis tasks; phases, deliverables and exit criteria are authored claims derived from docs/codas-implementation-plan.html sections 8 and 6. Trellis governs task-level execution; this file governs project-level sequencing.
@@ -126,14 +126,19 @@ work_items:
     depends_on:
       - program:P4:preflight-receipts
     trellis_tasks:
+      - 06-19-wiki-architecture
       - 06-19-wiki-claim-parser
       - 06-19-stale-wiki-claim
     deliverables:
-      - Wiki claim parser
-      - Generated wiki sections
-      - Stale wiki claim policy
+      - Wiki claim parser (codas.adapters.wiki -> wiki_claims facts)
+      - Stale wiki claim policy (verifies wiki claims authority + evidence vs repo facts)
+      - Atlas grounding pack and deterministic generated sections (dependency graph, symbol index, structure units, roadmap; projected from inventory, byte-identical, no LLM)
+      - Generated-wiki drift verification policy (cross-checks generated-page claims against import/symbol/owner facts and a source_inventory_hash; a hallucinated claim is an error finding)
+      - codas wiki command (emit grounding pack, render sections, verify)
+      - Wiki contract / schema layer (CONTRACT.md + AGENTS.md pointer; the host-agent authoring protocol)
     exit_criteria:
       - Wiki claims are verified against repo facts
+      - Generated wiki output is grounded in and verified against repo facts; the correctness core (check/inventory/policies) stays deterministic and LLM-free (architecture: 06-19-wiki-architecture decision record)
 
   - id: program:P6:enforcement-integrations
     phase: P6
@@ -160,7 +165,9 @@ work_items:
       - program:P6:enforcement-integrations
     trellis_tasks: []
     deliverables:
-      - MCP server
+      - MCP server (general agent-query interface)
       - Role Integrations for Codex, Claude Code, hooks, CI and human review
+      - OSS LLM-wiki backend adapters (push verified grounding into deepwiki/CodeWiki-style generators; file-convention and subprocess injection, NOT MCP, per the 06-19-wiki-architecture decision)
     exit_criteria:
       - Codex, Claude and Cursor can query Codas without parsing reports manually
+      - An external LLM-wiki generator can be grounded by Codas and its output verified against repo facts
