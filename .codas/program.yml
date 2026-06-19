@@ -122,7 +122,7 @@ work_items:
     phase: P5
     title: Wiki reconciliation
     theme: Wiki reconciliation
-    status: in_progress
+    status: completed
     depends_on:
       - program:P4:preflight-receipts
     trellis_tasks:
@@ -134,6 +134,7 @@ work_items:
       - 06-19-atlas-pack
       - 06-19-generated-sections
       - 06-19-generated-wiki-drift
+      - 06-19-wiki-verify-contract
     deliverables:
       - Wiki claim parser (codas.adapters.wiki -> wiki_claims facts)
       - Stale wiki claim policy (verifies wiki claims authority + evidence vs repo facts)
@@ -141,8 +142,8 @@ work_items:
       - Spec-drift policy (codas.adapters.git -> ScanContext.changed_paths diff substrate + codas.policies.spec_drift; diff-grounded, materiality-as-claim: coarse must_update_if_changed stays advisory while vouched .codas/claims.yml drift_couplings gate co-change against the working-tree diff; Codas grounds + verifies, the host agent judges materiality)
       - Atlas grounding pack and deterministic generated sections (dependency graph, symbol index, structure units, roadmap; projected from inventory, byte-identical, no LLM). D3a shipped the grounding pack (codas wiki --emit-pack; pure projection + source_inventory_hash, generated-excluded to avoid the self-reference loop). D3b shipped the committed generated governance page (codas wiki --write -> .codas/wiki/generated/governance.md; structure-units + roadmap panels + a fenced atlas:claims block carrying source_inventory_hash and unit/roadmap claims; idempotent, dogfood-clean). Freshness verification of the committed page is D3d (generated_wiki_drift).
       - Generated-wiki drift verification policy (generated_wiki_drift, shipped D3d): parses each committed generated page's fenced atlas:claims block (a dedicated parser, since extract_wiki_claims skips fences) and verifies unit/roadmap claims against Structure Map + Program Plan facts -- a contradiction or an ungrounded page (no nonempty atlas:claims block with a source_inventory_hash) is an error. source_inventory_hash freshness is verified by codas wiki --verify (D3c), not the check gate.
-      - codas wiki command (emit grounding pack, render sections, verify)
-      - Wiki contract / schema layer (CONTRACT.md + AGENTS.md pointer; the host-agent authoring protocol)
+      - codas wiki command (shipped D3a/D3b/D3c): --emit-pack (grounding pack to stdout), --write (render committed generated sections), --verify (byte-compare committed pages to a fresh render; exit 1 if stale -- the CI/opt-in freshness gate, kept out of the always-on check). The committed page's source_inventory_hash pins only the fields it renders (units id/path/kind/owner + work-item id/phase/status) so it does not restale on unrelated edits.
+      - Wiki contract / schema layer (shipped D3e): CONTRACT.md (repo root) is the host-agent authoring protocol -- governed (generated sections + atlas:claims, verified) vs supporting (prose, non-authoritative), the atlas:claims grammar, and the emit-pack/write/verify workflow; registered as a config-supporting source + documents.yml role, with pointers from AGENTS.md (after TRELLIS:END) and the wiki index.
     exit_criteria:
       - Wiki claims are verified against repo facts
       - Generated wiki output is grounded in and verified against repo facts; the correctness core (check/inventory/policies) stays deterministic and LLM-free (architecture: 06-19-wiki-architecture decision record)

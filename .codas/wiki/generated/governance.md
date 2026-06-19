@@ -44,12 +44,12 @@ VERIFIED GOVERNANCE FACTS (prefer over inferred structure). Rendered determinist
 | `program:P2:policy-engine-structure-drift` | P2 | completed |
 | `program:P3:adapter-extraction` | P3 | completed |
 | `program:P4:preflight-receipts` | P4 | completed |
-| `program:P5:wiki-reconciliation` | P5 | in_progress |
+| `program:P5:wiki-reconciliation` | P5 | completed |
 | `program:P6:enforcement-integrations` | P6 | planned |
 | `program:P7:agent-query-interface` | P7 | planned |
 
 ```atlas:claims
-source_inventory_hash: sha256:be1d9c32065f4724e7a207b8045cb8f239a358c39d02c6bc3db843116e6f7095
+source_inventory_hash: sha256:6dca590d1b196abb5fc31b341db0aba219b76b37e3eb591143be8b71419e8ed3
 unit: agents-guide -> AGENTS.md
 unit: atlas-wiki -> .codas/wiki
 unit: claim-set -> .codas/claims.yml
@@ -79,7 +79,7 @@ roadmap: program:P1:structure-map-foundation -> completed
 roadmap: program:P2:policy-engine-structure-drift -> completed
 roadmap: program:P3:adapter-extraction -> completed
 roadmap: program:P4:preflight-receipts -> completed
-roadmap: program:P5:wiki-reconciliation -> in_progress
+roadmap: program:P5:wiki-reconciliation -> completed
 roadmap: program:P6:enforcement-integrations -> planned
 roadmap: program:P7:agent-query-interface -> planned
 ```
