@@ -129,9 +129,11 @@ work_items:
       - 06-19-wiki-architecture
       - 06-19-wiki-claim-parser
       - 06-19-stale-wiki-claim
+      - 06-19-callgraph-facts
     deliverables:
       - Wiki claim parser (codas.adapters.wiki -> wiki_claims facts)
       - Stale wiki claim policy (verifies wiki claims authority + evidence vs repo facts)
+      - Deterministic call-graph facts (codas.adapters.callgraph -> inventory `calls`; stdlib-ast, first-party, resolution-tagged; enables precise impact, the atlas dependency graph, and spec_drift; pyan was rejected for cross-process nondeterminism)
       - Atlas grounding pack and deterministic generated sections (dependency graph, symbol index, structure units, roadmap; projected from inventory, byte-identical, no LLM)
       - Generated-wiki drift verification policy (cross-checks generated-page claims against import/symbol/owner facts and a source_inventory_hash; a hallucinated claim is an error finding)
       - codas wiki command (emit grounding pack, render sections, verify)
