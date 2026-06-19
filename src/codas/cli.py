@@ -57,10 +57,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     wiki = subparsers.add_parser("wiki", help="Generate or verify Atlas Wiki.")
     wiki.add_argument("repo", nargs="?", default=".")
-    wiki.add_argument(
+    wiki_mode = wiki.add_mutually_exclusive_group()
+    wiki_mode.add_argument(
         "--emit-pack",
         action="store_true",
         help="Print the Atlas grounding pack (verified facts) as JSON.",
+    )
+    wiki_mode.add_argument(
+        "--write",
+        action="store_true",
+        help="Write the deterministic generated Atlas sections under .codas/wiki/generated/.",
     )
 
     doctor = subparsers.add_parser("doctor", help="Diagnose Codas installation.")
@@ -134,12 +140,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "wiki":
-        from .app.wiki import build_atlas_pack
+        from .app.wiki import build_atlas_pack, write_generated_sections
 
+        if args.write:
+            for path in write_generated_sections(repo):
+                print(f"wrote {path.relative_to(repo).as_posix()}")
+            return 0
         if args.emit_pack:
             print(json.dumps(build_atlas_pack(repo), indent=2, sort_keys=True))
             return 0
-        parser.error("wiki: use --emit-pack (other modes land in later D3 slices).")
+        parser.error("wiki: use --emit-pack or --write (--verify lands in a later D3 slice).")
 
     if args.command == "doctor":
         parser.error("doctor is planned but not implemented in P0.")

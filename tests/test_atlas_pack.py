@@ -100,27 +100,27 @@ class BuildAtlasPackTests(unittest.TestCase):
         without_hash = {k: v for k, v in pack.items() if k != "source_inventory_hash"}
         self.assertEqual(without_hash, rebuilt)
 
-    def test_source_hash_is_generated_excluded(self) -> None:
-        # This test's "exclusion is a no-op" assumption holds only while no generated
-        # dir exists. Assert that precondition LOUDLY so D3b/c (which commits pages
-        # under .codas/wiki/generated/) fails here and forces a real divergence test,
-        # rather than this silently passing on a now-meaningful exclusion (codex SHOULD).
-        self.assertFalse(
-            (self.repo / ".codas" / "wiki" / "generated").exists(),
-            "generated wiki pages exist -> restructure this test to assert the "
-            "source_inventory_hash DIVERGES from the full inventory hash",
-        )
+    def test_source_hash_excludes_generated(self) -> None:
+        # A generated page exists (D3b) -> source_inventory_hash is computed over the
+        # generated-EXCLUDED inventory, so it must DIVERGE from the full inventory hash
+        # (that divergence IS the self-reference hash-loop fix) and equal the excluded
+        # hash exactly.
         pack = build_atlas_pack(self.repo)
-        expected = inventory_hash(render_inventory_json(run_inventory(self.repo)))
-        self.assertEqual(pack["source_inventory_hash"], expected)
+        full = inventory_hash(render_inventory_json(run_inventory(self.repo)))
+        excluded = inventory_hash(
+            render_inventory_json(run_inventory(self.repo, exclude_under=(GENERATED,)))
+        )
+        self.assertNotEqual(pack["source_inventory_hash"], full)
+        self.assertEqual(pack["source_inventory_hash"], excluded)
 
 
 class ExcludeUnderTests(unittest.TestCase):
     def setUp(self) -> None:
         self.repo = Path.cwd()
 
-    def test_generated_exclusion_is_noop_today(self) -> None:
-        self.assertEqual(
+    def test_generated_exclusion_changes_inventory(self) -> None:
+        # The generated page exists and is tracked -> excluding it changes the inventory.
+        self.assertNotEqual(
             run_inventory(self.repo, exclude_under=(GENERATED,)),
             run_inventory(self.repo),
         )
@@ -149,6 +149,16 @@ class WikiCliTests(unittest.TestCase):
                     "concept_index", "verified_evidence", "roadmap",
                     "source_inventory_hash"):
             self.assertIn(key, pack)
+
+    def test_both_modes_mutually_exclusive(self) -> None:
+        with self.assertRaises(SystemExit) as caught:
+            main(["wiki", str(Path.cwd()), "--write", "--emit-pack"])
+        self.assertEqual(caught.exception.code, 2)  # argparse usage error, no write
+
+    def test_no_mode_is_usage_error(self) -> None:
+        with self.assertRaises(SystemExit) as caught:
+            main(["wiki", str(Path.cwd())])
+        self.assertEqual(caught.exception.code, 2)  # parser.error, exits before any write
 
 
 if __name__ == "__main__":
