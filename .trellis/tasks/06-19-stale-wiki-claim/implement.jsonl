@@ -1,0 +1,5 @@
+{"file": "src/codas/policies/stale_wiki_claim.py", "reason": "stale_wiki_claim policy: authority (literal canonical_source vs config, glob-aware) + existence (code-span kinds); concept_page deferred to stale_claim"}
+{"file": "src/codas/app/check.py", "reason": "wire check_stale_wiki_claim(ctx)"}
+{"file": ".codas/policies.yml", "reason": "declare stale_wiki_claim (warning)"}
+{"file": "tests/test_stale_wiki_claim.py", "reason": "policy tests incl spec-glob-match + glob-exempt + concept_page-deferred + 0-on-repo"}
+{"file": "tests/test_codas_check.py", "reason": "add check_stale_wiki_claim to orchestration monkeypatch (5th ctx consumer)"}

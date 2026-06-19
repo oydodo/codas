@@ -22,6 +22,10 @@ policies:
     severity: warning
     description: Markdown link references must point to existing paths; code-span and fragment-anchor checks are later expansion.
 
+  stale_wiki_claim:
+    severity: warning
+    description: Atlas Wiki claims must be verified against repo facts -- a literal canonical-source claim must be a constraint source config declares authoritative or supporting (glob-aware; glob canonical sources are existence-verified only), and canonical_source/evidence/sync_target code-span paths must exist. Broken concept-page links stay with stale_claim; sync_target reverse-pointer consistency is later.
+
   spec_drift:
     severity: error
     description: Changes to behavior, architecture, commands, policies or data model must update their authoritative claim source.
