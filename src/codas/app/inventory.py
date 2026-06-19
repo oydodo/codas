@@ -7,8 +7,8 @@ from typing import Any
 from codas.structure.inventory import build_inventory
 
 
-def run_inventory(repo: Path) -> dict[str, Any]:
-    return build_inventory(repo)
+def run_inventory(repo: Path, exclude_under: tuple[str, ...] = ()) -> dict[str, Any]:
+    return build_inventory(repo, exclude_under=exclude_under)
 
 
 def render_inventory_json(inventory: dict[str, Any]) -> str:

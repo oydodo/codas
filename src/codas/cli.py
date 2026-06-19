@@ -57,6 +57,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     wiki = subparsers.add_parser("wiki", help="Generate or verify Atlas Wiki.")
     wiki.add_argument("repo", nargs="?", default=".")
+    wiki.add_argument(
+        "--emit-pack",
+        action="store_true",
+        help="Print the Atlas grounding pack (verified facts) as JSON.",
+    )
 
     doctor = subparsers.add_parser("doctor", help="Diagnose Codas installation.")
     doctor.add_argument("repo", nargs="?", default=".")
@@ -128,8 +133,16 @@ def main(argv: list[str] | None = None) -> int:
             print_context_pack(pack)
         return 0
 
-    if args.command in {"wiki", "doctor"}:
-        parser.error(f"{args.command} is planned but not implemented in P0.")
+    if args.command == "wiki":
+        from .app.wiki import build_atlas_pack
+
+        if args.emit_pack:
+            print(json.dumps(build_atlas_pack(repo), indent=2, sort_keys=True))
+            return 0
+        parser.error("wiki: use --emit-pack (other modes land in later D3 slices).")
+
+    if args.command == "doctor":
+        parser.error("doctor is planned but not implemented in P0.")
 
     parser.error(f"unknown command: {args.command}")
     return 2

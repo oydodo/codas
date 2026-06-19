@@ -20,11 +20,23 @@ PROGRAM_SOURCE = ".codas/program.yml"
 DOCUMENTS_SOURCE = ".codas/documents.yml"
 
 
-def build_inventory(repo: Path) -> dict[str, Any]:
+def build_inventory(
+    repo: Path, exclude_under: tuple[str, ...] = ()
+) -> dict[str, Any]:
     """Build the deterministic normalized Atlas inventory for a repository.
 
     Structure portion follows the schema §5 normalized JSON shape (flat at the
     top level); program facts are added as a sibling ``program`` block.
+
+    ``exclude_under`` drops tracked files under the given repo-relative directory
+    prefixes from every FILE-SCOPED extractor (and the artifact index). Default
+    ``()`` performs no filtering, so ``codas inventory`` / provenance stay
+    byte-identical. The Atlas pack (``app/wiki.build_atlas_pack``) passes
+    ``(".codas/wiki/generated",)`` so the ``source_inventory_hash`` it pins is not
+    self-referential (the inventory ingests ``.codas/wiki/``; a generated page that
+    embeds the full inventory hash would chase its own bytes). NB ``extract_task_facts``
+    is trellis-rooted, not file-scoped, so the ``tasks`` block is unaffected — harmless,
+    since the excluded dir only holds ``.md``.
     """
     config = load_codas_config(repo / ".codas" / "config.yml")
     roots = workspace_roots(config.raw)
@@ -33,6 +45,15 @@ def build_inventory(repo: Path) -> dict[str, Any]:
         repo / ".codas" / "structure.yml", source=STRUCTURE_SOURCE
     )
     files = discover_files(repo, roots)
+    if exclude_under:
+        files = [
+            path
+            for path in files
+            if not any(
+                path == prefix or path.startswith(prefix + "/")
+                for prefix in exclude_under
+            )
+        ]
     index = build_artifact_index(repo, roots, structure_map, files=files)
 
     units = []
