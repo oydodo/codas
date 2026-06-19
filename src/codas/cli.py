@@ -76,6 +76,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = subparsers.add_parser("doctor", help="Diagnose Codas installation.")
     doctor.add_argument("repo", nargs="?", default=".")
+    doctor.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the diagnostics as JSON.",
+    )
 
     return parser
 
@@ -169,7 +174,28 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("wiki: use --emit-pack, --write or --verify.")
 
     if args.command == "doctor":
-        parser.error("doctor is planned but not implemented in P0.")
+        from .app.doctor import doctor_has_failures, run_doctor
+
+        diagnostics = run_doctor(repo)
+        if args.json:
+            payload = [
+                {"name": d.name, "status": d.status, "detail": d.detail}
+                for d in diagnostics
+            ]
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            for d in diagnostics:
+                print(f"[{d.status.upper():>4}] {d.name}: {d.detail}")
+            fails = sum(1 for d in diagnostics if d.status == "fail")
+            warns = sum(1 for d in diagnostics if d.status == "warn")
+            print()
+            if fails:
+                print(f"{fails} failed, {warns} warning(s) — Codas install needs attention.")
+            elif warns:
+                print(f"All required checks passed, {warns} warning(s).")
+            else:
+                print("Codas install healthy.")
+        return 1 if doctor_has_failures(diagnostics) else 0
 
     parser.error(f"unknown command: {args.command}")
     return 2
