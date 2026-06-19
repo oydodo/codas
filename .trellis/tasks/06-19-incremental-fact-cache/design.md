@@ -79,8 +79,10 @@ title/scope note accordingly.
    they don't `ast.parse`; the single-parse-pass is Python-only. They still benefit from
    Slice 2's content-hash cache.)
 4. `structure/inventory.py` + `app/inventory.py`: `build_inventory` projects from a
-   `ScanContext` (built once), not its own `discover_files`/`extract_*`. Preserve
-   `exclude_under`. `run_inventory`/provenance unchanged externally.
+   `ScanContext` (built once), not its own `discover_files`/`extract_*`. **`exclude_under`
+   must PRE-FILTER the file set the ScanContext is built over — NOT post-filter rows from
+   a full-set ScanContext** (codex BLOCKER; see "Resolved contract" below).
+   `run_inventory`/provenance unchanged externally.
 5. `app/check.py` / `app/provenance.py`: `check --json` reuses the run's `ScanContext`
    for provenance instead of a second `build_inventory` scan (or build_inventory accepts
    the existing ctx). One scan per `check --json`.
@@ -97,6 +99,43 @@ title/scope note accordingly.
   `ScanContext` is the existing inventory↔facts bridge (allowed; structure-module is the
   bridge, not a policy).
 - New names unique (`parse_python_modules`, `ParsedModules`, `*_from_parsed`).
+
+## Resolved contract (codex design review, 2026-06-20 — 3 BLOCKERs folded)
+
+**THE load-bearing rule: `exclude_under` narrows the file set BEFORE extraction, never
+after.** Python `imports.target_path` and `calls` edges resolve against the COMPLETE
+file set, so dropping rows from a full-set extraction is NOT behavior-preserving, and the
+wiki pack's `source_inventory_hash` is `digest(render(run_inventory(repo,
+exclude_under=(_GENERATED_DIR,))))` — a filtering-location shift changes that hash and
+breaks `codas wiki --verify`. So:
+
+- `build_inventory(repo, exclude_under=X)` builds a `ScanContext` over the **pre-filtered**
+  `files` (apply the existing `exclude_under` prefix filter to `discover_files(...)`
+  BEFORE constructing the ctx / before any extractor sees it). One ctx per (repo,
+  exclude_under). The default `exclude_under=()` path is the shared run ctx.
+- Provenance/check--json reuse the run's `ScanContext`; verify the rendered inventory JSON
+  is byte-identical to today's `run_inventory(repo)`, and preserve the best-effort error
+  path (malformed inventory → `inventory_hash=None`, never abort the JSON report —
+  `provenance.py` `_safe`).
+
+Folded SHOULDs:
+- **callgraph still needs its `_Module` projection** (defs/classes/is_package/bindings) on
+  top of the shared `ast.Module`; `parse_python_modules` yields trees, callgraph builds
+  `_Module` from them (don't try to share the `_Module` structure, only the parse).
+- **Preserve per-extractor error semantics**: symbols/imports catch `OSError+SyntaxError+
+  ValueError`; callgraph catches only `SyntaxError+ValueError`. The shared parser must not
+  silently change `extract_call_facts`' `skipped` set — keep each extractor's skip policy
+  (e.g. parse_python_modules records read/parse failures, and each `*_from_parsed` applies
+  its own filter, or the shared parser preserves the union and each extractor ignores
+  what it always did). Verify the `skipped` lists are byte-identical.
+- **Tests must prove EQUIVALENCE to the pre-refactor output, not just self-consistency**:
+  capture the current `extract_*` output on fixtures (syntax-error file, loose non-package
+  `.py`, `__init__.py`, relative imports, duplicate imports, all callgraph resolution
+  kinds) and assert the refactored `*_from_parsed` produces identical facts. ADD a
+  python-subtree `exclude_under` fixture (the primary projection-filter risk) asserting
+  the import/call resolution differs correctly when a subtree is excluded.
+- Name `ScanContext._parsed()` / `*_from_parsed` as the non-redundant path; the `(repo,
+  files)` wrappers stay for back-compat (and become the Slice-2 cache seam).
 
 ## Open questions for review
 
