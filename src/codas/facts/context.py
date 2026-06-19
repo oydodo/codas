@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from codas.adapters.markdown import DocClaim, extract_doc_claims
+from codas.adapters.callgraph import CallFact, CallFacts, extract_call_facts
 from codas.adapters.python import (
     ImportFact,
     ImportFacts,
@@ -30,6 +31,8 @@ __all__ = [
     "ImportFacts",
     "WikiClaim",
     "WikiClaims",
+    "CallFact",
+    "CallFacts",
 ]
 
 
@@ -82,6 +85,12 @@ class ScanContext:
                 self.repo, self.files, wiki_root
             )
         return self._cache["wiki_claims"]
+
+    def calls(self) -> CallFacts:
+        """Deterministic first-party Python call-graph facts (cached, stdlib ast)."""
+        if "calls" not in self._cache:
+            self._cache["calls"] = extract_call_facts(self.repo, self.files)
+        return self._cache["calls"]
 
 
 def build_scan_context(repo: Path, config: CodasConfig) -> ScanContext:

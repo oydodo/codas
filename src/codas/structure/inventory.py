@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from codas.adapters.callgraph import extract_call_facts
 from codas.adapters.markdown import extract_doc_claims
 from codas.adapters.python import extract_import_facts, extract_symbol_facts
 from codas.adapters.trellis import extract_task_facts
@@ -175,6 +176,28 @@ def build_inventory(repo: Path) -> dict[str, Any]:
             for fact in imports.imports
         ],
         "skipped": list(imports.skipped),
+    }
+
+    call_facts = extract_call_facts(repo, tuple(files))
+    inventory["calls"] = {
+        "sources": sorted({edge.caller_path for edge in call_facts.edges}),
+        "edges": [
+            {
+                "caller_module": edge.caller_module,
+                "caller_class": edge.caller_class,
+                "caller_symbol": edge.caller_symbol,
+                "caller_path": edge.caller_path,
+                "caller_line": edge.caller_line,
+                "callee_module": edge.callee_module,
+                "callee_class": edge.callee_class,
+                "callee_symbol": edge.callee_symbol,
+                "callee_path": edge.callee_path,
+                "callee_line": edge.callee_line,
+                "resolution": edge.resolution,
+            }
+            for edge in call_facts.edges
+        ],
+        "skipped": list(call_facts.skipped),
     }
 
     return inventory

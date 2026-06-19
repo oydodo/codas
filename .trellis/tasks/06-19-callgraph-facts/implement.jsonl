@@ -1,0 +1,4 @@
+{"file": "src/codas/adapters/callgraph.py", "reason": "Deterministic stdlib-ast call-graph extractor (resolution classes); pyan rejected (nondeterministic)"}
+{"file": "src/codas/structure/inventory.py", "reason": "calls block in inventory"}
+{"file": "src/codas/facts/context.py", "reason": "ScanContext.calls() accessor + CallFact/CallFacts re-export"}
+{"file": "tests/test_call_facts.py", "reason": "tests: resolution kinds, first-party filter, determinism, scope"}
