@@ -74,6 +74,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Verify committed generated Atlas sections match a fresh render (exit 1 if stale).",
     )
 
+    init = subparsers.add_parser("init", help="Scaffold a .codas/ skeleton.")
+    init.add_argument("repo", nargs="?", default=".")
+    init.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing .codas files instead of skipping them.",
+    )
+
     doctor = subparsers.add_parser("doctor", help="Diagnose Codas installation.")
     doctor.add_argument("repo", nargs="?", default=".")
     doctor.add_argument(
@@ -194,6 +202,18 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(build_atlas_pack(repo), indent=2, sort_keys=True))
             return 0
         parser.error("wiki: use --emit-pack, --write or --verify.")
+
+    if args.command == "init":
+        from .app.init import scaffold
+
+        result = scaffold(repo, force=args.force)
+        for rel in result.written:
+            print(f"wrote {rel}")
+        for rel in result.skipped:
+            print(f"skipped {rel} (exists; use --force to overwrite)")
+        if not result.written and not result.skipped:
+            print("nothing to scaffold")
+        return 0
 
     if args.command == "hooks":
         import sys
