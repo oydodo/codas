@@ -64,11 +64,13 @@ class CodasCheckTests(unittest.TestCase):
             "codas.app.check.check_stale_wiki_claim", return_value=[]
         ) as stale_wiki, mock.patch(
             "codas.app.check.check_spec_drift", return_value=[]
-        ) as spec_drift:
+        ) as spec_drift, mock.patch(
+            "codas.app.check.check_generated_wiki_drift", return_value=[]
+        ) as gen_drift:
             run_check(repo)
 
         self.assertEqual(build.call_count, 1)
-        for spy in (stale, dup_symbol, dup_impl, dep_dir, stale_wiki, spec_drift):
+        for spy in (stale, dup_symbol, dup_impl, dep_dir, stale_wiki, spec_drift, gen_drift):
             self.assertEqual(spy.call_count, 1)
             self.assertIs(spy.call_args.args[0], build.return_value)
 

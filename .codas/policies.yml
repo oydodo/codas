@@ -30,6 +30,10 @@ policies:
     severity: error
     description: Changes to behavior, architecture, commands, policies or data model must update their authoritative claim source.
 
+  generated_wiki_drift:
+    severity: error
+    description: A committed generated Atlas page (.codas/wiki/generated/**) must embed a nonempty atlas:claims block with a source_inventory_hash, and each unit/roadmap claim must match the Structure Map / Program Plan facts; a claim the facts contradict is an error. Source-hash freshness is verified by codas wiki --verify, not the check gate.
+
   missing_canonical_owner:
     severity: error
     description: New concepts must declare their owner before becoming part of the implementation.

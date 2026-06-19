@@ -262,6 +262,6 @@ def _claim_token(value: str) -> str:
     or a newline, else the line is ambiguous. (Bare ``:`` without a space is fine, so
     work-item ids like ``program:P0:cli-core`` pass.)
     """
-    if "->" in value or ": " in value or "\n" in value:
+    if "->" in value or ": " in value or "\n" in value or value.startswith("```"):
         raise ValueError(f"atlas:claims token breaks the grammar: {value!r}")
     return value

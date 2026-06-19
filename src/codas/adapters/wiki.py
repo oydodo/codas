@@ -172,3 +172,103 @@ def _heading(stripped: str) -> str | None:
     if not stripped.startswith("#"):
         return None
     return stripped.strip("#").strip().lower()  # tolerate trailing ATX '#'
+
+
+# --- generated-page atlas:claims (D3d) ------------------------------------------
+
+GENERATED_ROOT_DEFAULT = ".codas/wiki/generated"
+
+
+@dataclass(frozen=True)
+class GeneratedClaim:
+    source: str
+    line: int
+    kind: str  # unit | roadmap
+    subject: str
+    value: str
+
+
+@dataclass(frozen=True)
+class GeneratedPage:
+    source: str
+    source_inventory_hash: str  # "" if absent
+    claims: tuple[GeneratedClaim, ...]
+    has_block: bool
+
+
+@dataclass(frozen=True)
+class GeneratedClaims:
+    pages: tuple[GeneratedPage, ...]
+    skipped: tuple[str, ...]
+
+
+def extract_generated_claims(
+    repo: Path, files: tuple[str, ...], generated_root: str = GENERATED_ROOT_DEFAULT
+) -> GeneratedClaims:
+    """Parse the fenced ``atlas:claims`` block of each committed generated page.
+
+    The deliberate INVERSE of ``extract_wiki_claims``: that skips fenced content (so a
+    generated page's atlas:claims block produces no wiki_claims and stays dogfood-clean
+    for ``stale_wiki_claim``), while this reads INSIDE the ``atlas:claims`` fence.
+    Scoped to ``.md`` under ``generated_root``. Recognizes ``source_inventory_hash:
+    <h>``, ``unit: <subject> -> <value>`` and ``roadmap: <subject> -> <value>`` lines —
+    the format ``app/wiki.render_generated_overview`` emits. Deterministic (pages sorted
+    by source, claims in file order). The ``generated_wiki_drift`` policy verifies these.
+    """
+    prefix = generated_root.rstrip("/") + "/"
+    gen_files = [
+        f
+        for f in files
+        if f.endswith(".md") and (f == generated_root or f.startswith(prefix))
+    ]
+    pages: list[GeneratedPage] = []
+    skipped: list[str] = []
+
+    for source in sorted(gen_files):
+        try:
+            text = (repo / source).read_text(errors="ignore")
+        except OSError:
+            skipped.append(source)
+            continue
+        has_block = False
+        source_hash = ""
+        claims: list[GeneratedClaim] = []
+        in_block = False
+        for lineno, raw in enumerate(text.splitlines(), start=1):
+            stripped = raw.strip()
+            if not in_block:
+                if stripped.startswith("```") and stripped[3:].strip() == "atlas:claims":
+                    in_block = True
+                    has_block = True
+                continue
+            if stripped.startswith("```"):
+                in_block = False
+                continue
+            if stripped.startswith("source_inventory_hash:"):
+                if not source_hash:
+                    source_hash = stripped.split(":", 1)[1].strip()
+                continue
+            for kind in ("unit", "roadmap"):
+                if stripped.startswith(kind + ":"):
+                    _, _, rest = stripped.partition(":")
+                    subject, sep, value = rest.partition(" -> ")
+                    if sep:
+                        claims.append(
+                            GeneratedClaim(
+                                source=source,
+                                line=lineno,
+                                kind=kind,
+                                subject=subject.strip(),
+                                value=value.strip(),
+                            )
+                        )
+                    break
+        pages.append(
+            GeneratedPage(
+                source=source,
+                source_inventory_hash=source_hash,
+                claims=tuple(claims),
+                has_block=has_block,
+            )
+        )
+    return GeneratedClaims(pages=tuple(pages), skipped=tuple(sorted(skipped)))

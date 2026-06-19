@@ -14,7 +14,15 @@ from codas.adapters.python import (
     extract_import_facts,
     extract_symbol_facts,
 )
-from codas.adapters.wiki import WikiClaim, WikiClaims, extract_wiki_claims
+from codas.adapters.wiki import (
+    GeneratedClaim,
+    GeneratedClaims,
+    GeneratedPage,
+    WikiClaim,
+    WikiClaims,
+    extract_generated_claims,
+    extract_wiki_claims,
+)
 from codas.config.loader import CodasConfig
 from codas.structure.index import discover_files, workspace_roots
 
@@ -32,6 +40,9 @@ __all__ = [
     "ImportFacts",
     "WikiClaim",
     "WikiClaims",
+    "GeneratedClaim",
+    "GeneratedPage",
+    "GeneratedClaims",
     "CallFact",
     "CallFacts",
 ]
@@ -103,6 +114,21 @@ class ScanContext:
         if "changed_paths" not in self._cache:
             self._cache["changed_paths"] = extract_changed_paths(self.repo)
         return self._cache["changed_paths"]
+
+    def generated_claims(self) -> GeneratedClaims:
+        """atlas:claims parsed from committed generated wiki pages (cached).
+
+        A policy-time fact consumed by ``generated_wiki_drift``; deliberately not
+        serialized into ``inventory`` (the generated pages are excluded from the
+        source_inventory_hash, and their claims never re-enter the hashed inventory).
+        """
+        if "generated_claims" not in self._cache:
+            wiki_root = (self.config.raw.get("wiki") or {}).get("path", ".codas/wiki")
+            root = wiki_root.rstrip("/") + "/generated"
+            self._cache["generated_claims"] = extract_generated_claims(
+                self.repo, self.files, root
+            )
+        return self._cache["generated_claims"]
 
 
 def build_scan_context(repo: Path, config: CodasConfig) -> ScanContext:
