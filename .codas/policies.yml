@@ -1,9 +1,21 @@
 version: 1
 mode: bootstrap
 
+# `severity` is the declared/nominal severity of a policy, NOT the runtime source --
+# each check emits its own (sometimes dynamic) severity; bootstrap loader checks
+# (`kind: bootstrap`) may emit lower-severity findings than declared here.
+# `kind: bootstrap` marks meta/loader checks (config/structure/program/document/waiver
+# loading) as distinct from governance rules. `status: planned` marks a policy that is
+# declared on the roadmap but not yet implemented. The `policy_registry` policy keeps
+# this file and the implemented `check_*` functions in agreement.
 policies:
+  policy_registry:
+    severity: error
+    description: Every implemented check_<id> policy under src/codas/policies must be declared here (governance or bootstrap), and every declared non-planned policy must be implemented; otherwise the declared registry has drifted from the code.
+
   duplicate_concept:
     severity: error
+    status: planned
     description: Do not introduce a second implementation for the same concept without a waiver.
 
   duplicate_symbol:
@@ -16,6 +28,7 @@ policies:
 
   orphan_artifact:
     severity: error
+    status: planned
     description: New files must have an owner, purpose and path into the product architecture.
 
   stale_claim:
@@ -36,6 +49,7 @@ policies:
 
   missing_canonical_owner:
     severity: error
+    status: planned
     description: New concepts must declare their owner before becoming part of the implementation.
 
   missing_structure_owner:
@@ -56,8 +70,47 @@ policies:
 
   constraint_conflict:
     severity: error
+    status: planned
     description: Conflicting authoritative claims must be resolved or explicitly waived.
 
   stale_preflight:
     severity: warning
+    status: planned
     description: During bootstrap, agents must state the affected concept and read canonical sources before editing.
+
+  # Bootstrap meta/loader checks: wired in check.py, emit their own (sometimes
+  # dynamic) severity. Declared so the policy_registry stays consistent.
+  config_sources:
+    severity: error
+    kind: bootstrap
+    description: Declared authoritative/supporting constraint sources in config.yml must exist on disk.
+
+  structure_map:
+    severity: error
+    kind: bootstrap
+    description: .codas/structure.yml must load as a valid Structure Map (schema/parse check).
+
+  program_plan:
+    severity: error
+    kind: bootstrap
+    description: .codas/program.yml must load as a valid Program Plan (schema/parse check).
+
+  document_set:
+    severity: error
+    kind: bootstrap
+    description: The Project Document Set (documents.yml) canonical-required roles must be present, exist and not out-rank config authority.
+
+  trellis_context:
+    severity: error
+    kind: bootstrap
+    description: The configured Trellis workflow context (root, task globs) must be present and well-formed.
+
+  dogfooding_protocol:
+    severity: error
+    kind: bootstrap
+    description: The repository must satisfy its own declared dogfooding protocol (the dogfooding gate source must exist).
+
+  waivers:
+    severity: error
+    kind: bootstrap
+    description: Each waiver in waivers.yml must declare reason, owner, scope and expiry (waiver schema validation).
