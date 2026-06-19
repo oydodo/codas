@@ -131,12 +131,13 @@ work_items:
       - 06-19-stale-wiki-claim
       - 06-19-callgraph-facts
       - 06-19-spec-drift
+      - 06-19-atlas-pack
     deliverables:
       - Wiki claim parser (codas.adapters.wiki -> wiki_claims facts)
       - Stale wiki claim policy (verifies wiki claims authority + evidence vs repo facts)
       - Deterministic call-graph facts (codas.adapters.callgraph -> inventory `calls`; stdlib-ast, first-party, resolution-tagged; enables precise impact, the atlas dependency graph, and spec_drift; pyan was rejected for cross-process nondeterminism)
       - Spec-drift policy (codas.adapters.git -> ScanContext.changed_paths diff substrate + codas.policies.spec_drift; diff-grounded, materiality-as-claim: coarse must_update_if_changed stays advisory while vouched .codas/claims.yml drift_couplings gate co-change against the working-tree diff; Codas grounds + verifies, the host agent judges materiality)
-      - Atlas grounding pack and deterministic generated sections (dependency graph, symbol index, structure units, roadmap; projected from inventory, byte-identical, no LLM)
+      - Atlas grounding pack and deterministic generated sections (dependency graph, symbol index, structure units, roadmap; projected from inventory, byte-identical, no LLM). D3a shipped the grounding pack (codas wiki --emit-pack; pure projection + source_inventory_hash, generated-excluded to avoid the self-reference loop); deterministic committed generated sections are D3b.
       - Generated-wiki drift verification policy (cross-checks generated-page claims against import/symbol/owner facts and a source_inventory_hash; a hallucinated claim is an error finding)
       - codas wiki command (emit grounding pack, render sections, verify)
       - Wiki contract / schema layer (CONTRACT.md + AGENTS.md pointer; the host-agent authoring protocol)
