@@ -8,3 +8,4 @@ dist/
 build/
 *.egg-info/
 .codas/receipts/*.json
+.codas/cache/
