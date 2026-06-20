@@ -62,3 +62,18 @@ product namespace + names in a known vocabulary (policy ids, CLI commands, unit 
   is fuzzier (the claim-vs-illustrative judgment) and should be scoped tightly to avoid false
   positives. Recommend shipping Layer 1 first.
 - Relates to: `stale_claim` (the consumer), the markdown adapter (the pattern to mirror).
+
+## Audit residue (2026-06-20, from the Drift/Staleness 2×2 doc pass)
+
+A parallel doc audit (workflow) catching drift/stale conflations also surfaced these
+lower-value *naming* nits — left unfixed, exactly the class an html adapter (L1) + a
+term-consistency check (L2) would catch automatically rather than by manual grep:
+- `structure_drift` (policy + `structure/drift.py` module + several doc rows) names a
+  placement/boundary check with "drift" — orthogonal to the change-governance DRIFT
+  quadrant; a reader merges the two senses.
+- `--verify` "stale"/"freshness" wording in README.md, CONTRACT.md, design.html overloads
+  "stale" (it is a byte-compare regeneration gate, not the STALE quadrant).
+- design.html §16 policies.yml example lists planned policies but omits the wired STATE
+  detectors (stale_wiki_claim/generated_wiki_drift/policy_registry) — internally stale vs
+  the §11.1 wired set; an L2 policy-name-vs-wired-set check would flag it.
+- Several `must_update_if_changed` mentions don't mark themselves advisory-vs-gated.
