@@ -63,14 +63,38 @@ def parse_python_modules(repo: Path, files: tuple[str, ...]) -> ParsedModules:
     out: list[ParsedModule] = []
     for rel in sorted(f for f in files if f.endswith(".py")):
         try:
-            source = (repo / rel).read_text(errors="ignore")
+            source = (repo / rel).read_bytes().decode("utf-8", "ignore")
         except OSError as exc:  # legacy: symbols/imports skip; callgraph propagates
             out.append(ParsedModule(path=rel, tree=None, read_error=exc))
             continue
-        try:
-            tree = ast.parse(source)
-        except (SyntaxError, ValueError):
-            out.append(ParsedModule(path=rel, tree=None))
-            continue
-        out.append(ParsedModule(path=rel, tree=tree))
+        out.append(_parse_one(rel, source))
     return ParsedModules(tuple(out))
+
+
+def parse_sources(sources: dict[str, str]) -> ParsedModules:
+    """``ast.parse`` already-read ``.py`` source keyed by repo-relative path.
+
+    The sibling of :func:`parse_python_modules` for content read off-disk — the
+    ``HEAD`` fact snapshot reads each blob via git, then parses it here. There is no
+    per-file ``read_error`` state: the caller already obtained the bytes, so a read
+    failure is handled upstream (the whole snapshot is abandoned), never recorded as
+    a skipped module. Parse failures (``SyntaxError``/``ValueError``) become
+    ``tree=None`` exactly as in :func:`parse_python_modules`, and the path order is
+    the same (sorted), so the downstream extractors are byte-identical regardless of
+    which reader produced the source.
+    """
+    out = [
+        _parse_one(rel, sources[rel])
+        for rel in sorted(sources)
+        if rel.endswith(".py")
+    ]
+    return ParsedModules(tuple(out))
+
+
+def _parse_one(rel: str, source: str) -> ParsedModule:
+    """Parse one module's source; a parse failure yields ``tree=None`` (skipped)."""
+    try:
+        tree = ast.parse(source)
+    except (SyntaxError, ValueError):
+        return ParsedModule(path=rel, tree=None)
+    return ParsedModule(path=rel, tree=tree)

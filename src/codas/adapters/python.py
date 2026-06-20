@@ -96,16 +96,12 @@ def extract_import_facts_from_parsed(parsed: ParsedModules) -> ImportFacts:
     scanned ``.py`` (parsed or not), exactly as before. Deterministic, no LLM (§17).
     """
     py_files = [module.path for module in parsed.modules]
-    package_dirs = {
-        posixpath.dirname(f)
-        for f in py_files
-        if f == "__init__.py" or f.endswith("/__init__.py")
-    }
+    pkg_dirs = package_dirs_of(py_files)
     # Build dotted-name -> path map; sorted iteration + setdefault makes a collision
     # (only possible for stray non-package files) resolve to the first path stably.
     module_paths: dict[str, str] = {}
     for rel in py_files:
-        dotted = _dotted_for(rel, package_dirs)
+        dotted = dotted_for(rel, pkg_dirs)
         module_paths.setdefault(dotted, rel)
 
     facts: list[ImportFact] = []
@@ -115,7 +111,7 @@ def extract_import_facts_from_parsed(parsed: ParsedModules) -> ImportFacts:
             skipped.append(module.path)
             continue
         rel = module.path
-        importer = _dotted_for(rel, package_dirs)
+        importer = dotted_for(rel, pkg_dirs)
         package = importer if rel.endswith("__init__.py") else importer.rpartition(".")[0]
         # One edge per (importer, target); the same target imported on several lines
         # collapses to its first occurrence (smallest line) as evidence.
@@ -131,7 +127,22 @@ def extract_import_facts_from_parsed(parsed: ParsedModules) -> ImportFacts:
     return ImportFacts(tuple(facts), tuple(sorted(skipped)))
 
 
-def _dotted_for(path: str, package_dirs: set[str]) -> str:
+def package_dirs_of(py_files: list[str]) -> set[str]:
+    """Directories that are Python packages (hold an ``__init__.py``) in this file set.
+
+    Derived PURELY from the file SET, never the live filesystem — so any consumer
+    (imports, the call graph, a ``HEAD`` snapshot) computes package membership as a
+    function of (file-set, content) alone. Shared by the import and call extractors
+    so the two cannot fork on what counts as a package.
+    """
+    return {
+        posixpath.dirname(f)
+        for f in py_files
+        if f == "__init__.py" or f.endswith("/__init__.py")
+    }
+
+
+def dotted_for(path: str, package_dirs: set[str]) -> str:
     """Dotted module name for a repo-relative ``.py`` path via the package chain."""
     directory = posixpath.dirname(path)
     chain: list[str] = []

@@ -103,19 +103,19 @@ class SingleParsePassTests(unittest.TestCase):
             _write(repo / "pkg" / "a.py", "def f():\n    pass\n")
             files = ("pkg/__init__.py", "pkg/a.py")
 
-            real_read = Path.read_text
+            real_read = Path.read_bytes
 
             def fake_read(self, *a, **k):
                 if self.name == "a.py":
                     raise OSError("unreadable")
                 return real_read(self, *a, **k)
 
-            with mock.patch.object(Path, "read_text", fake_read):
+            with mock.patch.object(Path, "read_bytes", fake_read):
                 parsed = parse_python_modules(repo, files)
                 self.assertIn("pkg/a.py", extract_symbol_facts_from_parsed(parsed).skipped)
                 self.assertIn("pkg/a.py", extract_import_facts_from_parsed(parsed).skipped)
                 with self.assertRaises(OSError):
-                    extract_call_facts_from_parsed(repo, parsed)
+                    extract_call_facts_from_parsed(parsed)
 
     def test_parse_python_modules_is_one_entry_per_py_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -167,8 +167,8 @@ class ExcludeUnderPreFilterTests(unittest.TestCase):
             # Pre-filtered out, the same importer's edge no longer resolves first-party.
             self.assertIsNone(cut_target.get(("kept/a.py", "excluded.target")))
 
-            full_edges = extract_call_facts_from_parsed(repo, parse_python_modules(repo, files))
-            cut_edges = extract_call_facts_from_parsed(repo, parse_python_modules(repo, kept_only))
+            full_edges = extract_call_facts_from_parsed(parse_python_modules(repo, files))
+            cut_edges = extract_call_facts_from_parsed(parse_python_modules(repo, kept_only))
             full_callees = {(e.caller_path, e.callee_path) for e in full_edges.edges}
             cut_callees = {(e.caller_path, e.callee_path) for e in cut_edges.edges}
             # The cross-package call edges exist only while the target is scanned.

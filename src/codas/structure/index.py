@@ -76,10 +76,16 @@ def discover_files(repo: Path, roots: tuple[str, ...]) -> list[str]:
     files = _git_files(repo)
     if files is None:
         files = _walk_files(repo)
-    return _filter_to_roots(files, roots)
+    return filter_to_roots(files, roots)
 
 
-def _filter_to_roots(files: list[str], roots: tuple[str, ...]) -> list[str]:
+def filter_to_roots(files: list[str], roots: tuple[str, ...]) -> list[str]:
+    """Select the files under the configured workspace roots (sorted, unique).
+
+    Public so any scan that builds its own file list off-disk — e.g. the
+    ``HEAD`` fact snapshot reading ``git ls-tree`` — applies the IDENTICAL root
+    discipline as :func:`discover_files`, rather than re-implementing it.
+    """
     norm_roots = [normalize_path(root) for root in roots] or [""]
     selected: set[str] = set()
     for path in files:
@@ -129,7 +135,7 @@ def build_artifact_index(
     if files is None:
         files = discover_files(repo, roots)
     else:
-        files = _filter_to_roots(files, roots)
+        files = filter_to_roots(files, roots)
 
     literal_units: list[tuple[str, StructureUnit]] = []
     glob_units: list[tuple[str, StructureUnit]] = []

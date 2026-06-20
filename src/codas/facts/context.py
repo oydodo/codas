@@ -25,6 +25,9 @@ from codas.adapters.wiki import (
     extract_wiki_claims,
 )
 from codas.config.loader import CodasConfig
+from codas.facts.delta import FactDelta, diff_snapshots
+from codas.facts.snapshot import FactSnapshot
+from codas.facts.snapshot import head_snapshot as compute_head_snapshot
 from codas.structure.index import discover_files, workspace_roots
 
 # The facts seam surfaces the normalized fact vocabulary so policies can name the
@@ -46,7 +49,18 @@ __all__ = [
     "GeneratedClaims",
     "CallFact",
     "CallFacts",
+    "FactSnapshot",
+    "FactDelta",
 ]
+
+# An empty baseline snapshot — the delta base when HEAD has no commits (every
+# working-tree fact then reads as "added"; the policy layer decides if a no-baseline
+# repo is exempt).
+_EMPTY_SNAPSHOT = FactSnapshot(
+    symbols=SymbolFacts((), ()),
+    imports=ImportFacts((), ()),
+    calls=CallFacts((), ()),
+)
 
 
 @dataclass(frozen=True)
@@ -55,9 +69,9 @@ class ScanContext:
 
     `ScanContext` is the normalization layer between ecosystem adapters and the
     policy engine (plan §11 Adapter Boundary: "Core may only receive normalized
-    facts and claims"). It is the single point where adapter output crosses into
-    normalized facts — `codas.facts.context` is therefore the one place outside
-    `codas.adapters` that is permitted to import an adapter. Policies receive a
+    facts and claims"). It is where adapter output crosses into normalized facts —
+    `codas.facts` is the seam, so its modules (`context`, `snapshot`) are the place
+    outside `codas.adapters` permitted to import an adapter. Policies receive a
     `ScanContext` and never import an adapter themselves.
 
     `files` (and `roots`) are resolved once at build time so the working-tree scan
@@ -113,7 +127,7 @@ class ScanContext:
     def calls(self) -> CallFacts:
         """Deterministic first-party Python call-graph facts (cached, stdlib ast)."""
         if "calls" not in self._cache:
-            self._cache["calls"] = extract_call_facts_from_parsed(self.repo, self._parsed())
+            self._cache["calls"] = extract_call_facts_from_parsed(self._parsed())
         return self._cache["calls"]
 
     def changed_paths(self) -> tuple[str, ...]:
@@ -141,6 +155,43 @@ class ScanContext:
                 self.repo, self.files, root
             )
         return self._cache["generated_claims"]
+
+    def working_snapshot(self) -> FactSnapshot:
+        """The code-fact snapshot of the scanned working tree (cached).
+
+        Reuses the already-memoized ``symbols``/``imports``/``calls`` — one
+        computation, identical to the inventory's projection of the same facts.
+        """
+        if "working_snapshot" not in self._cache:
+            self._cache["working_snapshot"] = FactSnapshot(
+                symbols=self.symbols(), imports=self.imports(), calls=self.calls()
+            )
+        return self._cache["working_snapshot"]
+
+    def head_snapshot(self) -> FactSnapshot | None:
+        """The code-fact snapshot at ``HEAD`` (cached); ``None`` if HEAD is unavailable.
+
+        A policy-time fact (reflects the committed ref, not serialized into the
+        byte-identical ``inventory``). ``None`` when there is no baseline (no commits
+        / not a repo / a blob read failed — never a partial snapshot).
+        """
+        if "head_snapshot" not in self._cache:
+            self._cache["head_snapshot"] = compute_head_snapshot(self.repo, self.roots)
+        return self._cache["head_snapshot"]
+
+    def fact_delta(self) -> FactDelta:
+        """Code facts added/removed between ``HEAD`` and the working tree (cached).
+
+        The deterministic substrate for the spec-drift v2 fact-level couplings: a
+        coupling fires when its watched fact-delta is nonempty. On a clean tree
+        (HEAD == working, nothing staged) the delta is empty. When HEAD has no
+        baseline every working-tree fact reads as "added".
+        """
+        if "fact_delta" not in self._cache:
+            head = self.head_snapshot()
+            base = head if head is not None else _EMPTY_SNAPSHOT
+            self._cache["fact_delta"] = diff_snapshots(base, self.working_snapshot())
+        return self._cache["fact_delta"]
 
 
 def build_scan_context(repo: Path, config: CodasConfig) -> ScanContext:
