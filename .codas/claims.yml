@@ -83,3 +83,36 @@ fact_couplings:
       check_* is declared in policies.yml but NOT that it is dispatched, so an unwired
       new policy passes every state check yet is a silent dead gate. This coupling
       catches that drift: adding a check_* without touching check.py is an error.
+
+  # ANCHOR-TO-SOURCE, enforced (not just remembered). The open-world fact model lives in
+  # code at src/codas/facts/openworld.py and is authoritatively summarised in
+  # docs/codas-design.html (§9.4). When the model's PUBLIC code API changes, the master
+  # design doc must follow IN THE SAME DIFF — otherwise the doc silently falls behind the
+  # model (exactly what happened when B2 shipped before §9.4 existed). This is the
+  # deterministic slice of anchor-to-source: a public symbol-delta is the always-true
+  # fact-level trigger that the coarse advisory must_update_if_changed lacks. The SEMANTIC
+  # slice (a pure-PROSE model edit with no symbol-delta) cannot be gated deterministically
+  # — it is the LLM semantic-legality layer's job, not this coupling's. name "[!_]*" scopes
+  # to PUBLIC symbols so a private helper does not demand a doc change.
+  - when_fact:
+      kind: symbol_added
+      scope: src/codas/facts/openworld.py
+      name: "[!_]*"
+    requires:
+      - docs/codas-design.html
+    owner: Codas Core
+    reason: >-
+      A new public symbol in the open-world fact model (src/codas/facts/openworld.py)
+      changes its authoritative contract, so docs/codas-design.html §9.4 must co-change.
+
+  - when_fact:
+      kind: symbol_removed
+      scope: src/codas/facts/openworld.py
+      name: "[!_]*"
+    requires:
+      - docs/codas-design.html
+    owner: Codas Core
+    reason: >-
+      Removing a public symbol from the open-world fact model
+      (src/codas/facts/openworld.py) changes its authoritative contract, so
+      docs/codas-design.html §9.4 must co-change.
