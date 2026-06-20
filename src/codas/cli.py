@@ -79,6 +79,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Tier the offline semantic corpus (.codas/cache/semantic/) against facts; print JSON.",
     )
     wiki_mode.add_argument(
+        "--emit-mermaid",
+        action="store_true",
+        help="Print a Mermaid dependency graph of the product modules (verified facts).",
+    )
+    wiki_mode.add_argument(
+        "--emit-html",
+        action="store_true",
+        help="Print a self-contained static HTML view of the verified facts.",
+    )
+    wiki_mode.add_argument(
         "--write",
         action="store_true",
         help="Write the deterministic generated Atlas sections under .codas/wiki/generated/.",
@@ -273,8 +283,19 @@ def main(argv: list[str] | None = None) -> int:
 
             print(json.dumps(run_calibrate(repo), indent=2, sort_keys=True))
             return 0
+        if args.emit_mermaid:
+            from .app.views import build_mermaid
+
+            print(build_mermaid(repo), end="")
+            return 0
+        if args.emit_html:
+            from .app.views import build_html
+
+            print(build_html(repo), end="")
+            return 0
         parser.error(
-            "wiki: use --emit-pack, --emit-tree, --emit-feed, --calibrate, --write or --verify."
+            "wiki: use --emit-pack, --emit-tree, --emit-feed, --calibrate, "
+            "--emit-mermaid, --emit-html, --write or --verify."
         )
 
     if args.command == "init":
