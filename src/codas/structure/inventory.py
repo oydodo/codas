@@ -153,6 +153,22 @@ def build_inventory(
         ],
     }
 
+    html_claims = ctx.html_claims()
+    inventory["html_claims"] = {
+        "sources": sorted({claim.source for claim in html_claims}),
+        "references": [
+            {
+                "source": claim.source,
+                "line": claim.line,
+                "path": claim.path,
+                "fragment": claim.fragment,
+                "kind": claim.kind,
+                "exists": claim.exists,
+            }
+            for claim in html_claims
+        ],
+    }
+
     wiki_claims = ctx.wiki_claims()
     inventory["wiki_claims"] = {
         "sources": sorted({claim.source for claim in wiki_claims.claims}),

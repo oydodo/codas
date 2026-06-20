@@ -6,6 +6,13 @@ PLANNING / backlog — surfaced 2026-06-20 (user: "任何源文件都应该被�
 governance gap exposed while reconciling `spec_drift` → `fact_coupling` by HAND across the
 HTML docs: that manual reconcile is exactly the drift Codas should catch but cannot.
 
+> **Scope amendment (2026-06-20, supersedes the combined acceptance below):** this task
+> ships **Layer 1 only** (path/link existence). See `design.md`. The 7 stale `spec_drift`
+> `<code>` mentions are a **Layer 2** artifact (bare identifiers, no slash/ext) and are NOT
+> in scope; Layer 1's acceptance (a broken slashed-ext path in authoritative `.html` fires
+> `stale_html_claim`; 0 on the clean repo) supersedes the "7 mentions caught" criterion for
+> THIS task. Layer 2 remains a documented follow-up.
+
 ## The gap (with live teeth)
 
 `.codas/config.yml` declares `docs/codas-design.html`, `docs/codas-implementation-plan

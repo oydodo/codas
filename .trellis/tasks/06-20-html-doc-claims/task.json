@@ -3,7 +3,7 @@
   "name": "html-doc-claims",
   "title": "Govern authoritative .html docs: html doc-claim adapter (+symbol-mention staleness)",
   "description": "Authoritative docs/*.html produce ZERO facts/claims (markdown adapter scans .md only), so path/link refs AND code-identifier mentions in HTML drift invisibly to codas check. Layer 1: an html adapter extracting path/link claims (parity with .md doc_claims -> stale_claim existence check). Layer 2: verify code-identifier mentions (dotted modules / policy names) in authoritative docs against symbol facts (the deferred 'code spans illustrative' gap). Principle: any source file must be tracked.",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

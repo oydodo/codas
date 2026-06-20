@@ -18,6 +18,7 @@ from codas.policies.missing_owner import check_missing_structure_owner
 from codas.policies.policy_registry import check_policy_registry
 from codas.policies.program_plan import check_program_plan
 from codas.policies.stale_claim import check_stale_claim
+from codas.policies.stale_html_claim import check_stale_html_claim
 from codas.policies.stale_wiki_claim import check_stale_wiki_claim
 from codas.policies.structure_drift import check_structure_drift
 from codas.policies.structure_map import check_structure_map
@@ -66,6 +67,7 @@ def run_check_with_context(repo: Path) -> tuple[CheckReport, ScanContext | None]
     findings.extend(check_program_plan(repo, config))
     findings.extend(check_document_set(repo, config))
     findings.extend(check_stale_claim(ctx))
+    findings.extend(check_stale_html_claim(ctx))
     findings.extend(check_duplicate_symbol(ctx))
     findings.extend(check_duplicate_implementation(ctx))
     findings.extend(check_dependency_direction(ctx))

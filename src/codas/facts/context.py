@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from codas.adapters.git import extract_changed_paths
+from codas.adapters.html import extract_html_claims, governed_html_files
 from codas.adapters.markdown import DocClaim, extract_doc_claims
 from codas.adapters.callgraph import CallFact, CallFacts, extract_call_facts_from_parsed
 from codas.adapters.python import (
@@ -91,6 +92,21 @@ class ScanContext:
         if "doc_claims" not in self._cache:
             self._cache["doc_claims"] = tuple(extract_doc_claims(self.repo, self.files))
         return self._cache["doc_claims"]
+
+    def html_claims(self) -> tuple[DocClaim, ...]:
+        """Path/link claims from config-declared authoritative+supporting ``.html`` (cached).
+
+        Parallels ``doc_claims()`` but config-SCOPED — arbitrary ``.html`` is not governed
+        (only constraint sources, matched by ``fnmatch`` so a glob source is honored).
+        Consumed by ``stale_html_claim``; a disjoint fact stream from ``doc_claims()``
+        (markdown), so the two ``stale_*`` policies never double-report. These ARE facts,
+        so they enter ``inventory`` (the ``html_claims`` block).
+        """
+        if "html_claims" not in self._cache:
+            patterns = self.config.authoritative_sources + self.config.supporting_sources
+            scoped = governed_html_files(self.files, patterns)
+            self._cache["html_claims"] = tuple(extract_html_claims(self.repo, scoped))
+        return self._cache["html_claims"]
 
     def _parsed(self) -> ParsedModules:
         """Single per-run ``ast.parse`` pass over the scanned ``.py`` files (cached).

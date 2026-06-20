@@ -55,6 +55,8 @@ class CodasCheckTests(unittest.TestCase):
         with mock.patch("codas.app.check.build_scan_context") as build, mock.patch(
             "codas.app.check.check_stale_claim", return_value=[]
         ) as stale, mock.patch(
+            "codas.app.check.check_stale_html_claim", return_value=[]
+        ) as stale_html, mock.patch(
             "codas.app.check.check_duplicate_symbol", return_value=[]
         ) as dup_symbol, mock.patch(
             "codas.app.check.check_duplicate_implementation", return_value=[]
@@ -72,7 +74,7 @@ class CodasCheckTests(unittest.TestCase):
             run_check(repo)
 
         self.assertEqual(build.call_count, 1)
-        for spy in (stale, dup_symbol, dup_impl, dep_dir, stale_wiki, fact_coupling, gen_drift, policy_registry):
+        for spy in (stale, stale_html, dup_symbol, dup_impl, dep_dir, stale_wiki, fact_coupling, gen_drift, policy_registry):
             self.assertEqual(spy.call_count, 1)
             self.assertIs(spy.call_args.args[0], build.return_value)
 
