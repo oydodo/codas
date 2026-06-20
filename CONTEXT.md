@@ -367,3 +367,89 @@ claim rests on an open-world family's absence, so the sensor cannot confirm it; 
 evidence and a re-checkable lifecycle, never reported as a violation). "Code is wrong" and
 "I can't see well enough to judge" are different verdicts — the open-world invariant is what
 keeps the second from being mis-reported as the first.
+
+## Positioning — Karpathy's LLM-wiki framework (wiki pluggable; schema / authoring / maintenance enforced)
+
+Recorded 2026-06-20 after a research+critique workflow (mapped Andrej Karpathy's "LLM-wiki /
+docs-for-agents" model, FSoft-AI4Code CodeWiki, and Codas; synthesized; then adversarially
+de-hyped). The cleanest external framing Codas has: locate it INSIDE Karpathy's framework.
+
+**Karpathy's model = 4 load-bearing pieces over the raw repo** (raw sources are layer 0):
+1. **wiki** — an LLM-authored, navigable knowledge artifact, so the agent does not re-derive
+   from raw files each query ("compile once, maintain" = RAG-inversion).
+2. **schema** — the human-owned contract (`AGENTS.md` / llms.txt) declaring how to read the
+   repo and what is authoritative.
+3. **authoring** — the convention of *writing the repo for an LLM reader* (push: the owner
+   writes the entry points / menu; the agent does not reverse-engineer everything).
+4. **maintenance** — the discipline of keeping the wiki/schema fresh as code evolves (a stale
+   compiled artifact is worse than none).
+
+In Karpathy's framing all four are **conventions** — practices a human is *supposed* to
+follow. None are enforced. Codas's route is to make 2–4 enforceable and leave 1 pluggable.
+
+**Codas's route inside the frame:**
+- **Layer 1 (wiki) = PLUGGABLE, an explicit NON-GOAL to author.** Producing prose is the
+  crowded, commoditized LLM battleground (DeepWiki / CodeWiki / host-agent give it away).
+  Codas does not win there and does not try. The prose SOURCE is swappable: host-agent-direct
+  (primary), CodeWiki (Block B, license-gated), or none. Codas touches this layer ONLY at the
+  SEAM — it FEEDS the generator a fact-derived spine (the deterministic knowledge tree,
+  `codas wiki --emit-tree`, schema `knowledge_tree/v1`) and CALIBRATES the output back to
+  facts. It never authors the prose.
+- **Layers 2–4 = where Codas wins, by turning each CONVENTION into an ENFORCED ARTIFACT**
+  (the creed: process can't be enforced, artifacts can).
+  - **2 schema →** `structure.yml` + `CONTRACT.md` + `codas schema` + the knowledge tree,
+    with the schema's claims MACHINE-VERIFIED (live, not a hand-maintained doc that rots).
+    [largely shipped]
+  - **3 authoring →** inverted: author CLAIMS (checkable) instead of prose (hope). The
+    deliverable changes from "write prose, trust it" to "write a claim, the machine checks
+    it." [partly shipped]
+  - **4 maintenance →** the killer, and shipped: drift gates (`fact_coupling` /
+    `must_update_if_changed`: code changed without its claim source = error) + stale gates
+    (`stale_claim` / `generated_wiki_drift`: a claim fell behind the facts = error). Karpathy
+    says "maintain it"; Codas fails the build if you don't. [shipped]
+
+One-line positioning: **Codas = Karpathy's framework with layers 2–4 promoted from convention
+to enforced artifact, and the wiki layer left pluggable** — "the determinism / enforcement
+layer UNDER `AGENTS.md`."
+
+### 3-way comparison
+
+| axis | Karpathy LLM-wiki | FSoft CodeWiki | Codas |
+| --- | --- | --- | --- |
+| altitude | interface convention (write source+docs FOR the agent) | post-hoc description (generate prose FROM the repo) | verification / governance substrate (verify claims AGAINST facts) |
+| who authors knowledge | LLM writes the wiki; human owns schema | LLM writes the docs; deterministic graph only seeds | human/agent authors CLAIMS; Codas verifies, never writes prose |
+| determinism | none (committed LLM prose, non-reproducible) | skeleton only (graph); clustering + prose non-deterministic | byte-identical, content-hashed, LLM-free CORE (load-bearing, CI-gated) |
+| verification | none (lint = LLM-checks-LLM) | none on the prose (only the graph is sound) | machine-checked: claim ↔ code, declared ↔ implemented |
+| completeness honesty | closed-world (implies "this is everything") | closed-world (confident overview) | OPEN-WORLD (facts = sound lower bound; absence ≠ denial) |
+| direction | push (owner → agent) | pull (tool ← repo) | closed loop (facts ⇄ repo, verified) |
+
+CodeWiki is an *instance of the wiki-generator category* Karpathy popularized — NOT an
+implementation of his specific model: different lineage (a DeepWiki competitor), and it covers
+only piece 1 (its least-trustworthy, LLM-author slice), dropping his schema / authoring /
+maintenance pieces. Codas does the opposite — the three pieces nobody else enforces.
+
+### Honest caveats (the critic's corrections — do not oversell)
+- **Shipped vs planned.** Codas today enforces the FLOOR (schema + maintenance, layers 2 & 4).
+  The richness that makes the wiki layer *immediately useful* (the W3 semantic judge +
+  calibration, the layer-1 seam) is **unbuilt**, and extraction is **Python-first**.
+- **W3 does only the SEAM, and the trust TAGS must be deterministic.** The judge FEEDS
+  (fact-derived spine) + CALIBRATES (snap claims to facts → CONFIRMED / UNCONFIRMED /
+  SEMANTIC). The tags must be assigned by a DETERMINISTIC fact-match, not by the LLM
+  self-rating its confidence — else LLM-checks-LLM re-enters at the tagging boundary. Only the
+  SEMANTIC residue (no fact exists) is irreducibly LLM. Output is suggestion-only, never
+  committed (preserves byte-identity), and never upgrades a claim past the facts.
+- **Authoring tax (layer 3).** Codas-grade verification needs a human/agent to AUTHOR a
+  checkable claim — more labor than "write `AGENTS.md` and let an LLM review," which connects
+  to the project's own #1 risk (unproven demand). Soundness ≠ adoption.
+- **Layer-4 blind spot.** The maintenance gates catch directions expressible as a fact-delta
+  or a structured-claim-vs-fact check. They do NOT catch doc→code drift (a stale spec the
+  agent FOLLOWS) or free-prose staleness unless the prose is anchored to facts — Codas
+  verifies the *less dangerous* direction.
+- **Real nearest competitor = SonarQube (Architecture-as-Code), not these two prose
+  generators.** Against it Codas's differentiation is free / lightweight / agent-native /
+  byte-identical — NOT "has verification at all." Chasing the full wiki richness spends Codas's
+  actual moat (the lightweight, pyyaml-only, serverless CLI under `AGENTS.md`), so layers 1 /
+  multi-language extraction / judge stay opt-in or unbuilt by design.
+
+Full maps + synthesis + critique live in the 2026-06-20 Karpathy-framework positioning task
+ledger. Companion to the perception-model decision record above.
