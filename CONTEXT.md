@@ -53,9 +53,21 @@ _Avoid_: Explanation without path, LLM rationale
 **Conflict**:
 A contradiction between Claims or Governance Facts about ownership, canonical placement, state, responsibility or allowed dependency direction.
 
-**Drift** (change-triggered) and **Staleness** (state-based):
-Two ways a Claim diverges from the Facts. **Drift** is a Claim source diverging because a change was not propagated — detected at the moment of change (diff-based). **Staleness** is a Claim's content falling behind current Facts with no single trigger — detected by re-verifying the Claim against Facts at any time. Codas must catch both.
-_Avoid_: treating "out of date" as one undifferentiated condition
+**Drift** and **Staleness** (the change-governance 2×2):
+Drift and staleness are **the same condition — an artifact inconsistent with the Facts it should reflect — found at two different times**, not two kinds of divergence. Two orthogonal axes:
+- **Axis 1 — did this artifact change in the current diff?** changed / unchanged
+- **Axis 2 — is it consistent with the Facts it should reflect?** consistent / inconsistent
+
+|              | consistent        | inconsistent                          |
+|--------------|-------------------|---------------------------------------|
+| **unchanged**| quiescent (ok)    | **Staleness** (no diff to blame)      |
+| **changed**  | normal (a clean update) | **Drift** (this change broke it) |
+
+- **Drift** = changed + inconsistent. The change introduced (or failed to propagate) an inconsistency; **diff-attributable**, so it is caught at commit time by a diff-based detector (a co-change gate over the change + the fact-delta).
+- **Staleness** = unchanged + inconsistent. The inconsistency exists with **no diff to attribute it to** — it was introduced in some past commit and never caught — so it is found only by **re-verifying the artifact against current Facts** (a state-based detector), on any run, even on a clean tree.
+
+Because they are the same disease at two times, **both detector families are needed**: a diff-based gate blocks a bad change as it happens; a state-based check catches inconsistency that already slipped in. A `_drift`-suffixed policy name does **not** imply the change-axis — several state/staleness checks carry legacy `*_drift` names.
+_Avoid_: treating "out of date" as one undifferentiated condition; assuming "inconsistent" is only ever a diff-time concern; reading a `*_drift` policy name as a diff-based check without verifying which axis it covers.
 
 ## Structure Layer
 
@@ -77,7 +89,7 @@ The declared owner of a Structure Unit, concept or capability. Ownership can ref
 The expected location for a kind of code, capability, component, configuration or documentation.
 
 **Structural Drift**:
-The repository state drifting away from the Structure Map or accepted Governance Facts.
+A mismatch between repository state and the Structure Map or accepted Governance Facts. (Despite the name, this is the general inconsistency: it surfaces as **Drift** when a commit introduced it — diff-attributable — or as **Staleness** when it is detected with no triggering diff. See the Drift/Staleness 2×2.)
 
 **Orphan Artifact**:
 An Artifact that exists without a clear reference, owner, task context, build path or documentation explanation.
@@ -108,7 +120,7 @@ _Avoid_: Codas writing prose, an embedded LLM in the correctness core
 ## Governance Layer
 
 **Policy**:
-An executable governance rule, such as forbidding orphan artifacts, requiring Structure Map updates, or checking PRD/spec implementation drift.
+An executable governance rule, such as forbidding orphan artifacts, requiring Structure Map updates, or checking whether a PRD/spec claim is still consistent with implementation Facts (as Drift at commit time, or Staleness at rest).
 
 **Finding**:
 A Policy result describing a problem or unresolved risk, including severity, evidence, reason and suggested fix.
@@ -167,7 +179,7 @@ A Domain Role responsible near project start for designing and bootstrapping the
 _Avoid_: File system designer, scaffolder
 
 **Structure Steward**:
-A Domain Role responsible during project execution for maintaining the Repository Structure and preventing structure drift.
+A Domain Role responsible during project execution for maintaining the Repository Structure and preventing structural inconsistency (both drift and staleness).
 _Avoid_: Cleanup agent, ad hoc reviewer
 
 **Orientation Curator**:
@@ -197,7 +209,7 @@ A Domain Role responsible for defining and maintaining the Project Document Set 
 - A **Role Integration** may implement a **Domain Role** as a Codex skill, Claude Code subagent, hook workflow, CI check, GitHub Action or human reviewer checklist.
 - Codas core defines **Domain Roles** and governance contracts; integrations map those contracts onto specific execution surfaces.
 - The **Structure Architect** establishes the initial **Repository Structure**; the **Structure Steward** keeps it aligned as the codebase changes.
-- The **Document Steward** establishes and maintains the document roles that keep design, implementation, roadmap, task and spec artifacts from drifting.
+- The **Document Steward** establishes and maintains the document roles that keep design, implementation, roadmap, task and spec artifacts consistent (preventing both drift and staleness).
 - The **Atlas Wiki** can orient agents inside the **Repository Structure**, but Codas must still verify structural claims against repository facts.
 
 ## Example Dialogue

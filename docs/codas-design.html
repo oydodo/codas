@@ -323,8 +323,9 @@
       <div class="callout">
         <strong>Codas is a Code Atlas System for coding agents.</strong>
         It maps a repository into verifiable facts, gives agents task-specific architectural context,
-        and blocks changes that introduce duplicate implementations, orphan artifacts, stale claims,
-        or unresolved constraint conflicts.
+        blocks changes that introduce duplicate implementations, orphan artifacts, unresolved
+        constraint conflicts, or drift (a change leaving a claim inconsistent with the facts),
+        and surfaces stale claims (inconsistencies no diff can be blamed for) on any run.
       </div>
       <p>
         Codas 不是 Codex skill、Claude Code 插件、Trellis 插件或某种语言检查器。它是一个
@@ -478,7 +479,7 @@
           </tr>
           <tr>
             <td><strong>Structural Drift</strong></td>
-            <td>代码库实际结构逐渐偏离 Structure Map 或 Governance Fact 的现象。</td>
+            <td>代码库实际结构与 Structure Map 或 Governance Fact 不一致。这是一般性的"不一致"病:由某次 commit 引入(diff 可归因)时呈现为 <strong>Drift</strong>,无 diff 可归因时呈现为 <strong>Staleness</strong>。"drift" 一词只指 changed+inconsistent 那个象限;详见 <code>CONTEXT.md</code> 的 Drift/Staleness 2×2。</td>
           </tr>
           <tr>
             <td><strong>Orphan Artifact</strong></td>
@@ -910,7 +911,7 @@ codas doctor .</code></pre>
           </tr>
           <tr>
             <td><code>generated_wiki_drift</code></td>
-            <td>committed generated Atlas page 的 <code>atlas:claims</code> 必须与 Structure Map / Program Plan facts 一致；被 facts 反驳的 claim 报错。</td>
+            <td>committed generated Atlas page 的 <code>atlas:claims</code> 必须与 Structure Map / Program Plan facts 一致；被 facts 反驳的 claim 报错。<em>（名字带 drift,但实为 STATE/STALE 检查:claim-vs-facts,无需 diff;非 <code>fact_coupling</code> 那种 diff 触发的 DRIFT。）</em></td>
             <td>Error</td>
           </tr>
         </tbody>
@@ -918,10 +919,11 @@ codas doctor .</code></pre>
 
       <div class="callout">
         <strong>fact_coupling = materiality-as-coupling-property（决策记录，spec-drift v2）：</strong>
-        materiality 是 <em>耦合</em> 的静态属性（作者写一次），不是逐次变更的判断（§17 禁止后者）。
+        materiality 是 <em>耦合</em> 的静态属性（作者写一次），不是逐次变更的判断（§5「LLM assists, never rules」/ §15 LLM Usage 禁止后者进核心）。
         粗粒度的 <code>must_update_if_changed</code>（“unit 变 → doc 变”）没有 always-true 的 fact 级形式，保持 advisory；
         真正的 gate 是 <code>.codas/claims.yml</code> 的 <code>fact_couplings</code>，触发器是 <em>fact</em>-delta
         （symbol/import/call 的 add/remove，working-tree-vs-HEAD），故 always-true by construction：注释修改不产生 fact-delta，耦合 dormant。
+        <strong>这是 Drift/Staleness 2×2 的 DRIFT 半</strong>（changed+inconsistent，commit 时 diff 可归因）；互补的 STALE 半（unchanged+inconsistent，无 diff 可归因）由状态政策 <code>policy_registry</code> / <code>generated_wiki_drift</code> / <code>stale_claim</code> / <code>stale_wiki_claim</code> 抓。两半同病、两个时刻,缺一不可。canonical 定义见 <code>CONTEXT.md</code>。
         v1 <code>spec_drift</code>（file 级 <code>drift_couplings</code>，vouched）已退役；substrate 见 <code>06-20-fact-delta-substrate</code>，gate 见 <code>06-20-fact-coupling-gate</code>。
       </div>
 
@@ -1471,7 +1473,7 @@ git status --short</code></pre>
       <h2>22. Acceptance Criteria</h2>
       <ul>
         <li><code>codas inventory</code> 能在无语言 adapter 的情况下生成基础 artifact 和 doc claim 索引。</li>
-        <li><code>codas check</code> 能阻止 structure drift、未声明的 duplicate implementation、stale doc path / wiki claim、spec drift 等已接线的违规（<code>orphan_artifact</code> 为 declared-but-planned，尚未接线，不在当前强制范围内）。</li>
+        <li><code>codas check</code> 能拦 DRIFT（changed+inconsistent:<code>fact_coupling</code> 的 co-change gate、<code>structure_drift</code> 的边界）并查出 STALE（unchanged+inconsistent:<code>stale_claim</code> / <code>stale_wiki_claim</code> / <code>generated_wiki_drift</code> / <code>policy_registry</code>），外加未声明的 duplicate implementation 等已接线违规（<code>orphan_artifact</code> 为 declared-but-planned，尚未接线；v1 <code>spec_drift</code> 已被 <code>fact_coupling</code> 取代）。</li>
         <li><code>codas preflight</code> 能基于 task 输出 read-first 文件、相关 concepts 和 duplicate risks。</li>
         <li><code>codas wiki</code> 生成的页面每条 canonical 结论都包含 evidence。</li>
         <li>strict mode 下 error finding 会导致非零退出码。</li>
@@ -1487,7 +1489,7 @@ git status --short</code></pre>
       <ol>
         <li>删除旧 package 和 CLI：<code>harness_guard</code>、<code>harness-guard</code>。</li>
         <li>建立新的 package 和 CLI：<code>codas</code>。</li>
-        <li>把已有 checks 拆成通用 policy：ignored/buildable、duplicate type、stale doc path、code/spec drift。</li>
+        <li>把已有 checks 拆成通用 policy：ignored/buildable、duplicate type、stale doc path、code/spec 一致性（v2 由 <code>fact_coupling</code> 的 co-change DRIFT gate 实现;v1 <code>spec_drift</code> 已退役）。</li>
         <li>把 Swift/XcodeGen 逻辑移动到 adapter 层。</li>
         <li>新增 <code>.codas/config.yml</code>、<code>policies.yml</code>、<code>waivers.yml</code>。</li>
         <li>新增 <code>inventory</code>、<code>preflight</code>、<code>wiki</code> 子命令。</li>
