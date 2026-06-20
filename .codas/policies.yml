@@ -47,6 +47,10 @@ policies:
     severity: error
     description: Fact-level co-change couplings (.codas/claims.yml fact_couplings) gate the working-tree-vs-HEAD fact delta -- when a watched symbol/import/call add/remove appears, the required companion path must co-change in the same diff. Always-true by construction (a comment fix produces no fact delta); a malformed coupling is an error, not a silent skip. Supersedes the v1 spec_drift/drift_couplings file-level gate. The coarse Structure Map must_update_if_changed hints stay advisory.
 
+  code_anchor:
+    severity: warning
+    description: anchor_symbol claims in hand-authored Atlas code-wiki pages (.codas/wiki/code/**) must resolve to a current symbol fact (module+name). A non-resolving anchor is a WARNING (never an error) carrying the open-world caveat -- the symbols family is open-world, so absence may mean the code moved (update the wiki, catching code->doc drift) OR a dynamic/conditional form the extractor misses. The code-wiki PROSE is advisory and not verified; only its code anchors are.
+
   generated_wiki_drift:
     severity: error
     description: A committed generated Atlas page (.codas/wiki/generated/**) must embed a nonempty atlas:claims block with a source_inventory_hash, and each unit/roadmap claim must match the Structure Map / Program Plan facts; a claim the facts contradict is an error. Source-hash freshness is verified by codas wiki --verify, not the check gate.

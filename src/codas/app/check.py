@@ -5,6 +5,7 @@ from pathlib import Path
 from codas.config.loader import ConfigLoadError, load_codas_config, load_policies, load_waivers
 from codas.core.models import CheckReport, Evidence, Finding
 from codas.facts.context import ScanContext, build_scan_context
+from codas.policies.code_anchor import check_code_anchor
 from codas.policies.config_sources import check_config_sources
 from codas.policies.dependency_direction import check_dependency_direction
 from codas.policies.deprecated_path import check_deprecated_path_used
@@ -74,6 +75,7 @@ def run_check_with_context(repo: Path) -> tuple[CheckReport, ScanContext | None]
     findings.extend(check_stale_wiki_claim(ctx))
     findings.extend(check_fact_coupling(ctx))
     findings.extend(check_generated_wiki_drift(ctx))
+    findings.extend(check_code_anchor(ctx))
     findings.extend(check_policy_registry(ctx))
 
     policies_path = repo / ".codas" / "policies.yml"

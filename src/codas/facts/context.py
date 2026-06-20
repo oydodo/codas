@@ -17,11 +17,14 @@ from codas.adapters.python import (
 )
 from codas.adapters.python_parse import ParsedModules, parse_python_modules
 from codas.adapters.wiki import (
+    CodeAnchorClaim,
+    CodeAnchorClaims,
     GeneratedClaim,
     GeneratedClaims,
     GeneratedPage,
     WikiClaim,
     WikiClaims,
+    extract_code_anchor_claims,
     extract_generated_claims,
     extract_wiki_claims,
 )
@@ -48,6 +51,8 @@ __all__ = [
     "GeneratedClaim",
     "GeneratedPage",
     "GeneratedClaims",
+    "CodeAnchorClaim",
+    "CodeAnchorClaims",
     "CallFact",
     "CallFacts",
     "FactSnapshot",
@@ -171,6 +176,22 @@ class ScanContext:
                 self.repo, self.files, root
             )
         return self._cache["generated_claims"]
+
+    def code_anchor_claims(self) -> CodeAnchorClaims:
+        """anchor_symbol claims parsed from hand-authored code-wiki pages (cached).
+
+        A policy-time fact consumed by ``code_anchor``; deliberately NOT serialized into
+        ``inventory`` (the ``.codas/wiki/code/`` prose is excluded from the doc/wiki claim
+        streams, and these anchors are position-stripped — so the code-wiki never perturbs
+        the byte-identical inventory hash).
+        """
+        if "code_anchor_claims" not in self._cache:
+            wiki_root = (self.config.raw.get("wiki") or {}).get("path", ".codas/wiki")
+            root = wiki_root.rstrip("/") + "/code"
+            self._cache["code_anchor_claims"] = extract_code_anchor_claims(
+                self.repo, self.files, root
+            )
+        return self._cache["code_anchor_claims"]
 
     def working_snapshot(self) -> FactSnapshot:
         """The code-fact snapshot of the scanned working tree (cached).
