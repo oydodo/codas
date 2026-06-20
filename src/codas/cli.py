@@ -82,6 +82,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Overwrite existing .codas files instead of skipping them.",
     )
 
+    impact = subparsers.add_parser(
+        "impact",
+        help="Show what transitively calls a symbol or file (reverse reachability over call-graph facts).",
+    )
+    impact.add_argument(
+        "target",
+        help=(
+            "Symbol or source path to trace callers of. A symbol may be a bare name "
+            "(head_snapshot), a class-qualified method (ScanContext.head_snapshot), or "
+            "a dotted name (codas.facts.snapshot.head_snapshot). A path "
+            "(src/codas/facts/snapshot.py) traces callers of every symbol the file defines."
+        ),
+    )
+    impact.add_argument("repo", nargs="?", default=".")
+    impact.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the impact set as deterministic JSON.",
+    )
+
     doctor = subparsers.add_parser("doctor", help="Diagnose Codas installation.")
     doctor.add_argument("repo", nargs="?", default=".")
     doctor.add_argument(
@@ -235,6 +255,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"skipped {name} (existing non-Codas hook; pass --force to overwrite)")
         if not result.installed and not result.skipped:
             print("no hooks installed")
+        return 0
+
+    if args.command == "impact":
+        from .app.impact import render_impact_text, run_impact
+
+        result = run_impact(repo, args.target)
+        if args.json:
+            print(json.dumps(result, indent=2, sort_keys=True))
+        else:
+            print(render_impact_text(result))
         return 0
 
     if args.command == "doctor":
