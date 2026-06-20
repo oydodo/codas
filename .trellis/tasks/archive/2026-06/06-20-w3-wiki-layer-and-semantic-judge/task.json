@@ -1,0 +1,30 @@
+{
+  "id": "w3-wiki-layer-and-semantic-judge",
+  "name": "w3-wiki-layer-and-semantic-judge",
+  "title": "W3 — wiki layer (borrow CodeWiki multi-lang + mermaid + html) + the semantic judge tier",
+  "description": "",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "oydodo",
+  "assignee": "oydodo",
+  "createdAt": "2026-06-20",
+  "completedAt": "2026-06-21",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "06-21-w3-s3-semantic-judge-tier",
+    "06-21-w3-s1-mermaid-html-views",
+    "06-21-w3-s2-multi-language-extraction"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
