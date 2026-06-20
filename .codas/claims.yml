@@ -83,3 +83,40 @@ fact_couplings:
       check_* is declared in policies.yml but NOT that it is dispatched, so an unwired
       new policy passes every state check yet is a silent dead gate. This coupling
       catches that drift: adding a check_* without touching check.py is an error.
+
+  # ANCHOR-TO-SOURCE, enforced (not just remembered), per Codas's creed: process can't be
+  # enforced, artifacts can. The open-world fact model lives in code at
+  # src/codas/facts/openworld.py and is authoritatively summarised in docs/codas-design.html
+  # (§9.4). When the model's PUBLIC code API changes, the master design doc must follow IN
+  # THE SAME DIFF — else the doc silently falls behind (what happened when B2 shipped before
+  # §9.4 existed; the advisory must_update_if_changed hint did not fire). This is the
+  # DETERMINISTIC slice of anchor-to-source: a public symbol-delta is the always-true
+  # fact-level trigger must_update_if_changed lacks. The SEMANTIC slice (a pure-PROSE model
+  # edit with no symbol-delta) cannot be gated deterministically — it is the LLM
+  # semantic-legality layer's job. name "[!_]*" = PUBLIC symbols only (no leading underscore).
+  # KNOWN PROPERTIES (codex design review): (a) a pure RENAME of a public symbol fires both
+  # removed+added and both require the doc — INTENTIONAL, §9.4 names the public API surface;
+  # (b) the companion is satisfied by ANY edit to design.html, not specifically §9.4 — §17
+  # forbids judging whether the edit is the RIGHT one, only presence is checked.
+  - when_fact:
+      kind: symbol_added
+      scope: src/codas/facts/openworld.py
+      name: "[!_]*"
+    requires:
+      - docs/codas-design.html
+    owner: Codas Core
+    reason: >-
+      A new public symbol in the open-world fact model (src/codas/facts/openworld.py)
+      changes its authoritative contract, so docs/codas-design.html §9.4 must co-change.
+
+  - when_fact:
+      kind: symbol_removed
+      scope: src/codas/facts/openworld.py
+      name: "[!_]*"
+    requires:
+      - docs/codas-design.html
+    owner: Codas Core
+    reason: >-
+      Removing a public symbol from the open-world fact model
+      (src/codas/facts/openworld.py) changes its authoritative contract, so
+      docs/codas-design.html §9.4 must co-change.
