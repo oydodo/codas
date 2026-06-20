@@ -871,7 +871,7 @@ codas doctor .</code></pre>
         <code>config_sources</code>、<code>dogfooding</code>、<code>trellis_context</code>、<code>structure_map</code>、<code>missing_structure_owner</code>、
         <code>structure_drift</code>、<code>deprecated_path_used</code>、<code>program_plan</code>、<code>document_set</code>、<code>stale_claim</code>、
         <code>duplicate_symbol</code>、<code>duplicate_implementation</code>、<code>dependency_direction</code>、<code>stale_wiki_claim</code>、
-        <code>spec_drift</code>、<code>generated_wiki_drift</code>、<code>waivers</code>。
+        <code>fact_coupling</code>、<code>generated_wiki_drift</code>、<code>waivers</code>、<code>policy_registry</code>。
       </p>
       <p>headline policy（severity 请以 <code>.codas/policies.yml</code> 为准；接线状态以 <code>check.py</code> 为准）：</p>
       <table>
@@ -894,8 +894,8 @@ codas doctor .</code></pre>
             <td>Error</td>
           </tr>
           <tr>
-            <td><code>spec_drift</code></td>
-            <td>behavior、架构、命令、policy 或 data model 的变更必须更新其权威 claim 源（materiality-as-claim）。</td>
+            <td><code>fact_coupling</code></td>
+            <td>fact 级 co-change 耦合（<code>.codas/claims.yml</code> 的 <code>fact_couplings</code>）：当被监视的 symbol/import/call add/remove（working-tree-vs-HEAD fact-delta）出现时，required 伴随路径必须在同一 diff 中 co-change。fact 触发 → always-true（注释修改不产生 fact-delta）。取代 v1 <code>spec_drift</code>/<code>drift_couplings</code>。</td>
             <td>Error</td>
           </tr>
           <tr>
@@ -917,10 +917,12 @@ codas doctor .</code></pre>
       </table>
 
       <div class="callout">
-        <strong>spec_drift = materiality-as-claim（决策记录）：</strong>
-        materiality 本身被当作一种 claim 来表达——粗粒度的 <code>must_update_if_changed</code> 是 advisory 信号；
-        真正的 gate 是 <code>.codas/claims.yml</code> 中经过 vouch 的 <code>drift_couplings</code>，基于 diff 触发。
-        这样“代码变了但权威约束源没同步”既能被声明、也能被强制。
+        <strong>fact_coupling = materiality-as-coupling-property（决策记录，spec-drift v2）：</strong>
+        materiality 是 <em>耦合</em> 的静态属性（作者写一次），不是逐次变更的判断（§17 禁止后者）。
+        粗粒度的 <code>must_update_if_changed</code>（“unit 变 → doc 变”）没有 always-true 的 fact 级形式，保持 advisory；
+        真正的 gate 是 <code>.codas/claims.yml</code> 的 <code>fact_couplings</code>，触发器是 <em>fact</em>-delta
+        （symbol/import/call 的 add/remove，working-tree-vs-HEAD），故 always-true by construction：注释修改不产生 fact-delta，耦合 dormant。
+        v1 <code>spec_drift</code>（file 级 <code>drift_couplings</code>，vouched）已退役；substrate 见 <code>06-20-fact-delta-substrate</code>，gate 见 <code>06-20-fact-coupling-gate</code>。
       </div>
 
       <h3>11.2 Gate Levels</h3>
@@ -1160,7 +1162,7 @@ policies:
     severity: error
   stale_claim:
     severity: warning
-  spec_drift:
+  fact_coupling:
     severity: error
   missing_canonical_owner:
     severity: error
@@ -1444,7 +1446,7 @@ git status --short</code></pre>
           <tr>
             <td>P5</td>
             <td>Wiki reconciliation：确定性、agent-driven 的 wiki spine，<strong>不内嵌 LLM、不用 MCP</strong>。</td>
-            <td>wiki-claim parser、<code>stale_wiki_claim</code>、确定性 call-graph facts（pyan 因不确定性被否决）、<code>spec_drift</code>、atlas grounding pack（<code>codas wiki --emit-pack</code>）、committed generated governance page（<code>codas wiki --write</code> / <code>--verify</code>）、<code>generated_wiki_drift</code> policy、<code>CONTRACT.md</code> authoring contract。</td>
+            <td>wiki-claim parser、<code>stale_wiki_claim</code>、确定性 call-graph facts（pyan 因不确定性被否决）、<code>spec_drift</code>（v2 已被 <code>fact_coupling</code> 取代）、atlas grounding pack（<code>codas wiki --emit-pack</code>）、committed generated governance page（<code>codas wiki --write</code> / <code>--verify</code>）、<code>generated_wiki_drift</code> policy、<code>CONTRACT.md</code> authoring contract。</td>
           </tr>
           <tr>
             <td>P6</td>

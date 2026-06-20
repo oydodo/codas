@@ -873,7 +873,7 @@ scripts/
           <tr>
             <td>P5</td>
             <td>Wiki reconciliation (deterministic wiki spine)</td>
-            <td>Wiki adapter + claim parser (<code>codas.adapters.wiki</code>); <code>stale_wiki_claim</code> policy; deterministic call-graph facts (<code>codas.adapters.callgraph</code>, stdlib <code>ast</code>, first-party, resolution-tagged &mdash; pyan rejected for cross-process nondeterminism); <code>spec_drift</code> policy (materiality-as-claim: coarse <code>must_update_if_changed</code> stays advisory, vouched <code>.codas/claims.yml</code> <code>drift_couplings</code> gate diff-based co-change via <code>codas.adapters.git</code> <code>changed_paths</code>); atlas grounding pack (<code>codas wiki --emit-pack</code>); committed generated governance page (<code>codas wiki --write</code> &rarr; <code>.codas/wiki/generated/governance.md</code>, carrying an <code>atlas:claims</code> block + <code>source_inventory_hash</code>); <code>codas wiki --verify</code>; <code>generated_wiki_drift</code> policy; <code>CONTRACT.md</code> authoring contract.</td>
+            <td>Wiki adapter + claim parser (<code>codas.adapters.wiki</code>); <code>stale_wiki_claim</code> policy; deterministic call-graph facts (<code>codas.adapters.callgraph</code>, stdlib <code>ast</code>, first-party, resolution-tagged &mdash; pyan rejected for cross-process nondeterminism); <code>spec_drift</code> policy (materiality-as-claim: coarse <code>must_update_if_changed</code> stays advisory, vouched <code>.codas/claims.yml</code> <code>drift_couplings</code> gate diff-based co-change via <code>codas.adapters.git</code> <code>changed_paths</code>) &mdash; <em>superseded in spec-drift v2 by the <code>fact_coupling</code> gate over fact-deltas; see <code>06-20-fact-coupling-gate</code></em>; atlas grounding pack (<code>codas wiki --emit-pack</code>); committed generated governance page (<code>codas wiki --write</code> &rarr; <code>.codas/wiki/generated/governance.md</code>, carrying an <code>atlas:claims</code> block + <code>source_inventory_hash</code>); <code>codas wiki --verify</code>; <code>generated_wiki_drift</code> policy; <code>CONTRACT.md</code> authoring contract.</td>
             <td>Wiki claims and committed generated pages are verified against repo facts; the correctness core stays deterministic and LLM-free. (Status in <code>.codas/program.yml</code>.)</td>
           </tr>
           <tr>
@@ -1026,12 +1026,12 @@ scripts/
           <tr>
             <td>Callgraph</td>
             <td>first-party Python call edges via stdlib <code>ast</code> (resolution-tagged; pyan rejected for cross-process nondeterminism).</td>
-            <td>deterministic call facts (the inventory dependency graph; substrate for impact and <code>spec_drift</code>).</td>
+            <td>deterministic call facts (the inventory dependency graph; substrate for impact and the spec-drift v2 fact-delta).</td>
           </tr>
           <tr>
             <td>Git</td>
             <td>working-tree diff and changed paths, without mutating the repo.</td>
-            <td><code>changed_paths</code> substrate (diff grounding for <code>spec_drift</code>).</td>
+            <td><code>changed_paths</code> substrate (diff grounding for the <code>fact_coupling</code> co-change gate).</td>
           </tr>
           <tr>
             <th colspan="3">Planned per-language adapters (future &mdash; illustrate the boundary; not built today)</th>

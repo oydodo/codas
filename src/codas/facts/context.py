@@ -133,7 +133,7 @@ class ScanContext:
     def changed_paths(self) -> tuple[str, ...]:
         """Working-tree paths differing from HEAD (cached; git diff substrate).
 
-        Policy-time fact consumed by ``spec_drift``; deliberately *not* serialized
+        Policy-time fact consumed by ``fact_coupling``; deliberately *not* serialized
         into ``inventory`` — it reflects dirty working-tree state and would break the
         byte-identical inventory invariant.
         """

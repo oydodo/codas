@@ -8,9 +8,9 @@ def extract_changed_paths(repo: Path) -> tuple[str, ...]:
     """Working-tree paths that differ from HEAD (tracked diff ∪ untracked).
 
     Repo-relative posix, sorted and de-duplicated. The diff substrate for the
-    ``spec_drift`` policy: it answers "which files changed since the last commit",
-    the deterministic half of drift detection (the host agent judges *how* a change
-    is material from the actual diff content; Codas only grounds *which* files moved).
+    ``fact_coupling`` policy: it answers "which files changed since the last commit",
+    the companion to the fact delta — a coupling fires when a watched fact-delta is
+    nonempty but a required companion path is absent from this changed-path set.
 
     Returns ``()`` when git is unavailable, the path is not a repository, or ``HEAD``
     does not resolve (a repo with no commits has no baseline, so there is no drift to

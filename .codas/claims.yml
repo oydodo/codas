@@ -51,19 +51,35 @@ duplicate_relationships:
       - src/codas/structure/loader.py
       - src/codas/structure/program_loader.py
 
-# Vouched drift couplings for the spec_drift policy (§ change propagation). A
-# coupling is a *gating* co-change rule whose materiality an agent or human has
-# judged and recorded here: when a change site appears in the working-tree-vs-HEAD
-# diff, the required reactions must appear in the same diff or spec_drift reports an
-# error. This is the deterministic half of drift control — Codas grounds the diff and
-# verifies the coupling; the host agent supplies the semantic judgment by authoring
-# the coupling. The coarse structure.yml `must_update_if_changed` stays advisory and
-# is NOT gated; promote a genuinely material hint into a coupling here when it earns a
-# hard gate. No couplings are declared yet (the policy returns nothing until one is).
+# Fact-level co-change couplings for the fact_coupling policy (spec-drift v2 gating
+# half; supersedes the retired v1 drift_couplings file-level mechanism). A coupling
+# watches a FACT-delta (a symbol/import/call added or removed in the
+# working-tree-vs-HEAD diff) and requires a companion path to co-change in the SAME
+# diff; if the watched fact-delta is nonempty and a required path is absent, the
+# policy errors. The trigger is a fact, not a file, so the coupling is always-true by
+# construction — a comment fix or a refactor that adds no symbol/import/call produces
+# no delta and the coupling stays dormant (zero materiality judgment, §17-clean).
+# The coarse structure.yml `must_update_if_changed` hints stay ADVISORY (they have no
+# always-true fact-level form); an entry graduates to a hard coupling here only when a
+# specific fact-delta makes the companion obligation always-true.
 #
-# drift_couplings:
-#   - when_changed: src/codas/policies/duplicate_implementation.py
-#     requires:
-#       - .codas/claims.yml
-#     owner: Policy Maintainer
-#     reason: The duplicate_implementation suppression schema is defined by its claims.
+# when_fact.kind: symbol_added|symbol_removed|import_added|import_removed|
+#                 call_added|call_removed
+# when_fact.scope: repo-rel path prefix the fact's module must be under
+# when_fact.name:  optional fnmatch on the fact identity (symbol name / import target /
+#                  callee symbol)
+# requires:        companion paths/globs (fnmatch) that must appear in the same diff
+fact_couplings:
+  - when_fact:
+      kind: symbol_added
+      scope: src/codas/policies
+      name: "check_*"
+    requires:
+      - src/codas/app/check.py
+    owner: Codas Core
+    reason: >-
+      A new check_* policy under src/codas/policies must be wired into run_check in
+      src/codas/app/check.py to actually run. policy_registry (state) verifies a
+      check_* is declared in policies.yml but NOT that it is dispatched, so an unwired
+      new policy passes every state check yet is a silent dead gate. This coupling
+      catches that drift: adding a check_* without touching check.py is an error.
