@@ -176,8 +176,9 @@ work_items:
       - program:P6:enforcement-integrations
     trellis_tasks:
       - 06-20-codas-impact
+      - 06-20-codas-query-and-schema-p7-query-surface
     deliverables:
-      - "CLI-first query interface (decision 2026-06-20: CLI + deterministic JSON is the agent-query contract; MCP is OPTIONAL sugar). Codas already emits deterministic JSON (codas check/inventory/preflight --json, receipts); agents query by shelling out + jq. A thin set of query subcommands makes jq optional: codas impact <symbol|path> (reverse reachability over the calls call-graph facts -- 'changing this affects whom'), codas query/--select (pre-shaped slices), codas schema (the JSON shape). First slice: 06-20-codas-impact."
+      - "CLI-first query interface (decision 2026-06-20: CLI + deterministic JSON is the agent-query contract; MCP is OPTIONAL sugar). Codas already emits deterministic JSON (codas check/inventory/preflight --json, receipts); agents query by shelling out + jq. A thin set of query subcommands makes jq optional: codas impact <symbol|path> (reverse reachability over the calls call-graph facts -- 'changing this affects whom', shipped 06-20-codas-impact), codas query <kind> --select FIELD=VALUE (pre-shaped inventory slices) and codas schema (the JSON row shape, derived from the live inventory) -- both shipped 06-20-codas-query-and-schema-p7-query-surface."
       - "MCP server -- OPTIONAL thin stateless role-integration shell over the same core (shells out / read-only-calls, never re-implements fact logic, like enforcement.py shells out to codas check), built only if a target runtime needs typed self-describing tools. Not required: a stateful daemon + non-deterministic surface fights Codas's deterministic/stateless/auditable identity, and the CLI JSON is already the real interface."
       - Role Integrations for Codex, Claude Code, hooks, CI and human review (platform mappings over the CLI query surface)
       - OSS LLM-wiki backend adapters (push verified grounding into deepwiki/CodeWiki-style generators; file-convention and subprocess injection, NOT MCP, per the 06-19-wiki-architecture decision)

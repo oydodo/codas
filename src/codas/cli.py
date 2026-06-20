@@ -102,6 +102,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the impact set as deterministic JSON.",
     )
 
+    query = subparsers.add_parser(
+        "query",
+        help="Emit one inventory fact block as JSON, optionally filtered (jq-optional slice).",
+    )
+    query.add_argument(
+        "kind",
+        help="Fact block to query: symbols, imports, calls, units, tasks, doc-claims, html-claims, wiki-claims, work-items.",
+    )
+    query.add_argument("repo", nargs="?", default=".")
+    query.add_argument(
+        "--select",
+        action="append",
+        default=None,
+        metavar="FIELD=VALUE",
+        help="Keep only rows where FIELD equals VALUE, JSON-spelled (exists=true, package=null); repeatable, AND-combined.",
+    )
+
+    schema = subparsers.add_parser(
+        "schema",
+        help="Emit the inventory row shape (block + field names per query kind, derived from the rows present in the live inventory) as JSON.",
+    )
+    schema.add_argument("repo", nargs="?", default=".")
+
     doctor = subparsers.add_parser("doctor", help="Diagnose Codas installation.")
     doctor.add_argument("repo", nargs="?", default=".")
     doctor.add_argument(
@@ -255,6 +278,26 @@ def main(argv: list[str] | None = None) -> int:
             print(f"skipped {name} (existing non-Codas hook; pass --force to overwrite)")
         if not result.installed and not result.skipped:
             print("no hooks installed")
+        return 0
+
+    if args.command == "query":
+        import sys
+
+        from .app.query import QueryError, parse_selectors, run_query
+
+        try:
+            selectors = parse_selectors(args.select or [])
+            rows = run_query(repo, args.kind, selectors)
+        except QueryError as error:
+            print(f"query: {error}", file=sys.stderr)
+            return 2
+        print(json.dumps(rows, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "schema":
+        from .app.query import run_schema
+
+        print(json.dumps(run_schema(repo), indent=2, sort_keys=True))
         return 0
 
     if args.command == "impact":
