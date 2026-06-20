@@ -310,3 +310,56 @@ in the **Drift / Staleness 2×2** (Drift = changed + inconsistent, gated at comm
 single-pass oracle (a pure function of repository state); the dashed box is the planned
 incremental propagation engine that the fact-delta, call-graph and fact-cache are being
 built to enable.
+
+## Perception Model (evolved — fact families, claim schema, TMS lineage)
+
+The Concept Map above is the shipped single-pass spine. A 2026-06-20 critique generalized it
+into the model Codas is evolving toward. Three changes: the change/consistency split becomes
+an open set of **fact FAMILIES** (each sensor-scoped, each carrying a **soundness**
+qualifier — a static call-graph is byte-identical AND approximate, and the qualifier keeps a
+claim resting on it from being reported as exact); a **Claim** becomes a structured object
+(subject, assertion, grain, verifier-class, evidence, soundness, lifecycle) verified by
+**projecting** its evidence onto the families it names (many-to-many, not containment); and
+propagation becomes **bidirectional** (seeded by fact-delta ∪ claim-delta, so a
+top-originating intent edit is governed too). The determinism boundary is a **policy choice**
+("no non-deterministic verifier in the core"), not a law.
+
+Lineage: Codas is a deterministic single-context **Truth-Maintenance System** (JTMS) — facts
+justify claims, belief is a pure function of the justification network, retraction is
+dependency-directed (= the worklist). Provenance-semirings compose soundness; self-adjusting
+computation (Adapton/Salsa) makes the relabel incremental; Toulmin/Pollock/AGM name the claim
+slots. Full rationale + competitive positioning + the multi-language path live in the 06-20
+perception-model decision record.
+
+```
+                    Repository  (raw substrate: files, history)
+                      │ perceived by ▼        (FACT flows UP)
+   ┌──────── FACT FAMILIES — open set; each = sensor + SOUNDNESS qualifier ────────┐
+   │ static-content │ structure/call │  diff    │ generated │ [runtime] [external]  │
+   │  hash ⟨EXACT⟩   │  ast ⟨APPROX⟩  │changed_  │governance │  (future)            │
+   │  file           │  symbol·edge   │ paths    │  page     │  semantics: NO fact  │
+   └───────┬──────────── emit FACTS (deterministic → inventory) ──────────┬─────────┘
+           │                                                              │ semantics =
+  ─────────┼──── §17 = "no NON-DETERMINISTIC verifier in core" (CHOICE) ──┼── claim-only
+           ▼                                                              ▲
+   ┌─ VERIFY = project a CLAIM's evidence onto the families it names ─┐   │ optional L3
+   │   (MANY-TO-MANY, not a tree)                                     │◄──┤ GENERATOR:
+   │   CLAIM = {subject, assertion, grain, verifier-class,            │   │ host agent /
+   │            evidence[], soundness, lifecycle{hash, expiry}}       │   │ CodeWiki / none
+   └───────────────────────────────┬─────────────────────────────────┘   │ → output = CLAIM
+                                    ▼  outcome by verifier-class
+   GOVERNANCE FACT (verified) │ FINDING (REBUT: fact contradicts) │ RESIDUE (UNDERCUT:
+                              │                                   │ sensor can't reach;
+                              │                                   │ evidence-only, stored
+                              │  verdict = 2×2 (changed?×consistent?)  w/ hash+expiry)
+                                    ▼
+   PROPAGATION — BIDIRECTIONAL worklist: seed = fact-delta ∪ CLAIM-delta → re-verify → fixpoint
+                                    ▼
+                              RECEIPTS (provenance-pinned)
+```
+
+A claim outcome is one of three (the Pollock split): **GOVERNANCE FACT** (verified),
+**FINDING** (*rebutted* — a fact contradicts the claim), or **RESIDUE** (*undercut* — a fact
+family's soundness degraded so the sensor can no longer judge; stored with evidence and a
+re-checkable lifecycle, never reported as a violation). "Code is wrong" and "I can no longer
+see well enough" are different verdicts.
