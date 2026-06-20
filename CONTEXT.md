@@ -315,10 +315,13 @@ built to enable.
 
 The Concept Map above is the shipped single-pass spine. A 2026-06-20 critique generalized it
 into the model Codas is evolving toward. Three changes: the change/consistency split becomes
-an open set of **fact FAMILIES** (each sensor-scoped, each carrying a **soundness**
-qualifier — a static call-graph is byte-identical AND approximate, and the qualifier keeps a
-claim resting on it from being reported as exact); a **Claim** becomes a structured object
-(subject, assertion, grain, verifier-class, evidence, soundness, lifecycle) verified by
+an open set of **fact FAMILIES**, each either **OPEN-** or **CLOSED-world** — a static
+call-graph is byte-identical and each emitted edge is SOUND, but the set is a lower BOUND
+(absence ≠ denial: completeness over runtime behavior is undecidable, Rice), whereas a
+config/declared family is read in full so its absence IS evidence; a claim reasoning from an
+open-world family's *absence* inherits that lower-bound caveat. A **Claim** becomes a
+structured object (subject, assertion, grain, verifier-class, evidence, world, lifecycle)
+verified by
 **projecting** its evidence onto the families it names (many-to-many, not containment); and
 propagation becomes **bidirectional** (seeded by fact-delta ∪ claim-delta, so a
 top-originating intent edit is governed too). The determinism boundary is a **policy choice**
@@ -326,7 +329,7 @@ top-originating intent edit is governed too). The determinism boundary is a **po
 
 Lineage: Codas is a deterministic single-context **Truth-Maintenance System** (JTMS) — facts
 justify claims, belief is a pure function of the justification network, retraction is
-dependency-directed (= the worklist). Provenance-semirings compose soundness; self-adjusting
+dependency-directed (= the worklist). Provenance lineage tracks which facts justify a claim; self-adjusting
 computation (Adapton/Salsa) makes the relabel incremental; Toulmin/Pollock/AGM name the claim
 slots. Full rationale + competitive positioning + the multi-language path live in the 06-20
 perception-model decision record.
@@ -334,9 +337,9 @@ perception-model decision record.
 ```
                     Repository  (raw substrate: files, history)
                       │ perceived by ▼        (FACT flows UP)
-   ┌──────── FACT FAMILIES — open set; each = sensor + SOUNDNESS qualifier ────────┐
-   │ static-content │ structure/call │  diff    │ generated │ [runtime] [external]  │
-   │  hash ⟨EXACT⟩   │  ast ⟨APPROX⟩  │changed_  │governance │  (future)            │
+   ┌──────── FACT FAMILIES — open set; each OPEN- or CLOSED-world ─────────────────┐
+   │ static-content │ structure/call │  diff    │ declared  │ [runtime] [external]  │
+   │  hash ⟨CLOSED⟩  │  ast ⟨OPEN⟩    │changed_  │units⟨CLOSED⟩  (future)            │
    │  file           │  symbol·edge   │ paths    │  page     │  semantics: NO fact  │
    └───────┬──────────── emit FACTS (deterministic → inventory) ──────────┬─────────┘
            │                                                              │ semantics =
@@ -345,7 +348,7 @@ perception-model decision record.
    ┌─ VERIFY = project a CLAIM's evidence onto the families it names ─┐   │ optional L3
    │   (MANY-TO-MANY, not a tree)                                     │◄──┤ GENERATOR:
    │   CLAIM = {subject, assertion, grain, verifier-class,            │   │ host agent /
-   │            evidence[], soundness, lifecycle{hash, expiry}}       │   │ CodeWiki / none
+   │            evidence[], world, lifecycle{hash, expiry}}           │   │ CodeWiki / none
    └───────────────────────────────┬─────────────────────────────────┘   │ → output = CLAIM
                                     ▼  outcome by verifier-class
    GOVERNANCE FACT (verified) │ FINDING (REBUT: fact contradicts) │ RESIDUE (UNDERCUT:
@@ -359,7 +362,8 @@ perception-model decision record.
 ```
 
 A claim outcome is one of three (the Pollock split): **GOVERNANCE FACT** (verified),
-**FINDING** (*rebutted* — a fact contradicts the claim), or **RESIDUE** (*undercut* — a fact
-family's soundness degraded so the sensor can no longer judge; stored with evidence and a
-re-checkable lifecycle, never reported as a violation). "Code is wrong" and "I can no longer
-see well enough" are different verdicts.
+**FINDING** (*rebutted* — a fact contradicts the claim), or **RESIDUE** (*undercut* — the
+claim rests on an open-world family's absence, so the sensor cannot confirm it; stored with
+evidence and a re-checkable lifecycle, never reported as a violation). "Code is wrong" and
+"I can't see well enough to judge" are different verdicts — the open-world invariant is what
+keeps the second from being mis-reported as the first.

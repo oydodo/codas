@@ -6,7 +6,6 @@ from typing import Any
 from codas.adapters.trellis import extract_task_facts
 from codas.config.loader import load_codas_config
 from codas.facts.context import ScanContext
-from codas.facts.soundness import FACT_SOUNDNESS
 
 from .document_loader import load_document_manifest
 from .index import build_artifact_index, discover_files, workspace_roots
@@ -257,14 +256,9 @@ def build_inventory(
         "skipped": list(call_facts.skipped),
     }
 
-    # fact_soundness: a STATIC per-family soundness manifest (B2) — a sibling of the
-    # symbols/imports/calls blocks declaring, per family, the sensor's level + scope +
-    # named under-approximations. A frozen constant, so adding it changes the inventory
-    # hash exactly once, then stays byte-identical run-to-run; the existing fact blocks
-    # are untouched (no per-row field), so their rows stay byte-identical too. ``level``
-    # serializes as its lowercase name (never the int rank) and every list is sorted.
-    inventory["fact_soundness"] = {
-        family: FACT_SOUNDNESS[family].as_dict() for family in sorted(FACT_SOUNDNESS)
-    }
+    # NB no open/closed-world marker is serialized here. The open-world invariant for the
+    # static code-fact families (symbols/imports/calls) is documentation + the named gaps
+    # in codas.facts.openworld, consumed by `codas impact`; a serialized per-family marker
+    # is deferred to the generic LLM/claim-verifier layer that would need it as data.
 
     return inventory

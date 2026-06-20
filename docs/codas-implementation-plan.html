@@ -1209,7 +1209,21 @@ scripts/
         <li>Do not start with MCP. Agent query UX is valuable only after the underlying facts are trustworthy.</li>
         <li>Do not overfit Ciri. Ciri is a validation repo, not the Codas domain model.</li>
         <li>Do not depend on LLM similarity for P0 correctness.</li>
+        <li>Do not serialize a per-family open/closed-world MARKER into the inventory yet.
+          The <strong>open-world invariant</strong> (static code facts are a sound lower bound —
+          absence ≠ denial; config/declared facts are closed-world) holds NOW as a core constraint
+          (no policy gates on an open-world fact's absence; a reasoner reads absence as unknown — see
+          design §9.4), but a serialized data marker only earns its place once a generic LLM/claim
+          verifier over extensible multi-language fact families needs it as data. Today it is
+          documentation + the named gaps in <code>codas.facts.openworld</code> + the
+          <code>codas impact</code> caveat. The earlier graded "soundness level" was withdrawn as
+          information-free (static code facts are uniformly open-world).</li>
       </ul>
+      <p>
+        感知模型的完整路线（fact 家族、claim schema、把语义合法性交给 LLM、Truth-Maintenance 血脉、
+        双向传播、borrow-backlog）是活文档，见 <code>CONTEXT.md</code> 的 Perception Model 节与 06-20
+        perception-model 决策记录；本计划只在此钉死 "暂不构建" 的边界。
+      </p>
     </section>
 
     <footer>

@@ -808,6 +808,32 @@ codas doctor .</code></pre>
     "Add a temporary waiver with an expiry date."
   ]
 }</code></pre>
+
+      <h3>9.4 Fact Soundness &amp; the Open-World Invariant</h3>
+      <p>
+        每条 emitted fact 都是 <strong>SOUND</strong> 的（提取器保守，只吐它解析出的，丢弃不确定的），
+        所以对 fact 的<strong>正面</strong>读取 100% 可信（"A 调用 B" 为真）。但静态代码分析得到的家族
+        （<code>symbols</code> / <code>imports</code> / <code>calls</code>，以及正则抽取的 doc/wiki 路径引用）是
+        <strong>OPEN-WORLD</strong>：它们是一个 <em>sound 的下界</em>，而非完整集。<strong>缺席不是证据</strong>——
+        "没有 A→B 这条边" 不代表 A 从不调用 B，可能是静态分析无法判定的动态/反射形式（完整性对运行时行为不可判定，Rice 定理）。
+        相对地，config/声明类家族（structure units、tasks、work-items、documents）是 <strong>CLOSED-WORLD</strong>：
+        整份读入，所以它们的缺席<em>即</em>证据（"structure.yml 未声明 unit X" ⇒ X 确实未声明）。
+      </p>
+      <p>不变量的两个后果：</p>
+      <ol>
+        <li>Policy <span class="must">MUST NOT</span> 在 open-world fact 的<strong>缺席</strong>上设 gate —— 确定性 policy 只在
+          <strong>存在</strong>上判（<code>duplicate_implementation</code>、<code>dependency_direction</code>）。刻意<strong>没有</strong> "dead code" gate，
+          因为它要判 <code>calls</code> 边的缺席，会在动态派发上误报。</li>
+        <li>在这些 fact 上推理的消费者（今天的 <code>codas impact</code>；之后判定语义合法性的 LLM / claim verifier）
+          <span class="must">MUST</span> 把缺席读作<strong>未知</strong>，而非否定。</li>
+      </ol>
+      <p>
+        完整的感知模型（fact 家族、结构化 claim schema、把语义合法性判定交给 LLM 的 engine-split、
+        Truth-Maintenance-System 血脉、双向传播引擎）是活文档，记录在 <code>CONTEXT.md</code> 的 Perception Model 节
+        与 06-20 perception-model 决策记录中；本节只钉死其中稳定的 open-world 不变量，细节以那两处为准（anchor-to-source，避免复制后再漂）。
+        早先的分级 "soundness qualifier"（exact/scoped/approximate）已退役 —— 静态代码 fact 一律 open-world，
+        分级无信息；操作含义只有 open/closed 二元。
+      </p>
     </section>
 
     <section>
@@ -1127,6 +1153,12 @@ required resolution:
       <p>
         LLM 输出必须降级为 claim 或 suggestion，不能直接成为 fact。所有 LLM-assisted finding
         <span class="should">SHOULD</span> 携带置信度和 evidence。
+      </p>
+      <p>
+        语义合法性（"这是对的抽象吗"、"代码是否真的实现了它声称的目的"、"两个概念是否重复"的语义判断）是 LLM 的职责，
+        基于 Codas 的确定性 fact 进行（ground truth 钉 fact，不钉 LLM 自己生成的 wiki —— 否则是 LLM 查 LLM，共享幻觉）。
+        关键护栏 = §9.4 的 open-world 不变量：LLM 在代码 fact 上推理时 <span class="must">MUST NOT</span> 把"fact 没说"读作"事实否定"
+        （否则会把"无调用者"误判成死代码 —— 缺席只是下界）。
       </p>
     </section>
 

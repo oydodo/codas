@@ -8,12 +8,13 @@ from codas.facts.context import ScanContext
 
 CLAIMS_SOURCE = ".codas/claims.yml"
 
-# NB the call_*/import_* kinds watch fact families whose soundness is
-# APPROXIMATE_INCOMPLETE (see codas.facts.soundness): a call/import added in a form the
-# extractor does not resolve (dynamic dispatch, a module-level call, importlib) produces
-# NO delta and so never fires its coupling. These triggers are therefore a LOWER BOUND —
-# they catch the resolved subset, not every real co-change. symbol_* (SCOPED) is tighter.
-# Surfacing per-coupling soundness in the finding is deferred to B4 (the claim schema).
+# NB the call_*/import_* kinds watch OPEN-WORLD fact families (see codas.facts.openworld):
+# a call/import added in a form the static extractor does not resolve (dynamic dispatch, a
+# module-level call, importlib) produces NO delta and so never fires its coupling. These
+# triggers are therefore a LOWER BOUND — they catch the resolved subset, not every real
+# co-change. Per the open-world invariant, this gate keys on the PRESENCE of a delta, never
+# the absence; symbol_* is tighter than call_*. Surfacing this per-coupling is deferred to
+# B4 (the claim schema).
 _VALID_KINDS = (
     "symbol_added",
     "symbol_removed",

@@ -6,7 +6,7 @@ from typing import Any
 
 from codas.config.loader import load_codas_config
 from codas.facts.context import CallFacts, build_scan_context
-from codas.facts.soundness import family_soundness
+from codas.facts.openworld import open_world_gaps
 
 # ``codas impact <symbol|path>`` — the first P7 agent-query subcommand. Pure reverse
 # reachability over the existing deterministic ``calls`` call-graph facts ("changing
@@ -147,10 +147,10 @@ def compute_impact(calls: CallFacts, target: str, repo: Path) -> dict[str, Any]:
     (path, class, symbol, module). ``affected`` is the transitive caller set
     (distance >= 1); the target nodes themselves are excluded.
 
-    The result carries the ``calls`` family soundness (B2): the call graph is
-    APPROXIMATE_INCOMPLETE, so the impact set is a LOWER BOUND — an agent must not
-    read "not affected" as proof of no effect. A static constant, so it does not
-    perturb the determinism above.
+    The result carries the ``calls`` OPEN-WORLD gaps (codas.facts.openworld): the call
+    graph is a sound LOWER BOUND, so an agent must not read "not affected" as proof of
+    no effect — absence may be a dynamic/reflective call the static extractor missed. A
+    static constant, so it does not perturb the determinism above.
     """
     kind, norm, matched = _resolve_targets(target, calls, repo)
     rev = _reverse_graph(calls)
@@ -162,7 +162,7 @@ def compute_impact(calls: CallFacts, target: str, repo: Path) -> dict[str, Any]:
         "matched": [node.as_dict() for node in matched],
         "affected": [{**node.as_dict(), "distance": dist[node]} for node in affected],
         "affected_paths": sorted({node.path for node in affected}),
-        "soundness": family_soundness("calls").as_dict(),
+        "open_world": {"is_lower_bound": True, "misses": list(open_world_gaps("calls"))},
     }
 
 
@@ -183,15 +183,15 @@ def _fqn(node: dict[str, str]) -> str:
     return ".".join(parts)
 
 
-def _soundness_note(soundness: dict[str, Any], miss: bool) -> str:
-    gaps = ", ".join(soundness["under_approximates"])
+def _open_world_note(open_world: dict[str, Any], miss: bool) -> str:
+    gaps = ", ".join(open_world["misses"])
     if miss:
         return (
-            f"  note: calls are {soundness['level']} — misses {gaps}; "
+            f"  note: calls are open-world (static analysis) — misses {gaps}; "
             "an empty/absent result may reflect a missed call, not proof of none."
         )
     return (
-        f"  note: calls are {soundness['level']} — misses {gaps}; "
+        f"  note: calls are open-world (static analysis) — misses {gaps}; "
         "the affected set is a lower bound."
     )
 
@@ -202,7 +202,7 @@ def render_impact_text(result: dict[str, Any]) -> str:
     matched = result["matched"]
     affected = result["affected"]
     paths = result["affected_paths"]
-    soundness = result["soundness"]
+    open_world = result["open_world"]
 
     lines = [f"impact of {target} ({kind})"]
     if not matched:
@@ -216,15 +216,13 @@ def render_impact_text(result: dict[str, Any]) -> str:
                 f"  '{target}' not found in the call graph "
                 "(no first-party definition or caller under the scanned roots)."
             )
-        # A MISS is exactly where approximation matters (codex B2 SHOULD-FIX): the
-        # target may be absent because the call graph missed the relevant call forms,
-        # so disclose the soundness here too.
-        lines.append(_soundness_note(soundness, miss=True))
+        # A MISS is exactly where the open-world caveat matters: the target may be absent
+        # because the call graph missed the relevant call form, so disclose it here too.
+        lines.append(_open_world_note(open_world, miss=True))
         return "\n".join(lines)
 
-    # One-line soundness caveat (B2): the call graph is approximate, so the affected
-    # set is a lower bound.
-    lines.append(_soundness_note(soundness, miss=False))
+    # The open-world caveat: the call graph is a lower bound, so the affected set is too.
+    lines.append(_open_world_note(open_world, miss=False))
 
     lines.append(
         f"  {len(matched)} target symbol(s), "
