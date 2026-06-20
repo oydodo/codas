@@ -2,18 +2,25 @@
 
 ## Status
 
-PLANNING / queued — **partially shipped, remainder DEFERRED.**
+PLANNING / queued — **v2-A substrate + policy_registry SHIPPED; v2-B couplings DEFERRED.**
 
 - **`policy_registry` coupling: SHIPPED** as standalone task `06-20-policy-registry`
   (commit `1d1cd91`) — the worked example below, implemented state-based (set-equality
   between policies.yml declarations and implemented `check_*`, no fact-diff needed).
-- **Remainder DEFERRED** (re-author `must_update_if_changed` into fact-level couplings;
-  fact-delta detection over `inventory@HEAD` vs working-tree; retire `drift_couplings`):
-  needs the `inventory@HEAD` fact-diff substrate, which **co-designs with the deferred
-  `06-20-fact-cache-persistent`** (the cache makes HEAD's facts cheap). The two should
-  be designed together so the `RawFileFacts` schema is stable. v2 can compute the
-  fact-delta WITHOUT the cache (recompute both inventories directly — correct, slower),
-  so the cache is an optimization, not a hard blocker, but co-design is the right call.
+- **v2-A fact-delta substrate: SHIPPED** as task `06-20-fact-delta-substrate` (commit
+  `54968e8`). The `inventory@HEAD` fact-diff substrate this remainder needed now exists:
+  `FactSnapshot{symbols,imports,calls}` at the working tree OR `HEAD` (pure fn of
+  file-set+content; HEAD via `git ls-tree`/`cat-file`), a pure identity-key
+  `diff_snapshots`, and `ScanContext.fact_delta()` (working-tree-vs-HEAD). No coupling
+  schema, no policy change yet. This also FROZE the snapshot schema for the deferred
+  `06-20-fact-cache-persistent` (the cache stores `FactSnapshot`'s per-file slice).
+- **v2-B remainder DEFERRED** (re-author `must_update_if_changed` into fact-level
+  couplings consuming `ctx.fact_delta()`; retire `drift_couplings`; the `spec_drift` v2
+  policy rewrite). This is the bulk of the risk — re-authoring the coarse couplings
+  precisely so the always-on gate does not re-break the dogfood `check 0` or block past
+  commits. Needs its OWN design + codex review before any gate-semantics change. The
+  cache (`06-20-fact-cache-persistent`) is now an independent optimization (v2-B can
+  recompute the HEAD snapshot directly via `ctx.fact_delta()` — correct, slower).
 
 A reframing of the shipped `spec_drift` (06-19-spec-drift) from a 2026-06-19 user
 insight. Supersedes the `drift_couplings` (vouched-claim) layer.

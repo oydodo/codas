@@ -11,6 +11,31 @@ inventories directly — correct, just slower); building v2 first lets its exact
 needs FREEZE the `RawFileFacts` schema before the cache commits to it. This task stays
 in PLANNING until v2 is underway.
 
+## SCHEMA FROZEN (2026-06-20): spec-drift v2-A substrate shipped
+
+`06-20-fact-delta-substrate` (commit `54968e8`) shipped the HEAD fact snapshot v2
+needed, WITHOUT the persistent cache — it recomputes the HEAD snapshot directly via
+`git ls-tree`/`cat-file` (correct, slower; the cache is now a pure optimization). It
+froze the schema this cache will store:
+
+- The cached per-file unit is the **per-file slice of `codas.facts.snapshot.FactSnapshot`**
+  (`{symbols, imports, calls}`). Layer-1 `RawFileFacts` = one file's contribution to that
+  snapshot BEFORE cross-file resolution; Layer-2 `assemble_*` = `extract_*_from_parsed`
+  over the union (the resolution logic already split this way for snapshots).
+- **Package detection is already file-set-derived** (v2-A moved callgraph off the
+  filesystem stat onto `package_dirs_of`, gated on `read_error is None`). So Layer-2's
+  package math is `package_dirs_of(union-of-readable-paths)` — no remaining working-tree
+  filesystem dependency to design around. This resolves the design's "RawFileFacts needs
+  a read-error state" gap: the snapshot/`ParsedModule` already carry it, and package
+  membership already excludes read-error files.
+- **Decode is pinned**: working-tree + HEAD both `read_bytes().decode("utf-8","ignore")`,
+  so the cache key (git blob sha) and the parse input are over the same bytes (the
+  design's "key/parse-input consistency" requirement is satisfied upstream).
+- The import-descriptor `kind`+`asname` and `call_scopes` materialization gaps from the
+  schema-gaps list below still apply to the Layer-1 RAW serialization (the snapshot keeps
+  live `ast`-derived facts, not yet a serialized descriptor) — these remain the cache's
+  work.
+
 **Schema gaps codex found (must fix before any Layer-2 rewrite ships):**
 - **Import descriptor needs `kind` + `asname`.** `_bindings` (callgraph) reads
   `alias.asname` (so `import pkg.mod as m; m.f()` binds `m`; `from p import f as g; g()`
