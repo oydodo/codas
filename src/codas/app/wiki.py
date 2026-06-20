@@ -6,6 +6,7 @@ from typing import Any
 
 from codas.app.inventory import render_inventory_json, run_inventory
 from codas.core.provenance import inventory_hash
+from codas.facts.openworld import open_world_gaps
 
 # Source code the pack scopes its symbol/dependency views to (the product, not the
 # vendored .trellis/scripts or tests). NB the inventory `symbols`/`imports` `module`
@@ -142,6 +143,210 @@ def build_atlas_pack(repo: Path) -> dict[str, Any]:
 def _in_product(module: str) -> bool:
     """True if a symbol/import `module` path is under the product source tree."""
     return module == _PRODUCT_PREFIX.rstrip("/") or module.startswith(_PRODUCT_PREFIX)
+
+
+# --- Block A: neutral Codas knowledge-tree emitter ------------------------------
+#
+# Projects the verified symbol/call/ownership facts into a hierarchical, navigable
+# KNOWLEDGE TREE in a NEUTRAL, versioned Codas schema (`codas.knowledge_tree/v1`) — the
+# DETERMINISTIC ORGANIZATION layer: scattered facts (646 symbols + 775 call edges +
+# unit ownership) reshaped into a package -> module -> class -> function tree with
+# resolution-tagged call adjacency, so a host agent (or a Block-B CodeWiki adapter that
+# maps this neutral tree to its private schema) navigates structure rather than scanning
+# flat rows. A pure projection of the inventory dict, like `project_atlas_pack`: no LLM,
+# no ScanContext re-scan, not in the byte-identical inventory hash. The tree is a sound
+# LOWER BOUND (open-world): symbol nodes are the top-level defs, but method nodes are
+# CALL-ENDPOINT-DERIVED (the adapter emits only top-level symbols), so absence of a node
+# or edge is not proof of absence. The SEMANTIC synthesis layer (LLM narrative) and the
+# provenance-calibrator/judge that consume this tree are deferred to W3.
+
+_TREE_SCHEMA = "codas.knowledge_tree/v1"
+
+
+def _node_id(path: str, cls: str, symbol: str) -> str:
+    """The class-precise node address ``<path>::<class-or-empty>::<symbol>``. The empty
+    class segment (``path::::name``) is a module-level def; a non-empty segment is a
+    method, so a same-name method in another class is a DISTINCT node."""
+    return f"{path}::{cls}::{symbol}"
+
+
+def _parent_dir(path: str) -> str:
+    """The containing directory of a repo-relative path (``""`` at the top)."""
+    return path.rsplit("/", 1)[0] if "/" in path else ""
+
+
+def _owner_index(units: list[dict[str, Any]]) -> list[tuple[str, str, str]]:
+    """Build the ``(path-prefix, unit id, unit owner)`` table for longest-prefix
+    ownership. The repo-root unit path (``.``) normalizes to the empty prefix (the
+    least-specific catch-all). Sorted by ``(len, prefix, id)`` for a stable,
+    YAML-order-independent table. TIE-BREAK: two distinct prefixes of equal length can
+    never both prefix the same path, so a real tie requires two units declaring the SAME
+    prefix (a malformed structure.yml); ``_owning`` then keeps the FIRST in this order —
+    i.e. the lexicographically-smallest (prefix, id) — deterministically, never YAML
+    insertion order."""
+    owners = [
+        ("" if unit["path"] in (".", "./") else unit["path"], unit["id"], unit["owner"])
+        for unit in units
+    ]
+    owners.sort(key=lambda owner: (len(owner[0]), owner[0], owner[1]))
+    return owners
+
+
+def _owning(path: str, owners: list[tuple[str, str, str]]) -> tuple[str | None, str | None]:
+    """Longest-prefix owner of ``path`` -> ``(unit_id, unit_owner)`` (``(None, None)`` if
+    unowned). Sibling-prefix-safe (``path == prefix`` or ``startswith(prefix + "/")``) so
+    unit ``src/codas/app`` never wrongly owns ``src/codas/apple.py``. The strict
+    ``len(prefix) > best_len`` keeps the FIRST entry at the winning length (see
+    ``_owner_index`` for the deterministic same-prefix tie-break)."""
+    best: tuple[str | None, str | None] = (None, None)
+    best_len = -1
+    for prefix, unit_id, unit_owner in owners:
+        matches = prefix == "" or path == prefix or path.startswith(prefix + "/")
+        if matches and len(prefix) > best_len:
+            best_len = len(prefix)
+            best = (unit_id, unit_owner)
+    return best
+
+
+def project_atlas_tree(inventory: dict[str, Any]) -> dict[str, Any]:
+    """Project an inventory dict into the neutral Codas knowledge tree (pure, no I/O).
+
+    The deterministic ORGANIZATION layer. Reads three fact families from the inventory:
+    top-level symbol defs (class/function nodes), the call graph (resolution-tagged
+    ``calls_out``/``calls_in`` edges + CALL-ENDPOINT-DERIVED method nodes the symbol
+    extractor cannot surface), and structure units (longest-prefix ``unit_id`` /
+    ``unit_owner`` per node). Symbols are authoritative for ``kind`` so a class called as
+    a constructor stays a ``class``, never relabelled a ``function``. Every list sorts on
+    an explicit total key and the tree is keyed by node-id, so the shape is
+    self-determined and byte-identical. ``build_atlas_tree`` only adds the
+    ``source_inventory_hash`` on top.
+    """
+    symbols = (inventory.get("symbols") or {}).get("definitions") or []
+    call_edges = (inventory.get("calls") or {}).get("edges") or []
+    units = inventory.get("units") or []
+    owners = _owner_index(units)
+
+    # node-id -> (path, cls, symbol) and -> kind, for every "::"-bearing node.
+    decomp: dict[str, tuple[str, str, str]] = {}
+    kinds: dict[str, str] = {}
+
+    def _ensure(path: str, cls: str, symbol: str, kind: str) -> str:
+        node_id = _node_id(path, cls, symbol)
+        if node_id not in kinds:
+            kinds[node_id] = kind
+            decomp[node_id] = (path, cls, symbol)
+        return node_id
+
+    # 1. Authoritative top-level symbol nodes (class | function), product-scoped.
+    for definition in symbols:
+        if _in_product(definition["module"]):
+            _ensure(definition["module"], "", definition["name"], definition["kind"])
+
+    # 2. Call edges -> endpoint nodes (call-endpoint-derived, lower bound), class
+    #    containers for methods, and resolution-tagged adjacency. Only product<->product
+    #    edges so the tree stays internal to the product.
+    out_edges: dict[str, set[tuple[str, str]]] = {}
+    in_edges: dict[str, set[tuple[str, str]]] = {}
+    for edge in call_edges:
+        caller_path, caller_cls = edge["caller_path"], edge["caller_class"]
+        callee_path, callee_cls = edge["callee_path"], edge["callee_class"]
+        if not (_in_product(caller_path) and _in_product(callee_path)):
+            continue
+        caller_id = _ensure(caller_path, caller_cls, edge["caller_symbol"], "function")
+        callee_id = _ensure(callee_path, callee_cls, edge["callee_symbol"], "function")
+        # A method's enclosing class is its parent node; ensure it exists (a top-level
+        # class symbol already created it as a `class` in step 1).
+        if caller_cls:
+            _ensure(caller_path, "", caller_cls, "class")
+        if callee_cls:
+            _ensure(callee_path, "", callee_cls, "class")
+        # The set deduplicates a call-site repeated in the raw facts; two surviving
+        # entries for one (caller, callee) pair mean two distinct resolution tags, both
+        # valid (the adapter dedups edges by the 6-tuple, excluding resolution).
+        resolution = edge["resolution"]
+        out_edges.setdefault(caller_id, set()).add((callee_id, resolution))
+        in_edges.setdefault(callee_id, set()).add((caller_id, resolution))
+
+    # 3. Module nodes (one per defining file) and package nodes (every ancestor dir
+    #    within product scope, down to the product root `src/codas`).
+    module_paths = sorted({path for path, _cls, _symbol in decomp.values()})
+    product_root = _PRODUCT_PREFIX.rstrip("/")
+
+    def _in_scope(directory: str) -> bool:
+        return directory == product_root or directory.startswith(product_root + "/")
+
+    package_paths: set[str] = set()
+    for module_path in module_paths:
+        parent = _parent_dir(module_path)
+        while _in_scope(parent):
+            package_paths.add(parent)
+            parent = _parent_dir(parent)
+
+    # 4. Parentage: method -> class, top-level -> module, module -> package,
+    #    package -> package.
+    children: dict[str, set[str]] = {}
+    for node_id, (path, cls, _symbol) in decomp.items():
+        parent = _node_id(path, "", cls) if cls else path
+        children.setdefault(parent, set()).add(node_id)
+    for module_path in module_paths:
+        parent = _parent_dir(module_path)
+        if _in_scope(parent):
+            children.setdefault(parent, set()).add(module_path)
+    for package_path in package_paths:
+        parent = _parent_dir(package_path)
+        if _in_scope(parent):
+            children.setdefault(parent, set()).add(package_path)
+
+    def _emit(node_id: str, kind: str, path: str, symbol: str | None) -> dict[str, Any]:
+        unit_id, unit_owner = _owning(path, owners)
+        return {
+            "kind": kind,
+            "path": path,
+            "symbol": symbol,
+            "unit_id": unit_id,
+            "unit_owner": unit_owner,
+            "children": sorted(children.get(node_id, ())),
+            "calls_out": [
+                {"target": target, "resolution": resolution}
+                for target, resolution in sorted(out_edges.get(node_id, ()))
+            ],
+            "calls_in": [
+                {"source": source, "resolution": resolution}
+                for source, resolution in sorted(in_edges.get(node_id, ()))
+            ],
+        }
+
+    tree: dict[str, dict[str, Any]] = {}
+    for node_id, (path, _cls, symbol) in decomp.items():
+        tree[node_id] = _emit(node_id, kinds[node_id], path, symbol)
+    for module_path in module_paths:
+        tree[module_path] = _emit(module_path, "module", module_path, None)
+    for package_path in package_paths:
+        tree[package_path] = _emit(package_path, "package", package_path, None)
+
+    return {
+        "schema": _TREE_SCHEMA,
+        # The call graph + call-endpoint method nodes are a sound LOWER BOUND, so a
+        # consumer must not read an absent node/edge as proof of absence (open-world).
+        "open_world": {
+            "is_lower_bound": True,
+            "misses": list(open_world_gaps("calls")),
+        },
+        "tree": tree,
+    }
+
+
+def build_atlas_tree(repo: Path) -> dict[str, Any]:
+    """Build the neutral knowledge tree for ``repo`` (projection + source hash).
+
+    Mirrors ``build_atlas_pack``: builds the inventory once with the generated wiki dir
+    excluded, projects it, and pins the same ``source_inventory_hash`` freshness anchor —
+    so the tree shares the pack's anchor and moves only when the source facts move.
+    """
+    inventory = run_inventory(repo, exclude_under=(_GENERATED_DIR,))
+    tree = project_atlas_tree(inventory)
+    tree["source_inventory_hash"] = inventory_hash(render_inventory_json(inventory))
+    return tree
 
 
 # --- D3b: deterministic committed governance page -------------------------------

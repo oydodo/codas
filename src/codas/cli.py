@@ -64,6 +64,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the Atlas grounding pack (verified facts) as JSON.",
     )
     wiki_mode.add_argument(
+        "--emit-tree",
+        action="store_true",
+        help="Print the neutral Codas knowledge tree (verified facts) as JSON.",
+    )
+    wiki_mode.add_argument(
         "--write",
         action="store_true",
         help="Write the deterministic generated Atlas sections under .codas/wiki/generated/.",
@@ -225,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "wiki":
         from .app.wiki import (
             build_atlas_pack,
+            build_atlas_tree,
             verify_generated_sections,
             write_generated_sections,
         )
@@ -244,7 +250,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.emit_pack:
             print(json.dumps(build_atlas_pack(repo), indent=2, sort_keys=True))
             return 0
-        parser.error("wiki: use --emit-pack, --write or --verify.")
+        if args.emit_tree:
+            print(json.dumps(build_atlas_tree(repo), indent=2, sort_keys=True))
+            return 0
+        parser.error("wiki: use --emit-pack, --emit-tree, --write or --verify.")
 
     if args.command == "init":
         from .app.init import scaffold
