@@ -28,6 +28,11 @@ from codas.adapters.wiki import (
     extract_generated_claims,
     extract_wiki_claims,
 )
+from codas.adapters.semantic import (
+    SemanticClaims,
+    StructuralClaim,
+    extract_semantic_claims,
+)
 from codas.config.loader import CodasConfig
 from codas.facts.delta import FactDelta, diff_snapshots
 from codas.facts.snapshot import FactSnapshot
@@ -53,6 +58,8 @@ __all__ = [
     "GeneratedClaims",
     "CodeAnchorClaim",
     "CodeAnchorClaims",
+    "StructuralClaim",
+    "SemanticClaims",
     "CallFact",
     "CallFacts",
     "FactSnapshot",
@@ -192,6 +199,20 @@ class ScanContext:
                 self.repo, self.files, root
             )
         return self._cache["code_anchor_claims"]
+
+    def semantic_corpus_claims(self) -> SemanticClaims:
+        """Structural claims parsed from the OFFLINE semantic corpus (cached).
+
+        Read directly from `.codas/cache/semantic/` — gitignored, so NOT in `self.files`
+        and never discovered into the inventory (it cannot perturb the byte-identical
+        hash). Consumed ONLY by the W3 calibrator (`codas wiki --calibrate`), never by a
+        check-time policy — so the offline corpus stays off the always-on `codas check`
+        path. Requires a git repo for the gitignore exclusion to hold (already an implied
+        operating assumption for the git-based facts).
+        """
+        if "semantic_corpus_claims" not in self._cache:
+            self._cache["semantic_corpus_claims"] = extract_semantic_claims(self.repo)
+        return self._cache["semantic_corpus_claims"]
 
     def working_snapshot(self) -> FactSnapshot:
         """The code-fact snapshot of the scanned working tree (cached).

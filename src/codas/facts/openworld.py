@@ -26,13 +26,16 @@ from __future__ import annotations
 #   2. A consumer reasoning over these facts (today: `codas impact`; later: an LLM/claim
 #      verifier judging semantic legality) must read absence as UNKNOWN, not as denial.
 #
-# This module deliberately does NOT serialize a per-family open/closed MARKER into the
-# inventory. That marker only earns its place once there is a GENERIC consumer (an
-# extensible multi-language fact set + an LLM claim-verifier that must handle a new
-# family's world without hardcoding it) — deferred to that layer. For now the invariant
-# is documentation + the named open-world gaps below (each proven real by a test in
-# tests/test_openworld.py, so the disclosure is ground-truthed, never merely asserted)
-# + the one live consumer, `codas impact`, which renders the lower-bound caveat.
+# This module deliberately does NOT serialize a per-family open/closed marker INTO THE
+# INVENTORY (that would perturb the byte-identical hash). The marker earns its place once a
+# GENERIC consumer must decide a fact family's world without hardcoding it — and that
+# consumer has now arrived: the W3 semantic CALIBRATOR (app/calibrate.py) tiers a structural
+# claim by the world of the fact family it names. So the marker exists as a STATIC module
+# registry, WORLD_BY_FAMILY (below) + the world_of() accessor — never per-inventory data,
+# still out of the hash. The invariant remains documentation + the named open-world gaps
+# below (each proven real by a test in tests/test_openworld.py, so the disclosure is
+# ground-truthed, never merely asserted) + the live consumers, `codas impact` (renders the
+# lower-bound caveat) and the calibrator (reads WORLD_BY_FAMILY).
 #
 # History: this replaces the B2 graded "soundness qualifier" (EXACT/SCOPED/APPROXIMATE +
 # a meet lattice, serialized into inventory). That gradation was information-free — static
@@ -69,6 +72,40 @@ OPEN_WORLD_GAPS: dict[str, tuple[str, ...]] = {
         "builtins and external (non-first-party) calls",
     ),
 }
+
+
+VALID_WORLDS = ("open", "closed")
+
+# The per-family WORLD, the deferred marker now that the W3 calibrator consumes it. "open"
+# = static code extraction is a sound LOWER BOUND, so absence is UNKNOWN (the calibrator
+# tags a missing match UNCONFIRMED, never "false"). "closed" = read in full from a bounded
+# declared artifact, so absence IS evidence (a missing match is CONTRADICTED). A first-class
+# registry so the calibrator never derives world from an empty open_world_gaps() tuple
+# (which is NOT a closed-world assertion). A static constant — never serialized into the
+# byte-identical inventory.
+WORLD_BY_FAMILY: dict[str, str] = {
+    # open-world: static code extraction (a sound lower bound; absence = UNKNOWN)
+    "symbols": "open",
+    "imports": "open",
+    "calls": "open",
+    "contains": "open",  # knowledge-tree node presence (derived from symbols + calls)
+    # closed-world: bounded declared artifacts (absence IS evidence)
+    "units": "closed",
+    "tasks": "closed",
+    "work_items": "closed",
+    "documents": "closed",
+}
+
+
+def world_of(family: str) -> str | None:
+    """``"open"`` | ``"closed"`` for a known fact family, else ``None`` (unknown family).
+
+    The W3 calibrator reads ``"open"`` as "absence is UNKNOWN, never denial" (a missing
+    match is UNCONFIRMED), ``"closed"`` as "absence IS evidence" (a missing match is
+    CONTRADICTED), and ``None`` as "no fact family expresses this" (a SEMANTIC claim). It
+    must NEVER treat an unknown family as closed-world — fail safe to ``None``/SEMANTIC.
+    """
+    return WORLD_BY_FAMILY.get(family)
 
 
 def open_world_gaps(family: str) -> tuple[str, ...]:

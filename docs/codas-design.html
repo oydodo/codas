@@ -828,6 +828,15 @@ codas doctor .</code></pre>
           <span class="must">MUST</span> 把缺席读作<strong>未知</strong>，而非否定。</li>
       </ol>
       <p>
+        曾被推迟的 per-family open/closed <strong>标记</strong>现在有了消费者（W3 calibrator，<code>src/codas/app/calibrate.py</code>），
+        故以<strong>静态注册表</strong>落地：<code>src/codas/facts/openworld.py</code> 的 <code>WORLD_BY_FAMILY</code>
+        （<code>symbols</code>/<code>imports</code>/<code>calls</code>/<code>contains</code> = open；<code>units</code>/<code>tasks</code>/<code>work_items</code>/<code>documents</code> = closed）
+        与 <code>world_of(family)</code> 访问器（open|closed|None）。calibrator 据此给结构 claim 评级：open 家族缺匹配 ⇒
+        <strong>UNCONFIRMED</strong>（绝不读作"假"），closed 家族缺匹配 ⇒ CONTRADICTED，未知家族 ⇒ SEMANTIC。
+        这是<strong>静态常量</strong>，<span class="must">绝不</span>序列化进 byte-identical inventory（不从空的
+        <code>open_world_gaps()</code> 推断 closed-world —— 空元组不是 closed-world 断言）。
+      </p>
+      <p>
         完整的感知模型（fact 家族、结构化 claim schema、把语义合法性判定交给 LLM 的 engine-split、
         Truth-Maintenance-System 血脉、双向传播引擎）是活文档，记录在 <code>CONTEXT.md</code> 的 Perception Model 节
         与 06-20 perception-model 决策记录中；本节只钉死其中稳定的 open-world 不变量，细节以那两处为准（anchor-to-source，避免复制后再漂）。

@@ -11,10 +11,12 @@ from .models import StructureMap, StructureUnit
 
 GLOB_CHARS = ("*", "?", "[")
 _IGNORE_DIRS = {".git", "__pycache__"}
-# Generated-artifact subtrees pruned on the non-git walk fallback (the git path
-# already excludes them via .gitignore / --exclude-standard). Keeps receipts and
-# other generated files out of the scan so check/inventory stay deterministic.
-_IGNORE_PATHS = {".codas/receipts"}
+# Generated/local-cache subtrees pruned on the non-git walk fallback (the git path
+# already excludes them via .gitignore / --exclude-standard). Keeps receipts and the
+# regenerable local cache (e.g. the W3 semantic corpus under .codas/cache/semantic/) out
+# of the scan so check/inventory stay deterministic REGARDLESS of git availability — the
+# corpus-out-of-hash guarantee then holds unconditionally, not only in a git repo.
+_IGNORE_PATHS = {".codas/receipts", ".codas/cache"}
 
 
 def workspace_roots(raw: dict[str, Any]) -> tuple[str, ...]:
