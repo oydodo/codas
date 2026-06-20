@@ -230,3 +230,83 @@ A Domain Role responsible for defining and maintaining the Project Document Set 
 - "file system" was used to mean repository organization rather than OS-level storage. Resolved: **Repository Structure** is the governed domain term.
 - "skill", "subagent" and "hook" were used to describe what Structure roles are. Resolved: Structure roles are **Domain Roles**; platform-specific executions are **Role Integrations**.
 - "source of truth" was too broad. Resolved: use **Observed Fact**, **Claim**, **Governance Fact** and **Evidence** instead.
+
+## Concept Map
+
+How the glossary terms wire together, end to end. Two axes split at the top — **change**
+is cheap and language-agnostic (a content hash / diff); **consistency** is expensive and
+per-language (an adapter must interpret bytes into Facts). The fact-delta bridges them.
+Everything above the `no-LLM` line is deterministic; a human/LLM only authors Claims (judging
+materiality once) and judges meaning Facts cannot reach.
+
+```
+                       ┌──────────────────────────────────────────────┐
+   Repository  ──────► │ code(.py)  docs(.md)  Atlas Wiki  config(.yml) │
+                       │ git HEAD ◄┄┄ commit history (baseline)         │
+                       └──────────────────────────────────────────────┘
+              ╱                                              ╲
+   CHANGE axis (cheap, language-agnostic)         CONSISTENCY axis (costly, per-language)
+   content hash / git diff                        ADAPTERS  ◄── §11 boundary ──
+        │                                         python(ast) markdown wiki git trellis
+        ▼                                         "interpret bytes -> Facts"
+   changed_paths                                          │
+   "which FILES moved"                                    ▼
+        │                                        ScanContext  (one scan, memoized)
+        │                                        = the seam: Policies consume Facts here,
+        │                                          never import an adapter
+        │                                                  │
+        │                                                  ▼
+        │                            ┌────────────── FACTS (observed) ──────────────┐
+        │                            │ symbols  imports  calls(call-graph)           │
+        │                            │ doc_claims  wiki_claims  Structure units  tasks│
+        │                            └───────────────────────────────────────────────┘
+        │                                                  │
+        │              authored CLAIMS ───────────────── verify ──► GOVERNANCE FACTS
+        │              (claims.yml: fact_couplings,                  (a Claim Codas
+        │               duplicate_relationships)                     checked against Facts
+        │                    ▲ human writes once: materiality        and accepted)
+        ▼                    │                                       │
+   fact_delta ◄── HEAD snapshot vs working snapshot (identity-key diff)
+   "which FACTS moved"                                              │
+        │                                                           ▼
+        ▼                                                       POLICIES
+   ┌─ DRIFT detector ─┐                          ┌─ STALENESS detectors (state) ──────┐
+   │ fact_coupling    │                          │ policy_registry  generated_wiki_drift│
+   │ (Δfact + changed │                          │ stale_claim  stale_wiki_claim        │
+   │  -> co-change?)  │                          │ structure_drift                      │
+   └────────┬─────────┘                          └──────────────────┬───────────────────┘
+            │           both serve the change-governance 2×2         │
+            │       ┌──────────────┬────────────────────────────┐
+            └──────►│              │ consistent  │ inconsistent  │
+                    │ unchanged    │ quiescent   │ STALENESS ◄───┘ (state detectors)
+                    │ changed      │ normal      │ DRIFT ◄───────┐ fact_coupling
+                    └──────────────┴─────────────┴───────────────┘
+                                       │
+                                       ▼
+                                  FINDINGS ──► RECEIPTS (provenance: inventory_hash +
+                                                          policy_version)
+
+  ── no-LLM line ───────────────────────────────────────────────────────────────────
+  Everything above is deterministic (stdlib ast, sorted, content-only, byte-identical).
+  A human/LLM acts only at: (1) authoring a Claim/coupling (judging materiality once),
+  (2) judging MEANING the deterministic Facts cannot reach. Neither enters the core.
+
+  advisory (not gated): must_update_if_changed  — coarse "unit changed -> doc changed" hint.
+
+  ┌┄ future: single-pass oracle -> incremental propagation engine (worklist) ┄┄┄┄┄┄┄┐
+  ┊ a fact_delta propagates along edges (calls / imports / fact_couplings) to re-check  ┊
+  ┊ reachable nodes; new inconsistencies enqueue; iterate to a fixpoint. Terminates by  ┊
+  ┊ content-hash dedup; a recurring hash = an unsatisfiable contradiction (a Finding,   ┊
+  ┊ not a loop). Enabler = the persistent fact-cache (only changed nodes recompute).    ┊
+  ┊ codas impact <symbol> is the CLI face of one hop of this reachable set.             ┊
+  └┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘
+```
+
+Reading the spine: **Repository** → (split: cheap **change** signal vs per-language
+**consistency** extraction) → one scan yields **Facts** → Facts plus human-authored
+**Claims** verify into **Governance Facts** → **Policies** evaluate them → the result lands
+in the **Drift / Staleness 2×2** (Drift = changed + inconsistent, gated at commit; Staleness
+= unchanged + inconsistent, caught on any run) → **Findings → Receipts**. Today this is a
+single-pass oracle (a pure function of repository state); the dashed box is the planned
+incremental propagation engine that the fact-delta, call-graph and fact-cache are being
+built to enable.
