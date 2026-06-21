@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from codas.app.inventory import render_inventory_json, run_inventory
+from codas.app.render_util import guard_table_cell
 from codas.config.loader import load_codas_config
 from codas.core.provenance import inventory_hash
 from codas.facts.openworld import open_world_gaps
@@ -521,22 +522,11 @@ def verify_generated_sections(repo: Path) -> list[Path]:
 
 
 def _code(value: str) -> str:
-    return f"`{_guard_cell(value)}`"
+    return f"`{guard_table_cell(value)}`"
 
 
 def _plain(value: str) -> str:
-    return _guard_cell(value)
-
-
-def _guard_cell(value: str) -> str:
-    """Reject a table cell that would break the markdown table or determinism.
-
-    A `|` or newline in an inventory field is an upstream bug; fail loudly rather than
-    silently mangle the rendered table (codex SHOULD — don't assume clean source data).
-    """
-    if "|" in value or "\n" in value:
-        raise ValueError(f"generated table cell breaks the table: {value!r}")
-    return value
+    return guard_table_cell(value)
 
 
 def _claim_token(value: str) -> str:

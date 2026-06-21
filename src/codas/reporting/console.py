@@ -43,3 +43,38 @@ def print_context_pack(pack: dict) -> None:
     print(f"Active policies: {len(pack.get('policies', []))}")
     for policy in pack.get("policies", []):
         print(f"  - {policy['id']} ({policy['severity']})")
+
+    digest = pack.get("digest")
+    if digest:
+        _print_digest(digest)
+
+
+def _print_digest(digest: dict) -> None:
+    """Render the session-start digest (affected units + reuse candidates + advisory why)."""
+    units = digest.get("affected_units") or []
+    if units:
+        print("Affected units:")
+        for unit in units:
+            print(f"  - {unit['id']} ({unit['path']}) — {unit['owner']}")
+
+    candidates = digest.get("reuse_candidates") or []
+    if candidates:
+        total = digest.get("reuse_candidates_total", len(candidates))
+        suffix = (
+            f" (showing {len(candidates)}/{total}; `codas query symbols` for all)"
+            if digest.get("reuse_candidates_truncated")
+            else ""
+        )
+        print(f"Reuse candidates — exist here, reuse before adding{suffix}:")
+        for candidate in candidates:
+            print(
+                f"  - {candidate['name']} ({candidate['kind']}) "
+                f"{candidate['module']}:{candidate['line']}"
+            )
+
+    advisory = digest.get("advisory_why") or {}
+    if advisory:
+        print(f"Advisory why ({digest.get('advisory_note', '')}):")
+        for unit_id, prose in advisory.items():
+            first_line = prose.splitlines()[0] if prose else ""
+            print(f"  - {unit_id}: {first_line}")

@@ -214,6 +214,7 @@ def build_inventory(
                 "dev_type": task.dev_type,
                 "priority": task.priority,
                 "archived": task.archived,
+                "related_files": list(task.related_files),
             }
             for task in task_facts.items
         ],

@@ -21,6 +21,7 @@ Reporting is a strict downstream *consumer*. It imports only `codas.core.models`
 
 ### `src/codas/reporting/console.py`
 
+- `_print_digest` *(function)*
 - `print_context_pack` *(function)*
 - `print_findings` *(function)*
 

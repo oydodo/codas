@@ -8,6 +8,20 @@ mode: bootstrap
 # loading) as distinct from governance rules. `status: planned` marks a policy that is
 # declared on the roadmap but not yet implemented. The `policy_registry` policy keeps
 # this file and the implemented `check_*` functions in agreement.
+#
+# UNGATEABLE failure classes (the gate is SILENT here -- documented so the injection scope
+# is not undersold as "just efficiency"; the AGENTS.md governance block surfaces these to the
+# coding agent because NO active policy below catches them):
+#   - Wrong unit but still owned: code placed in a path that IS owned, but the WRONG subsystem.
+#     missing_structure_owner only checks that SOME unit owns a changed file, never that it is
+#     the RIGHT one; canonical_placement is advisory text, not an enforced rule.
+#   - Semantic reuse miss: re-implementing a concept that already exists. duplicate_concept is
+#     `planned`; duplicate_symbol/duplicate_implementation catch only EXACT top-level name
+#     collisions, not a differently-named second implementation of the same idea.
+#   - Wrong abstraction / hook point: a change that parses, type-checks and is owned but sits at
+#     the wrong layer or seam. No policy models design-level placement quality.
+# These are correctness-bearing (two-tier framing): the gate guarantees the hard invariants
+# below; INJECTION of the ownership/placement map + reuse query is the only defense for these.
 policies:
   policy_registry:
     severity: error

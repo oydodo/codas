@@ -9,3 +9,4 @@ build/
 *.egg-info/
 .codas/receipts/*.json
 .codas/cache/
+.codas/.install-state.json

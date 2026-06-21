@@ -5,6 +5,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from .install_state import hook_state, merge_install_state
+
 # Hook bodies carry this marker so the installer recognises (and may refresh) its own
 # hooks and refuses to trample a foreign hook the user already wrote.
 HOOK_MARKER = "# codas-managed-hook"
@@ -97,7 +99,31 @@ def install_hooks(
         path.write_text(body)
         path.chmod(0o755)
         installed.append(name)
-    return InstallResult(str(hooks_dir), tuple(installed), tuple(skipped))
+    result = InstallResult(str(hooks_dir), tuple(installed), tuple(skipped))
+    _write_git_hook_state(repo, hooks_dir, installed, command)
+    return result
+
+
+def _write_git_hook_state(
+    repo: Path, hooks_dir: Path, installed: list[str], command: str
+) -> None:
+    """Emit the ``git_hooks`` slice of ``.codas/.install-state.json`` (must-hold #6: the schema
+    must not carry state no installer writes). Guarded to a Codas repo (a ``.codas`` dir) so a
+    bare repo getting only git hooks is never surprised with a Codas marker file. Per hook:
+    ``installed`` (ours, current) vs ``foreign`` (a user hook preserved untouched)."""
+    if not (repo / ".codas").is_dir():
+        return
+    git_hooks = {}
+    for name in HOOK_NAMES:
+        is_ours = name in installed
+        git_hooks[name.replace("-", "_")] = hook_state(
+            "installed" if is_ours else "foreign",
+            expected_command=command,
+            installed_command=command if is_ours else None,
+            settings_path=str(hooks_dir / name),
+            marker_id=HOOK_MARKER,
+        )
+    merge_install_state(repo, {"git_hooks": git_hooks})
 
 
 def _is_codas_hook(text: str) -> bool:

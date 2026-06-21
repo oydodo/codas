@@ -11,12 +11,15 @@ from .models import StructureMap, StructureUnit
 
 GLOB_CHARS = ("*", "?", "[")
 _IGNORE_DIRS = {".git", "__pycache__"}
-# Generated/local-cache subtrees pruned on the non-git walk fallback (the git path
-# already excludes them via .gitignore / --exclude-standard). Keeps receipts and the
-# regenerable local cache (e.g. the W3 semantic corpus under .codas/cache/semantic/) out
-# of the scan so check/inventory stay deterministic REGARDLESS of git availability — the
-# corpus-out-of-hash guarantee then holds unconditionally, not only in a git repo.
-_IGNORE_PATHS = {".codas/receipts", ".codas/cache"}
+# Generated/local-cache paths pruned on the non-git walk fallback (the git path already
+# excludes them via .gitignore / --exclude-standard). Keeps receipts and the regenerable
+# local cache (e.g. the W3 semantic corpus under .codas/cache/semantic/) out of the scan so
+# check/inventory stay deterministic REGARDLESS of git availability — the corpus-out-of-hash
+# guarantee then holds unconditionally, not only in a git repo. Entries are matched against
+# BOTH walked dir names (whole-subtree prune) AND walked file names: `.codas/.install-state.json`
+# is the machine-local agent/git install-state marker (gitignored on the git path) — a FILE,
+# not a subtree, so the filename check in _walk_files is what keeps it out of the hash here.
+_IGNORE_PATHS = {".codas/receipts", ".codas/cache", ".codas/.install-state.json"}
 
 # Default reserved prefix for Codas-RENDERED committed output — scanned NEVER as input.
 # Distinct from _IGNORE_PATHS (local/regenerable cache + receipts, walk-only): the wiki/
@@ -195,6 +198,8 @@ def _walk_files(
             if name.endswith(".pyc"):
                 continue
             rel = (Path(dirpath) / name).relative_to(repo).as_posix()
+            if rel in _IGNORE_PATHS:  # machine-local marker file (e.g. .install-state.json)
+                continue
             files.append(rel)
     return files
 

@@ -179,6 +179,31 @@ def build_parser() -> argparse.ArgumentParser:
             "'PYTHONPATH=src python3 -m codas check .'."
         ),
     )
+    hooks.add_argument(
+        "--agent-command",
+        default=None,
+        help=(
+            "Command the Claude SessionStart injection hook runs (default: an installed "
+            "'codas preflight' on PATH, else the portable source-checkout form)."
+        ),
+    )
+
+    agents = subparsers.add_parser(
+        "agents",
+        help="Render or verify the Codas agent-instruction docs (AGENTS.md block + CLAUDE.md shim).",
+    )
+    agents.add_argument("repo", nargs="?", default=".")
+    agents_mode = agents.add_mutually_exclusive_group()
+    agents_mode.add_argument(
+        "--write",
+        action="store_true",
+        help="Write the deterministic AGENTS.md governance block + the CLAUDE.md shim.",
+    )
+    agents_mode.add_argument(
+        "--verify",
+        action="store_true",
+        help="Verify the AGENTS.md block + CLAUDE.md shim match a fresh render (exit 1 if stale).",
+    )
 
     return parser
 
@@ -318,7 +343,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "hooks":
         import sys
 
-        from .app.hooks import install_git_hooks
+        from .app.hooks import install_agent_injection, install_git_hooks
 
         if not args.install:
             parser.error("hooks: use --install to install the git enforcement hooks.")
@@ -335,7 +360,37 @@ def main(argv: list[str] | None = None) -> int:
             print(f"skipped {name} (existing non-Codas hook; pass --force to overwrite)")
         if not result.installed and not result.skipped:
             print("no hooks installed")
+
+        # Claude Code SessionStart injection hook (the norm-injection seam, gaps 2/3).
+        agent = install_agent_injection(repo, command=args.agent_command, force=args.force)
+        claude = agent.claude
+        ran = claude.installed_command or claude.expected_command
+        print(f"claude session hook: {claude.status} -> {claude.settings_path} ({ran})")
+        if claude.status in ("installed", "refreshed"):
+            print("  approve the hook in Claude Code when prompted (workspace trust).")
+        if agent.agents_block != "current" or agent.claude_shim != "current":
+            print(
+                f"  agent docs: AGENTS.md block {agent.agents_block}, CLAUDE.md shim "
+                f"{agent.claude_shim} — run `codas agents --write`."
+            )
         return 0
+
+    if args.command == "agents":
+        from .app.agent_docs import verify_agent_docs, write_agent_docs
+
+        if args.write:
+            for path in write_agent_docs(repo):
+                print(f"wrote {path.relative_to(repo).as_posix()}")
+            return 0
+        if args.verify:
+            stale = verify_agent_docs(repo)
+            if stale:
+                for path in stale:
+                    print(f"stale {path.relative_to(repo).as_posix()}")
+                return 1
+            print("agent docs up to date")
+            return 0
+        parser.error("agents: use --write or --verify.")
 
     if args.command == "query":
         import sys

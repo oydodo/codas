@@ -15,6 +15,10 @@ class TaskFact:
     dev_type: str | None
     priority: str | None
     archived: bool
+    # Declared touched repo-relative paths (Trellis task.json `relatedFiles`), the path-level
+    # scope the coarse `package`/`scope` labels lack. The session-start preflight DIGEST derives
+    # affected units + reuse candidates from these; empty (the common case today) -> empty digest.
+    related_files: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -58,6 +62,7 @@ def extract_task_facts(repo: Path, config: CodasConfig) -> TaskFacts:
                 dev_type=_optional_str(data.get("dev_type")),
                 priority=_optional_str(data.get("priority")),
                 archived=archived,
+                related_files=_path_list(data.get("relatedFiles")),
             )
         )
 
@@ -69,3 +74,17 @@ def _optional_str(value: object) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _path_list(value: object) -> tuple[str, ...]:
+    """Normalize a task's ``relatedFiles`` to a sorted, unique tuple of repo-relative,
+    forward-slash paths. A non-list, or non-string entries, yield ``()`` / are dropped — a
+    malformed field never hard-fails the inventory (mirrors the skipped-task tolerance)."""
+    if not isinstance(value, list):
+        return ()
+    paths = {
+        str(item).replace("\\", "/").strip()
+        for item in value
+        if isinstance(item, str) and item.strip()
+    }
+    return tuple(sorted(paths))

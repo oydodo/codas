@@ -20,16 +20,42 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 
 ## Modules & symbols
 
+### `src/codas/integrations/claude.py`
+
+- `ClaudeHookResult` *(class)*
+- `_is_ours` *(function)*
+- `claude_shim_pages` *(function)*
+- `install_claude_session_hook` *(function)*
+- `render_claude_shim` *(function)*
+- `resolve_agent_command` *(function)*
+- `verify_claude_shim` *(function)*
+- `write_claude_shim` *(function)*
+
 ### `src/codas/integrations/enforcement.py`
 
 - `InstallResult` *(class)*
 - `_hooks_dir` *(function)*
 - `_is_codas_hook` *(function)*
 - `_worktree_root` *(function)*
+- `_write_git_hook_state` *(function)*
 - `install_hooks` *(function)*
 - `render_hook` *(function)*
 - `render_workflow` *(function)*
 
+### `src/codas/integrations/install_state.py`
+
+- `hook_state` *(function)*
+- `merge_install_state` *(function)*
+- `read_install_state` *(function)*
+
 ## Dependencies
 
-_No first-party import edges originate in this unit._
+```mermaid
+graph LR
+  n0["src/codas/app/agents_block.py"]
+  n1["src/codas/integrations/claude.py"]
+  n2["src/codas/integrations/enforcement.py"]
+  n3["src/codas/integrations/install_state.py"]
+  n1 --> n0
+  n2 --> n3
+```
