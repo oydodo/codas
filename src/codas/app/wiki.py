@@ -461,9 +461,12 @@ def write_generated_sections(repo: Path) -> list[Path]:
     written: list[Path] = []
     for page, content in _generated_pages(repo).items():
         page.parent.mkdir(parents=True, exist_ok=True)
-        page.write_text(content)
+        # write_bytes (not write_text) pins UTF-8 + LF: text mode would translate "\n" to
+        # os.linesep on write, breaking byte-identical on Windows. (Path.write_text gained
+        # the `newline` kwarg only in 3.10; this is the 3.9-safe equivalent.)
+        page.write_bytes(content.encode("utf-8"))
         written.append(page)
-    return written
+    return sorted(written)
 
 
 def verify_generated_sections(repo: Path) -> list[Path]:
@@ -475,10 +478,18 @@ def verify_generated_sections(repo: Path) -> list[Path]:
     the home for the source-hash freshness deliberately kept out of the always-on
     ``check`` gate (the committed page's hash churns on every unrelated source change).
     """
+    expected = _generated_pages(repo)
     stale: list[Path] = []
-    for page, content in _generated_pages(repo).items():
-        if not page.exists() or page.read_text() != content:
+    for page, content in expected.items():
+        if not page.exists() or page.read_bytes() != content.encode("utf-8"):
             stale.append(page)
+    # Orphans: a committed generated/*.md no longer rendered (e.g. a removed section) lingers
+    # on disk and regeneration never clears it, so --verify flags it (codex).
+    generated_dir = repo / _GENERATED_DIR
+    if generated_dir.is_dir():
+        for found in generated_dir.glob("*.md"):
+            if found not in expected:
+                stale.append(found)
     return sorted(stale)
 
 

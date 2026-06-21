@@ -91,7 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
     wiki_mode.add_argument(
         "--write",
         action="store_true",
-        help="Write the deterministic generated Atlas sections under .codas/wiki/generated/.",
+        help="Write the deterministic generated Atlas sections (.codas/wiki/generated/) and the human book (wiki/).",
     )
     wiki_mode.add_argument(
         "--verify",
@@ -256,13 +256,18 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         if args.write:
-            for path in write_generated_sections(repo):
+            from .app.book import write_book
+
+            written = write_generated_sections(repo) + write_book(repo)
+            for path in sorted(written, key=lambda p: p.relative_to(repo).as_posix()):
                 print(f"wrote {path.relative_to(repo).as_posix()}")
             return 0
         if args.verify:
-            stale = verify_generated_sections(repo)
+            from .app.book import verify_book
+
+            stale = verify_generated_sections(repo) + verify_book(repo)
             if stale:
-                for path in stale:
+                for path in sorted(stale, key=lambda p: p.relative_to(repo).as_posix()):
                     print(f"stale {path.relative_to(repo).as_posix()}")
                 return 1
             print("generated sections up to date")

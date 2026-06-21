@@ -18,6 +18,32 @@ _IGNORE_DIRS = {".git", "__pycache__"}
 # corpus-out-of-hash guarantee then holds unconditionally, not only in a git repo.
 _IGNORE_PATHS = {".codas/receipts", ".codas/cache"}
 
+# Repo-relative prefixes for Codas-RENDERED committed output — scanned NEVER as input.
+# Distinct from _IGNORE_PATHS (local/regenerable cache + receipts, walk-only): the wiki/
+# book is COMMITTED but DERIVED (a pure render of facts + .codas/wiki/ source prose), so
+# scanning it would be (a) self-referential — the book renders facts and its bytes would
+# then feed the inventory hash the book pins — and (b) churn-amplifying: every prose edit
+# would move the inventory hash. Excluded at filter_to_roots, the ONE funnel shared by
+# discover_files (working-tree scan), head_snapshot (HEAD fact baseline), and the artifact
+# index, so every scan honors the reserved prefix in one place. W7 lifts this into config.
+_DERIVED_OUTPUT_PREFIXES = ("wiki",)
+
+
+def _is_derived_output(path: str) -> bool:
+    """True if ``path`` is under a reserved Codas-rendered output prefix. Prefix-boundary
+    safe: ``wiki/`` matches ``wiki`` and ``wiki/x`` but never ``wikipedia.py`` at root.
+
+    NB the exclusion lives at the FILE SCANNER (filter_to_roots) only. The doc/wiki/html
+    claim adapters resolve claim-target existence by hitting the filesystem directly — a
+    governance doc that references a path UNDER the book would leak the book's on-disk
+    presence into the inventory hash. That layer is NOT guarded here because a blanket
+    "wiki/ is absent" rule over-reaches (it would mark a user's real wiki/ docs missing); the
+    fix needs the config-aware book root and lands with W7 (see test_book invariant guard)."""
+    return any(
+        path == prefix or path.startswith(prefix + "/")
+        for prefix in _DERIVED_OUTPUT_PREFIXES
+    )
+
 
 def workspace_roots(raw: dict[str, Any]) -> tuple[str, ...]:
     """Resolve configured workspace roots from raw config, defaulting to ``(".",)``.
@@ -82,15 +108,19 @@ def discover_files(repo: Path, roots: tuple[str, ...]) -> list[str]:
 
 
 def filter_to_roots(files: list[str], roots: tuple[str, ...]) -> list[str]:
-    """Select the files under the configured workspace roots (sorted, unique).
+    """Select the files under the configured workspace roots (sorted, unique), minus the
+    reserved Codas-rendered output prefixes (:data:`_DERIVED_OUTPUT_PREFIXES`).
 
     Public so any scan that builds its own file list off-disk — e.g. the
     ``HEAD`` fact snapshot reading ``git ls-tree`` — applies the IDENTICAL root
-    discipline as :func:`discover_files`, rather than re-implementing it.
+    AND derived-output discipline as :func:`discover_files`, rather than re-implementing
+    it. This is the single chokepoint where the ``wiki/`` book is dropped from EVERY scan.
     """
     norm_roots = [normalize_path(root) for root in roots] or [""]
     selected: set[str] = set()
     for path in files:
+        if _is_derived_output(path):
+            continue
         for root in norm_roots:
             if root == "" or path == root or path.startswith(root + "/"):
                 selected.add(path)
@@ -119,6 +149,7 @@ def _walk_files(repo: Path) -> list[str]:
             for name in dirnames
             if name not in _IGNORE_DIRS
             and (Path(dirpath) / name).relative_to(repo).as_posix() not in _IGNORE_PATHS
+            and not _is_derived_output((Path(dirpath) / name).relative_to(repo).as_posix())
         ]
         for name in filenames:
             if name.endswith(".pyc"):

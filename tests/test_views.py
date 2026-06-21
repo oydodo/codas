@@ -3,9 +3,9 @@ import io
 import unittest
 from pathlib import Path
 
+from codas.app.render_util import mermaid_label
 from codas.app.views import (
     _html_escape,
-    _mermaid_label,
     _render_nav,
     _tree_roots,
     build_html,
@@ -17,14 +17,14 @@ from codas.cli import main
 class HelperTests(unittest.TestCase):
     def test_mermaid_label_sanitizes(self):
         # no double-quote or newline survives (would break the ["..."] label / determinism)
-        out = _mermaid_label('a"b\nc\\d')
+        out = mermaid_label('a"b\nc\\d')
         self.assertNotIn('"', out)
         self.assertNotIn("\n", out)
         self.assertEqual(out, "a'b c/d")
 
     def test_mermaid_label_neutralizes_syntax_chars(self):
         # bracket/angle/backtick chars that would break Mermaid node syntax are replaced
-        out = _mermaid_label("foo[bar]<baz>`q`")
+        out = mermaid_label("foo[bar]<baz>`q`")
         for ch in ("[", "]", "<", ">", "`"):
             self.assertNotIn(ch, out)
 

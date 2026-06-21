@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from codas.app.render_util import mermaid_label
 from codas.app.wiki import build_atlas_pack, build_atlas_tree
 from codas.facts.openworld import open_world_gaps
 
@@ -23,16 +24,6 @@ def _import_caveat() -> str:
     return _IMPORT_CAVEAT + "; ".join(open_world_gaps("imports"))
 
 
-def _mermaid_label(text: str) -> str:
-    """A Mermaid-safe quoted-label body. Beyond the quote/newline that break the `["..."]`
-    label, also neutralize the bracket/angle/backtick chars that break Mermaid node syntax
-    (real module paths never contain these, but a synthetic/adversarial path could).
-    Deterministic substitution, never a crash."""
-    out = text.replace("\\", "/").replace('"', "'").replace("`", "'")
-    out = out.replace("[", "(").replace("]", ")").replace("<", "(").replace(">", ")")
-    return out.replace("\n", " ").replace("\r", " ")
-
-
 def build_mermaid(repo: Path) -> str:
     """A Mermaid `graph LR` of the PRODUCT module dependency graph (import facts), with the
     open-world caveat as a `%%` comment AND a visible note node. Deterministic: nodes are
@@ -47,7 +38,7 @@ def build_mermaid(repo: Path) -> str:
         "graph LR",
     ]
     for path in nodes:
-        lines.append(f'  {node_id[path]}["{_mermaid_label(path)}"]')
+        lines.append(f'  {node_id[path]}["{mermaid_label(path)}"]')
     # re-sort edges locally on a total key so output never depends on the upstream pack's
     # sort guarantee staying stable.
     for edge in sorted(
@@ -55,7 +46,7 @@ def build_mermaid(repo: Path) -> str:
     ):
         lines.append(f"  {node_id[edge['module']]} --> {node_id[edge['target_path']]}")
     # the caveat is also a VISIBLE node, so a rendered diagram never reads as complete.
-    lines.append(f'  owCaveat["{_mermaid_label(_import_caveat())}"]')
+    lines.append(f'  owCaveat["{mermaid_label(_import_caveat())}"]')
     return "\n".join(lines) + "\n"
 
 
