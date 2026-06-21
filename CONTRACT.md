@@ -85,6 +85,21 @@ agent judges grounded in those tiers. **Codas runs no model here (§17).** The l
    - Output is **suggestion-only, never committed** — it cannot become a fact or a `codas check`
      verdict (that would break byte-identity and §17).
 
+### Delegate the LLM steps to a cheap sub-agent
+
+Only AUTHOR and JUDGE use a model; FEED and CALIBRATE are deterministic Codas calls. So the
+"host agent" need not be your expensive main agent — dispatch AUTHOR + JUDGE to a **cheap,
+disposable sub-agent**, while the main agent runs only `--emit-feed` / `--calibrate` and merges
+the suggestion-only output. The bulky feed and the prose reasoning then never pollute the main
+context, the cost lands on a weak model, and N sub-agents can run one-package-each in parallel.
+
+This is safe on a weak model **because of** the calibration, not despite it: a hallucinated
+node-id tiers to UNCONFIRMED, and a false concept on a real tuple stays STRUCTURE_CONFIRMED with
+the concept unverified — so a cheap model cannot launder a false claim past the iron rules above.
+Fact-anchoring substitutes for model capability; cheap-but-disciplined beats
+expensive-but-ungrounded. Codas spawns nothing — the dispatch is the harness's job (Codas core
+shells only deterministic tools, never a model).
+
 ### Worked example (dogfooded on the calibration layer itself)
 
 A page under `.codas/cache/semantic/` describing the W3 calibrator carries:
