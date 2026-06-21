@@ -50,15 +50,84 @@ of the wiki (raw repo + facts -> wiki -> **this contract**): the rules a coding 
    open-world family, so absence is a lower bound, not proof: the code may have moved (update
    the page) or it may take a dynamic/conditional form the extractor misses.
 
+## The W3 semantic judge loop (host-agent contract)
+
+The semantic tier sits ABOVE the verified facts: the host agent writes the rich "what/why"
+prose the facts cannot, Codas calibrates the agent's STRUCTURAL claims against facts, and the
+agent judges grounded in those tiers. **Codas runs no model here (§17).** The loop:
+
+1. **FEED** — `codas wiki --emit-feed` returns the verified knowledge tree + an instructions
+   blob; this is the grounding the prose must stay anchored to. The tree is large — work **one
+   subsystem (package) at a time**, never the whole repo at once.
+2. **AUTHOR** — write prose pages under `.codas/cache/semantic/` (a gitignored, regenerable
+   LOCAL cache — never committed, never in the inventory hash). Each page carries a fenced
+   `atlas:claims` block of STRUCTURAL claims, one per line:
+   - `defines: <concept> -> <node-id>`
+   - `calls: <node-id> -> <node-id>`
+   - `contains: <node-id>`
+   where a node-id is the knowledge-tree address `path::<class-or-empty>::symbol` (the class
+   segment is empty for a module-level def) or a bare repo-rel path for a module/package node.
+3. **CALIBRATE** — `codas wiki --calibrate` tiers each structural claim against the facts,
+   deterministically (offline JSON; **never** a `codas check` finding):
+   - **STRUCTURE_CONFIRMED** — the cited tuple EXISTS. It does **NOT** confirm the `concept`
+     prose; a structural match is necessary, never sufficient, for a semantic claim.
+   - **UNCONFIRMED** — no match in an open-world family. Read as **UNKNOWN, never "false"**
+     (absence is not denial — the node may take a form the static extractor misses).
+   - **SEMANTIC** — a claim whose KIND names no fact family (a future capability/intent claim,
+     NOT a `defines` with a capability-sounding concept); a pure hypothesis (reachable once
+     capability-claim kinds land; v0 has none).
+4. **JUDGE** — the host agent reasons over (facts + tree + tiers) and emits semantic-legality
+   SUGGESTIONS, under the iron rules:
+   - **Trust STRUCTURE_CONFIRMED structure, never its concept.** Verify the concept by reading;
+     if it contradicts the code, FLAG it — a confirmed tuple never launders a false concept.
+   - **ABSTAIN on UNCONFIRMED.** Do not assert the thing is absent; suggest re-checking the node-id.
+   - **Never upgrade** a SEMANTIC or UNCONFIRMED claim to trusted.
+   - Output is **suggestion-only, never committed** — it cannot become a fact or a `codas check`
+     verdict (that would break byte-identity and §17).
+
+### Worked example (dogfooded on the calibration layer itself)
+
+A page under `.codas/cache/semantic/` describing the W3 calibrator carries:
+
+```atlas:claims
+defines: assigns the deterministic trust tier -> src/codas/app/calibrate.py::::tier
+contains: src/codas/app/calibrate.py::::build_feed
+calls: src/codas/app/calibrate.py::::calibrate -> src/codas/app/wiki.py::::build_atlas_tree
+calls: src/codas/app/calibrate.py::::tier -> src/codas/app/calibrate.py::::_absent
+defines: implements a neural ranking model -> src/codas/app/calibrate.py::::tier
+contains: src/codas/app/calibrate.py::::nonexistent_helper
+```
+
+`codas wiki --calibrate` tiers them — the structurally-real ones STRUCTURE_CONFIRMED, the absent
+node UNCONFIRMED. **Judge verdict (the discipline in action):**
+
+- The real `defines`/`contains`/`calls` tuples are STRUCTURE_CONFIRMED; their concepts read as
+  correct, but Codas confirmed only that the tuples EXIST — the prose stays the agent's, advisory.
+- "`tier` implements a neural ranking model" is **also** STRUCTURE_CONFIRMED, because `tier`
+  exists. That does **not** mean `tier` is a neural model — reading the code, it is a
+  deterministic dict-lookup, so the concept is false. The judge FLAGS it: a confirmed tuple never
+  validates a wrong concept (the laundering defense, demonstrated).
+- `nonexistent_helper` is UNCONFIRMED. The judge does **not** declare it nonexistent (open-world);
+  it suggests re-checking the node-id.
+
+The value: the agent gets the rich semantic layer, yet every structural claim is fact-anchored and
+no LLM assertion can masquerade as ground truth.
+
 ## Author workflow
 
 ```bash
 codas wiki --emit-pack    # ground: the verified facts to prefer over inferred structure
-codas wiki --write        # (re)generate the deterministic sections
+codas wiki --emit-tree    # the neutral knowledge tree (package -> module -> class -> function)
+codas wiki --emit-feed    # the W3 grounding feed (tree + judge instructions) for a host agent
+codas wiki --calibrate    # tier the offline semantic corpus against facts (offline JSON)
+codas wiki --emit-mermaid # a Mermaid dependency graph (deterministic, with the open-world note)
+codas wiki --emit-html    # a self-contained static HTML view (no external script)
+codas wiki --write        # (re)generate the deterministic governance sections
 codas wiki --verify       # confirm committed generated pages match a fresh render (CI)
 codas check .             # verify all claims (incl. generated_wiki_drift) — must be 0
 ```
 
-`--emit-pack` is the grounding feed for a host agent or an OSS wiki backend; `--write`
-renders the committed governance page; `--verify` (exit 1 if stale) is the CI freshness
-gate; `codas check` enforces claim correctness on every run.
+`--emit-pack` / `--emit-tree` / `--emit-feed` are grounding feeds for a host agent or an OSS wiki
+backend; `--calibrate` runs the W3 semantic loop above; `--emit-mermaid` / `--emit-html` are
+deterministic views; `--write` renders the committed governance page; `--verify` (exit 1 if stale)
+is the CI freshness gate; `codas check` enforces claim correctness on every run.
