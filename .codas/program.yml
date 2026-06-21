@@ -185,3 +185,25 @@ work_items:
     exit_criteria:
       - Codex, Claude and Cursor can query Codas without parsing reports manually (via the CLI query subcommands + deterministic JSON; MCP optional)
       - An external LLM-wiki generator can be grounded by Codas and its output verified against repo facts
+
+  - id: program:P8:readable-wiki-book
+    phase: P8
+    title: Readable wiki book + wiki-layer convergence
+    theme: Readable wiki book + wiki-layer convergence
+    status: planned
+    depends_on:
+      - program:P7:agent-query-interface
+    trellis_tasks:
+      - 06-21-wiki-layer-plan
+    deliverables:
+      - "TWO-PART SPLIT (decision 2026-06-21, brainstorm wlf4jvc99 + grill-me): .codas/wiki/ = the MACHINE/SOURCE layer (verified claims + advisory why-prose, agent + check facing); wiki/ (repo root) = the HUMAN BOOK (the persistent readable knowledge base). Dissolves the dual-audience conflation -- agents consume the FEED + claims, humans read wiki/."
+      - "Canonical model: wiki artifacts classify by VERIFICATION CONTRACT -- FEED (ephemeral stdout projection), GENERATED (committed deterministic, hash-excluded, --verify), WIKI-PAGES (committed advisory prose out-of-hash + verified claim block: structural + reference kinds), CACHE (gitignored author scratchpad)."
+      - "W4: codas wiki --write RENDERS the wiki/ chapter-book SKELETON deterministically -- nav/index + overview + ~24 per-subsystem chapters (module->class->function tree-slice + dependency mermaid + owner + one open-world lower-bound banner), with the advisory why-prose woven in from .codas/wiki/ source. wiki/ is hash-EXCLUDED (a derived render) and --verify-checked; skeleton-first, prose filled incrementally."
+      - "W5: UNIFY code_anchor + check_semantic_wiki into ONE parser/policy/grammar (anchor_symbol is the defines subset; debt named at policies.yml). Minimal churn (keep code/ dir, retire the 'semantic' name), golden parity test before migrating code/openworld.md; do while semantic/ is empty."
+      - "W6: incremental prose fill -- a host agent authors each chapter's why-prose into .codas/wiki/ source; codas wiki --write weaves it into the book."
+      - "W7: CONTRACT.md wiki-layer doc -- the two-part split, the verification-contract model, the verifier-routing table (concept_page->stale_claim; canonical_source/evidence/sync_target->stale_wiki_claim; doc_claims), the dual freshness-hash explanation."
+      - "W8: packaging -- pip/pipx install + a README quickstart that does not teach PYTHONPATH (a real doc-lie fix). Parallel, pure moat-alignment, no wiki risk."
+      - "DEFERRED (placed, not commitments): S2 multi-language extraction (moat-gated, may never ship); Block B FSoft CodeWiki shell-out (license-gated); --scope feed slicing (until a real run shows hand-slicing friction); W3 judge productization (after the book/loop has real use); --promote cache->committed (manual git mv until a real page demands a command)."
+    exit_criteria:
+      - A human can browse a generated wiki/ chapter book (codas wiki --write) from index -> subsystem -> symbol; codas check 0 + --verify clean + byte-identical preserved (wiki/ hash-excluded)
+      - One verified-claim parser/policy/grammar for committed wiki pages (code_anchor folded into the unified verifier); pip/pipx install works without PYTHONPATH

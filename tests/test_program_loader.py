@@ -48,7 +48,7 @@ class ProgramLoaderTests(unittest.TestCase):
         plan = load_program_plan(
             Path.cwd() / ".codas" / "program.yml", source=".codas/program.yml"
         )
-        self.assertEqual(len(plan.work_items), 8)
+        self.assertEqual(len(plan.work_items), 9)
 
     def test_invalid_id_raises(self) -> None:
         broken = VALID_PLAN.replace("program:P0:cli-core", "P0-cli-core")

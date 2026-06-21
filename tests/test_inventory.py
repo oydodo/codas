@@ -32,7 +32,7 @@ class InventoryTests(unittest.TestCase):
             self.assertIn("artifact_count", unit["observed"])
 
         self.assertIn("program", inventory)
-        self.assertEqual(len(inventory["program"]["work_items"]), 8)
+        self.assertEqual(len(inventory["program"]["work_items"]), 9)
 
         self.assertIn("documents", inventory)
         roles = {role["role"] for role in inventory["documents"]["roles"]}
