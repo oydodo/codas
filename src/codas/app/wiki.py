@@ -5,13 +5,43 @@ from pathlib import Path
 from typing import Any
 
 from codas.app.inventory import render_inventory_json, run_inventory
+from codas.config.loader import load_codas_config
 from codas.core.provenance import inventory_hash
 from codas.facts.openworld import open_world_gaps
 
-# Source code the pack scopes its symbol/dependency views to (the product, not the
-# vendored .trellis/scripts or tests). NB the inventory `symbols`/`imports` `module`
-# fields are repo-relative PATHS, not dotted names, so this is a path prefix.
-_PRODUCT_PREFIX = "src/codas/"
+# Product source-root prefixes the pack/tree/book/feed scope their symbol/dependency views to
+# (the product code, not the vendored .trellis/scripts or tests). Config-driven via
+# `wiki.product_roots` so the wiki outputs work on ANY repo's layout, not only Codas's own
+# `src/codas/` — `_PRODUCT_PREFIX` used to hardcode that. NB the inventory `symbols`/`imports`
+# `module` fields are repo-relative PATHS, not dotted names, so these are path prefixes.
+_PRODUCT_ROOTS_DEFAULT = ("src",)
+
+
+def product_roots(raw: dict[str, Any]) -> tuple[str, ...]:
+    """Configured product source-root prefixes (`wiki.product_roots`), defaulting to
+    :data:`_PRODUCT_ROOTS_DEFAULT` (the common src-layout). A flat-layout repo configures its
+    package dir explicitly. Mirrors `structure.index.workspace_roots`: pure, normalizes each
+    prefix to a repo-relative forward-slash path (no trailing slash)."""
+    wiki = raw.get("wiki")
+    if isinstance(wiki, dict):
+        roots = wiki.get("product_roots")
+        if isinstance(roots, list) and roots:
+            return tuple(
+                str(root).strip().replace("\\", "/").strip("/") for root in roots
+            )
+    return _PRODUCT_ROOTS_DEFAULT
+
+
+def _under_any(path: str, roots: tuple[str, ...]) -> bool:
+    """True if ``path`` is a configured product root or under one (the single predicate behind
+    both product-symbol scoping and the tree's package-ancestry climb)."""
+    return any(path == root or path.startswith(root + "/") for root in roots)
+
+
+def _config_product_roots(repo: Path) -> tuple[str, ...]:
+    """Resolve product roots from the repo's config (missing config → default), for the
+    impure `build_atlas_*` builders. Pure projections receive the roots as a DATA param."""
+    return product_roots(load_codas_config(repo / ".codas" / "config.yml").raw)
 
 # Inventory facts derived from generated wiki pages must be excluded from the hash a
 # generated page pins (the inventory ingests `.codas/wiki/`; embedding the full hash
@@ -21,7 +51,9 @@ _GENERATED_DIR = ".codas/wiki/generated"
 _PREAMBLE = "VERIFIED GOVERNANCE FACTS (prefer over inferred structure)"
 
 
-def project_atlas_pack(inventory: dict[str, Any]) -> dict[str, Any]:
+def project_atlas_pack(
+    inventory: dict[str, Any], product_roots: tuple[str, ...] = _PRODUCT_ROOTS_DEFAULT
+) -> dict[str, Any]:
     """Project an inventory dict into the Atlas grounding pack (pure, no I/O).
 
     The "FEED" half of the wiki architecture: the verified facts a host agent (or an
@@ -48,7 +80,7 @@ def project_atlas_pack(inventory: dict[str, Any]) -> dict[str, Any]:
             # first-party edges from product code: scoped to src/codas like
             # symbol_index, so the pack describes the product's dependencies (not the
             # vendored .trellis/scripts internal edges).
-            if edge.get("target_path") and _in_product(edge["module"])
+            if edge.get("target_path") and _under_any(edge["module"], product_roots)
         ),
         key=lambda edge: (edge["module"], edge["target_path"], edge["target"]),
     )
@@ -62,7 +94,7 @@ def project_atlas_pack(inventory: dict[str, Any]) -> dict[str, Any]:
                 "line": definition["line"],
             }
             for definition in symbols
-            if _in_product(definition["module"])
+            if _under_any(definition["module"], product_roots)
         ),
         key=lambda item: (item["module"], item["line"], item["name"], item["kind"]),
     )
@@ -135,14 +167,9 @@ def build_atlas_pack(repo: Path) -> dict[str, Any]:
     only when the underlying source facts move.
     """
     inventory = run_inventory(repo, exclude_under=(_GENERATED_DIR,))
-    pack = project_atlas_pack(inventory)
+    pack = project_atlas_pack(inventory, _config_product_roots(repo))
     pack["source_inventory_hash"] = inventory_hash(render_inventory_json(inventory))
     return pack
-
-
-def _in_product(module: str) -> bool:
-    """True if a symbol/import `module` path is under the product source tree."""
-    return module == _PRODUCT_PREFIX.rstrip("/") or module.startswith(_PRODUCT_PREFIX)
 
 
 # --- Block A: neutral Codas knowledge-tree emitter ------------------------------
@@ -208,7 +235,9 @@ def _owning(path: str, owners: list[tuple[str, str, str]]) -> tuple[str | None, 
     return best
 
 
-def project_atlas_tree(inventory: dict[str, Any]) -> dict[str, Any]:
+def project_atlas_tree(
+    inventory: dict[str, Any], product_roots: tuple[str, ...] = _PRODUCT_ROOTS_DEFAULT
+) -> dict[str, Any]:
     """Project an inventory dict into the neutral Codas knowledge tree (pure, no I/O).
 
     The deterministic ORGANIZATION layer. Reads three fact families from the inventory:
@@ -239,7 +268,7 @@ def project_atlas_tree(inventory: dict[str, Any]) -> dict[str, Any]:
 
     # 1. Authoritative top-level symbol nodes (class | function), product-scoped.
     for definition in symbols:
-        if _in_product(definition["module"]):
+        if _under_any(definition["module"], product_roots):
             _ensure(definition["module"], "", definition["name"], definition["kind"])
 
     # 2. Call edges -> endpoint nodes (call-endpoint-derived, lower bound), class
@@ -250,7 +279,7 @@ def project_atlas_tree(inventory: dict[str, Any]) -> dict[str, Any]:
     for edge in call_edges:
         caller_path, caller_cls = edge["caller_path"], edge["caller_class"]
         callee_path, callee_cls = edge["callee_path"], edge["callee_class"]
-        if not (_in_product(caller_path) and _in_product(callee_path)):
+        if not (_under_any(caller_path, product_roots) and _under_any(callee_path, product_roots)):
             continue
         caller_id = _ensure(caller_path, caller_cls, edge["caller_symbol"], "function")
         callee_id = _ensure(callee_path, callee_cls, edge["callee_symbol"], "function")
@@ -270,10 +299,8 @@ def project_atlas_tree(inventory: dict[str, Any]) -> dict[str, Any]:
     # 3. Module nodes (one per defining file) and package nodes (every ancestor dir
     #    within product scope, down to the product root `src/codas`).
     module_paths = sorted({path for path, _cls, _symbol in decomp.values()})
-    product_root = _PRODUCT_PREFIX.rstrip("/")
-
     def _in_scope(directory: str) -> bool:
-        return directory == product_root or directory.startswith(product_root + "/")
+        return _under_any(directory, product_roots)
 
     package_paths: set[str] = set()
     for module_path in module_paths:
@@ -344,7 +371,7 @@ def build_atlas_tree(repo: Path) -> dict[str, Any]:
     so the tree shares the pack's anchor and moves only when the source facts move.
     """
     inventory = run_inventory(repo, exclude_under=(_GENERATED_DIR,))
-    tree = project_atlas_tree(inventory)
+    tree = project_atlas_tree(inventory, _config_product_roots(repo))
     tree["source_inventory_hash"] = inventory_hash(render_inventory_json(inventory))
     return tree
 

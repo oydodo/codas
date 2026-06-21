@@ -5,7 +5,9 @@ from typing import Any
 
 from codas.app.inventory import run_inventory
 from codas.app.render_util import mermaid_label
-from codas.app.wiki import project_atlas_tree
+from codas.app.wiki import _PRODUCT_ROOTS_DEFAULT, project_atlas_tree
+from codas.app.wiki import product_roots as _resolve_product_roots
+from codas.config.loader import load_codas_config
 from codas.facts.openworld import open_world_gaps
 
 # W4a — the HUMAN BOOK renderer. Renders the root `wiki/` chapter-book: a deterministic,
@@ -234,14 +236,17 @@ def _chapter_unit_ids(
 
 
 def project_book(
-    inventory: dict[str, Any], prose_by_unit: dict[str, str] | None = None
+    inventory: dict[str, Any],
+    prose_by_unit: dict[str, str] | None = None,
+    product_roots: tuple[str, ...] = _PRODUCT_ROOTS_DEFAULT,
 ) -> dict[str, str]:
     """Project an inventory dict (+ optional per-unit authored prose) into the book pages
     ``{repo-relative path: content}`` (pure, no I/O). The index + one chapter per code unit
     (see :func:`_chapter_unit_ids`). Deterministic by construction — ``prose_by_unit`` maps a
-    unit id to its committed ``## Overview`` text (empty/absent → skeleton-only chapter)."""
+    unit id to its committed ``## Overview`` text (empty/absent → skeleton-only chapter);
+    ``product_roots`` scopes the knowledge tree (config-driven via :func:`book_pages`)."""
     units = inventory.get("units") or []
-    tree = project_atlas_tree(inventory)["tree"]
+    tree = project_atlas_tree(inventory, product_roots)["tree"]
     imports = (inventory.get("imports") or {}).get("edges") or []
     by_id = _unit_by_id(units)
     prose_by_unit = prose_by_unit or {}
@@ -267,9 +272,10 @@ def book_pages(repo: Path) -> dict[Path, str]:
     inventory = run_inventory(repo)
     by_id = _unit_by_id(inventory.get("units") or [])
     prose_by_unit = {uid: _read_chapter_prose(repo, uid) for uid in by_id}
+    roots = _resolve_product_roots(load_codas_config(repo / ".codas" / "config.yml").raw)
     return {
         repo / rel: content
-        for rel, content in project_book(inventory, prose_by_unit).items()
+        for rel, content in project_book(inventory, prose_by_unit, roots).items()
     }
 
 

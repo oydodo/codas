@@ -64,6 +64,8 @@ wiki:
   enabled: true
   path: .codas/wiki
   require_evidence: true
+  product_roots:
+    - src/codas
 
 receipts:
   path: .codas/receipts

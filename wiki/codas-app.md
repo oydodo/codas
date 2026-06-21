@@ -144,16 +144,18 @@ The third is byte-identical determinism. The Atlas pack, knowledge tree, generat
 
 - `_claim_token` *(function)*
 - `_code` *(function)*
+- `_config_product_roots` *(function)*
 - `_generated_pages` *(function)*
 - `_guard_cell` *(function)*
-- `_in_product` *(function)*
 - `_node_id` *(function)*
 - `_owner_index` *(function)*
 - `_owning` *(function)*
 - `_parent_dir` *(function)*
 - `_plain` *(function)*
+- `_under_any` *(function)*
 - `build_atlas_pack` *(function)*
 - `build_atlas_tree` *(function)*
+- `product_roots` *(function)*
 - `project_atlas_pack` *(function)*
 - `project_atlas_tree` *(function)*
 - `render_generated_overview` *(function)*
@@ -212,6 +214,7 @@ graph LR
   n0 --> n6
   n0 --> n11
   n0 --> n13
+  n0 --> n14
   n0 --> n19
   n1 --> n13
   n1 --> n14
@@ -265,6 +268,7 @@ graph LR
   n12 --> n13
   n12 --> n19
   n13 --> n6
+  n13 --> n14
   n13 --> n16
   n13 --> n19
 ```

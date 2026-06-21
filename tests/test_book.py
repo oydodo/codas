@@ -17,19 +17,25 @@ from codas.app.book import (
 )
 from codas.app.inventory import run_inventory
 
+# Codas's configured product scope (.codas/config.yml wiki.product_roots) — the direct
+# project_book unit tests pass it so they exercise the REAL book scope, not the generic
+# ("src",) default (which would add a repo-root chapter).
+# KEEP IN SYNC with .codas/config.yml `wiki.product_roots` (no assertion ties them).
+CODAS_ROOTS = ("src/codas",)
+
 
 class ProjectBookTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.inventory = run_inventory(Path.cwd())
-        cls.pages = project_book(cls.inventory)
+        cls.pages = project_book(cls.inventory, None, CODAS_ROOTS)
 
     def test_pages_present(self) -> None:
         self.assertIn(f"{BOOK_ROOT}/index.md", self.pages)
         self.assertIn(f"{BOOK_ROOT}/codas-app.md", self.pages)
 
     def test_projection_is_deterministic(self) -> None:
-        again = project_book(self.inventory)
+        again = project_book(self.inventory, None, CODAS_ROOTS)
         self.assertEqual(self.pages, again)
 
     def test_index_links_chapter_unit_and_lists_others_plain(self) -> None:
@@ -57,7 +63,7 @@ class ProjectBookTests(unittest.TestCase):
         mutated = copy.deepcopy(self.inventory)
         for unit in mutated.get("units") or []:
             unit.setdefault("observed", {})["artifact_count"] = 999_999
-        self.assertEqual(project_book(mutated), self.pages)
+        self.assertEqual(project_book(mutated, None, CODAS_ROOTS), self.pages)
 
     def test_chapter_set_is_derived_code_units_only(self) -> None:
         # W4b: the chapter set is DERIVED from tree-node ownership — every code unit gets a
@@ -121,7 +127,7 @@ class ProseWeaveTests(unittest.TestCase):
 
     def test_overview_present_when_prose_given(self) -> None:
         prose = "The **why**: this subsystem is the boundary seam."
-        pages = project_book(self.inventory, {"codas-app": prose})
+        pages = project_book(self.inventory, {"codas-app": prose}, CODAS_ROOTS)
         chapter = pages[f"{BOOK_ROOT}/codas-app.md"]
         self.assertIn("## Overview", chapter)
         self.assertIn("boundary seam", chapter)
@@ -131,7 +137,7 @@ class ProseWeaveTests(unittest.TestCase):
 
     def test_no_overview_when_no_prose(self) -> None:
         # A unit with no source page renders the skeleton — no Overview, no dead section.
-        pages = project_book(self.inventory, {})
+        pages = project_book(self.inventory, {}, CODAS_ROOTS)
         self.assertNotIn("## Overview", pages[f"{BOOK_ROOT}/codas-app.md"])
 
     def test_strip_claims_block(self) -> None:
