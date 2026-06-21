@@ -1,5 +1,57 @@
 # Design — persistent content-hash fact cache (Slice 2)
 
+## RE-EVALUATED (2026-06-21): BENCHMARK SAYS STAY DEFERRED — do not build now
+
+Picked up to BUILD (the 2026-06-20 defer-condition — "co-design with v2" — is mechanically
+LIFTED: v2 substrate shipped in `06-20-fact-delta-substrate` `54968e8`, the `RawFileFacts`
+schema froze). Ran a fresh codex DESIGN re-review (APPROVE-WITH-CONSTRAINTS) + a benchmark.
+**The benchmark disqualifies the build on payoff.**
+
+**Benchmark (this repo, 145 `.py` of 421 scanned, min-of-N):**
+
+| stage | cost | cacheable? |
+|---|---|---|
+| parse (`parse_python_modules`, the Layer-1 work) | **74 ms** | yes — but only warm + file UNCHANGED |
+| resolution (the 3 `*_from_parsed` extractors = Layer 2) | **151 ms** | NO — cross-file, recomputed every run |
+| `build_inventory` total | 283 ms | — |
+
+- The design ASSUMED "resolution is cheap relative to parsing." The data is the OPPOSITE:
+  **resolution is 2× the parse**, and resolution is the part the cache CANNOT remove.
+- Cache ceiling = the 74 ms parse = **26 % of inventory**, warm-and-unchanged only. codex's
+  stated precondition ("build only if parse DOMINATES") is FALSE — resolution dominates 2:1.
+- The byte-identical RISK is the callgraph descriptor rewrite (the `_bindings` ast.walk
+  last-write order, `call_scopes` materialization, read-error re-raise). High risk for a
+  26 % warm-only win on the cheaper half. Not worth it.
+
+**The invocation model seals it (why frequency never reaches save-rate).** Codas is a GATE,
+not a watcher (`integrations/enforcement.py`): it installs `pre-commit` + `pre-push` hooks
+(`exec codas check .`, block on error findings) + a CI workflow (check on push/PR). The
+agent loop is: `codas preflight --task <id>` BEFORE editing (on demand) → `codas impact` /
+`codas query` DURING (on demand, targeted) → `codas check` AT commit/push/CI (whole-tree
+gate). NONE of those is per-save. At a handful of gate runs per session, a 74 ms parse
+saving is invisible. The cache only ever mattered at save-frequency, which the design
+deliberately does not use.
+
+**DECISION: keep DEFERRED (status → planning).** Not "never" — a permission structure.
+
+**RE-EVALUATE TRIGGER (any one):** a real LARGE Python repo (≈3000+ `.py`) profile showing
+parse time DOMINATES whole-tree `codas check` (multi-second, parse the majority); OR a
+demonstrated save-frequency invocation need (which the gate model would have to adopt first).
+Until then the gate model has no cache-shaped gap.
+
+If ever built, the codex APPROVE-WITH-CONSTRAINTS holds — must-hold: raw import descriptors
+in EXACT `ast.walk` order (no sort before `_bindings` replays them, last-write-wins); call
+scope + call-site traversal order preserved (params + Store locals + caller class/symbol/line
++ only Name/Attribute(Name) call shapes); RawFileFacts/cache-read-path carries read-error vs
+parse-error and RE-RAISES read errors for in-scope package files (FactSnapshot does NOT carry
+this); single raw-byte read for both key and decoded parse input, direct hash = `sha1(b"blob
+<len>\0" + raw_bytes)` (verified to match `git hash-object` exactly); cached-vs-`--no-cache`
++ raw-vs-parsed equivalence tests before enabling; preserve the W7 `ScanContext`
+additions (`_derived_prefixes`, `derived_output_prefixes` threading, `head_snapshot` 3rd
+param) when reattaching `._parsed()` → `._raw()`.
+
+---
+
 ## DECISION (2026-06-20): DEFERRED — co-design with spec-drift-fact-delta v2
 
 Codex design review verdict: **defer Slice 2 as currently designed; co-design the
