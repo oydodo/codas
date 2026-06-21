@@ -13,6 +13,7 @@
 ### `src/codas/app/book.py`
 
 - `_chapter_filename` *(function)*
+- `_chapter_unit_ids` *(function)*
 - `_open_world_banner` *(function)*
 - `_render_chapter` *(function)*
 - `_render_index` *(function)*

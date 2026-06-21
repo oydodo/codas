@@ -55,20 +55,25 @@ class ProjectBookTests(unittest.TestCase):
             unit.setdefault("observed", {})["artifact_count"] = 999_999
         self.assertEqual(project_book(mutated), self.pages)
 
-    def test_absent_chapter_unit_skipped_not_crash(self) -> None:
-        # A configured chapter unit absent from THIS repo is skipped (renders on any repo);
-        # the index links only the chapters actually rendered (no dead link).
-        from codas.app import book
+    def test_chapter_set_is_derived_code_units_only(self) -> None:
+        # W4b: the chapter set is DERIVED from tree-node ownership — every code unit gets a
+        # chapter; non-code units (own no symbols) get NONE.
+        chapter_files = {p for p in self.pages if p != f"{BOOK_ROOT}/index.md"}
+        # several code units beyond codas-app are now rendered...
+        for code_unit in ("codas-app", "codas-policies", "codas-facts", "codas-adapters"):
+            self.assertIn(f"{BOOK_ROOT}/{code_unit}.md", chapter_files)
+        # ...and non-code units (config/docs/tasks) are NOT rendered as chapters.
+        for non_code in ("program-plan", "agents-guide", "codas-docs", "trellis-workflow"):
+            self.assertNotIn(f"{BOOK_ROOT}/{non_code}.md", chapter_files)
+            self.assertNotIn(f"[{non_code}](", self.pages[f"{BOOK_ROOT}/index.md"])
 
-        original = book._CHAPTER_UNITS
-        book._CHAPTER_UNITS = ("does-not-exist", "codas-app")
-        try:
-            pages = project_book(self.inventory)
-        finally:
-            book._CHAPTER_UNITS = original
-        self.assertNotIn(f"{BOOK_ROOT}/does-not-exist.md", pages)
-        self.assertIn(f"{BOOK_ROOT}/codas-app.md", pages)
-        self.assertNotIn("[does-not-exist](", pages[f"{BOOK_ROOT}/index.md"])
+    def test_every_chapter_has_banner_and_owner(self) -> None:
+        # Each rendered chapter (not the index) carries the open-world banner exactly once.
+        for page, content in self.pages.items():
+            if page == f"{BOOK_ROOT}/index.md":
+                continue
+            self.assertEqual(content.count("**Open-world.**"), 1, page)
+            self.assertIn("- **Owner:**", content)
 
 
 class WriteVerifyBookTests(unittest.TestCase):
