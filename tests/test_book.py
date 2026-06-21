@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import copy
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
 from codas.app.book import (
     BOOK_ROOT,
+    _read_chapter_prose,
+    _strip_claims_block,
     book_pages,
     project_book,
     verify_book,
@@ -107,6 +111,56 @@ class WriteVerifyBookTests(unittest.TestCase):
         finally:
             orphan.unlink()
         self.assertEqual(verify_book(repo), [])
+
+
+class ProseWeaveTests(unittest.TestCase):
+    """W6: authored .codas/wiki/code/<unit>.md prose woven into the chapter as ## Overview."""
+
+    def setUp(self) -> None:
+        self.inventory = run_inventory(Path.cwd())
+
+    def test_overview_present_when_prose_given(self) -> None:
+        prose = "The **why**: this subsystem is the boundary seam."
+        pages = project_book(self.inventory, {"codas-app": prose})
+        chapter = pages[f"{BOOK_ROOT}/codas-app.md"]
+        self.assertIn("## Overview", chapter)
+        self.assertIn("boundary seam", chapter)
+        # Overview sits before the structure; banner still rendered exactly once.
+        self.assertLess(chapter.index("## Overview"), chapter.index("## Modules & symbols"))
+        self.assertEqual(chapter.count("**Open-world.**"), 1)
+
+    def test_no_overview_when_no_prose(self) -> None:
+        # A unit with no source page renders the skeleton — no Overview, no dead section.
+        pages = project_book(self.inventory, {})
+        self.assertNotIn("## Overview", pages[f"{BOOK_ROOT}/codas-app.md"])
+
+    def test_strip_claims_block(self) -> None:
+        text = "# title\n\nprose body\n\n```atlas:claims\ndefines: c -> a/b.py::::f\n```\n"
+        self.assertEqual(_strip_claims_block(text), "# title\n\nprose body")
+        # a claims-only page weaves nothing
+        self.assertEqual(_strip_claims_block("```atlas:claims\ncontains: a/b.py\n```\n"), "")
+
+    def test_read_chapter_prose_missing_is_empty(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(_read_chapter_prose(Path(d), "nope"), "")
+
+    def test_prose_content_edit_is_out_of_hash(self) -> None:
+        # The .codas/wiki/code/ prose CONTENT is excluded from the inventory hash, so EDITING a
+        # chapter's prose must NOT move `codas inventory` (the book restales; the hash does not).
+        # NB the file's EXISTENCE is a real artifact fact (a new page changes artifact_count) —
+        # this isolates the content-out-of-hash property by editing an existing page in place.
+        from codas.structure.inventory import build_inventory
+
+        repo = Path.cwd()
+        page = repo / ".codas" / "wiki" / "code" / "_w6_probe.md"
+        try:
+            page.write_text("# probe\n\nprose ONE\n", encoding="utf-8")
+            a = json.dumps(build_inventory(repo), sort_keys=True)
+            page.write_text("# probe\n\nCOMPLETELY different prose TWO\n", encoding="utf-8")
+            b = json.dumps(build_inventory(repo), sort_keys=True)
+        finally:
+            page.unlink()
+        self.assertEqual(a, b)  # content changed, inventory identical
 
 
 class LatentLeakGuardTests(unittest.TestCase):

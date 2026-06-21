@@ -90,7 +90,10 @@ def extract_semantic_claims(
                 if stripped.startswith("```") and stripped[3:].strip() == "atlas:claims":
                     in_block = True
                 continue
-            if stripped.startswith("```"):
+            if stripped.startswith("```") and not stripped.strip("`"):
+                # close ONLY on a BARE fence (``` with no trailing tag), aligned with the book
+                # renderer's _strip_claims_block — a ```python/```nested line inside the block
+                # does not terminate it (it parses as a claim line -> None -> skipped).
                 in_block = False
                 continue
             parsed = _parse_claim(stripped)

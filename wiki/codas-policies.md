@@ -6,6 +6,16 @@
 - **Owner:** Policy Maintainer
 - **Kind:** policy_module
 
+## Overview
+
+The `policies` package is Codas's rule layer: each module contributes one `check_<id>` function that reads governance input and the repository's extracted facts, then returns a `list[Finding]`. This is where Codas turns facts and authored claims into verdicts — `dependency_direction` enforces the §11 adapter boundary by flagging first-party imports that violate a Structure Map `must_not_depend_on` rule; `missing_owner` flags artifacts no Structure Unit claims; `duplicate_implementation` requires a declared canonical/variant/migration relationship for a symbol defined in two `src/` modules; `fact_coupling` gates working-tree-vs-HEAD fact deltas against co-change obligations; and `code_anchor` checks that hand-authored code-wiki claims still resolve against current facts.
+
+The dominant boundary every module upholds is the **adapter seam (§11)**. Fact-consuming policies take a `ScanContext` and reach facts only through it — `ctx.symbols()`, `ctx.imports()`, `ctx.calls()`, `ctx.fact_delta()`, `ctx.changed_paths()` — never importing an adapter directly, so the boundary-enforcing layer is itself clean against the boundary. Governance YAML (`claims.yml`, `policies.yml`, `structure.yml`) is loaded policy-locally via `config.loader`/`structure.loader`, because authored claims are governance input rather than scanned facts.
+
+Two invariants are non-negotiable. **No LLM** lives in any check (plan §17): every verdict is a deterministic function of facts plus declarations, and each function sorts its findings by a total key so output is byte-identical. The **open-world** discipline governs severity: families backed by static extraction (`calls`, `imports`) are a sound lower bound, so `code_anchor` emits a *warning* not an error when a claim fails to resolve — absence of a fact is not denial. Policies also coordinate error ownership: a `claims.yml` parse failure yields `[]` in `fact_coupling` because `duplicate_implementation` owns the canonical load-error finding, avoiding double reporting.
+
+Codas dogfoods this layer on itself: `policy_registry` enforces set-equality between the `check_*` functions actually implemented under `src/codas/policies/` and the entries declared in `.codas/policies.yml`, so the declared registry can never silently drift from the implementation.
+
 > **Open-world.** The structure below is a sound LOWER BOUND — an absent function, method, or edge is not proof of absence (static facts under-approximate; see `codas impact`). Misses: calls outside a function/method body (module-level, class-body, decorator, or default-argument expressions); dynamic dispatch / calls through variables or returns; super() / MRO / cross-class instance dispatch; reflection (getattr / dynamic); builtins and external (non-first-party) calls
 
 ## Modules & symbols

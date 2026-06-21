@@ -1,0 +1,13 @@
+`codas-app` is the orchestration layer that sits between the thin CLI shell and the deterministic fact/policy engines. Each module here is a *service*: it loads `.codas/` config, builds (or reuses) a single `ScanContext`, drives the right engine, and shapes the result for a command. `run_check_with_context` is the canonical example — it loads config, builds one scan context, fans it across every policy in `codas.policies`, and returns the `CheckReport` plus the context so `check --json` can pin provenance from the *same* scan instead of re-parsing the tree. This single-snapshot discipline recurs throughout: `build_context_pack` and `compute_provenance` both build the inventory once so a task's facts and its `inventory_hash` can never disagree.
+
+The defining boundary is what this layer is *forbidden* to touch. By design `codas-app` honors its own `must_not_depend_on: [codas-adapters]` rule — facts arrive only through the `codas.facts` seam (`ScanContext`, `CallFacts`), never by importing an adapter, and the `dependency_direction` policy dogfoods that constraint back onto this very directory. `hooks.py` exists precisely because the CLI umbrella may not reach `role-integrations` directly, so app orchestration is the one permitted bridge. The dependency arrow always points downward: app → core/facts, never the reverse.
+
+The second invariant is open-world honesty. Anything projected from static facts is a sound *lower bound*, and these services refuse to let that caveat get lost at the presentation layer. `compute_impact` (reverse reachability over `calls`), `project_atlas_tree`, the Mermaid/HTML views, and the human book all embed the same "absence is not denial" note drawn from `codas.facts.openworld` — a dependency picture that read as complete would re-import a false-completeness failure.
+
+The third is byte-identical determinism. The Atlas pack, knowledge tree, generated governance page, and the `wiki/` book are all *pure projections* of the inventory dict with explicit total sort keys, no timestamps, and no LLM in the core (§17). Freshness rides in the rendered bytes: `verify_book` and `verify_generated_sections` are plain byte-compares, and derived outputs are scanner-excluded so the book never feeds its own hash. `calibrate.py` is the lone semantic touchpoint, and even it only *tiers* host-authored claims against facts — it confirms structure exists, never the concept the prose wraps around it.
+
+```atlas:claims
+defines: check orchestration -> src/codas/app/check.py::::run_check_with_context
+defines: reverse-reachability impact -> src/codas/app/impact.py::::compute_impact
+defines: atlas knowledge tree projection -> src/codas/app/wiki.py::::project_atlas_tree
+```
