@@ -71,12 +71,14 @@ class CodasCheckTests(unittest.TestCase):
         ) as gen_drift, mock.patch(
             "codas.app.check.check_code_anchor", return_value=[]
         ) as code_anchor, mock.patch(
+            "codas.app.check.check_semantic_wiki", return_value=[]
+        ) as semantic_wiki, mock.patch(
             "codas.app.check.check_policy_registry", return_value=[]
         ) as policy_registry:
             run_check(repo)
 
         self.assertEqual(build.call_count, 1)
-        for spy in (stale, stale_html, dup_symbol, dup_impl, dep_dir, stale_wiki, fact_coupling, gen_drift, code_anchor, policy_registry):
+        for spy in (stale, stale_html, dup_symbol, dup_impl, dep_dir, stale_wiki, fact_coupling, gen_drift, code_anchor, semantic_wiki, policy_registry):
             self.assertEqual(spy.call_count, 1)
             self.assertIs(spy.call_args.args[0], build.return_value)
 

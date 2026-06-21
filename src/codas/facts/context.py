@@ -29,6 +29,7 @@ from codas.adapters.wiki import (
     extract_wiki_claims,
 )
 from codas.adapters.semantic import (
+    SEMANTIC_WIKI_ROOT,
     SemanticClaims,
     StructuralClaim,
     extract_semantic_claims,
@@ -208,11 +209,33 @@ class ScanContext:
         hash). Consumed ONLY by the W3 calibrator (`codas wiki --calibrate`), never by a
         check-time policy — so the offline corpus stays off the always-on `codas check`
         path. Requires a git repo for the gitignore exclusion to hold (already an implied
-        operating assumption for the git-based facts).
+        operating assumption for the git-based facts). NB the sibling
+        `semantic_wiki_claims()` reads the COMMITTED `.codas/wiki/semantic/` (tracked) and
+        IS consumed by a check policy — do not conflate the two.
         """
         if "semantic_corpus_claims" not in self._cache:
             self._cache["semantic_corpus_claims"] = extract_semantic_claims(self.repo)
         return self._cache["semantic_corpus_claims"]
+
+    def semantic_wiki_claims(self) -> SemanticClaims:
+        """Structural claims from the COMMITTED semantic wiki (cached).
+
+        Reads `.codas/wiki/semantic/` from the DISCOVERED file set (`self.files` = tracked +
+        untracked-non-ignored) — i.e. any page that is NOT gitignored, unlike the gitignored
+        offline cache `semantic_corpus_claims()` reads. (A still-uncommitted draft is therefore
+        also verified — a helpful warning while authoring, and consistent with how Codas scopes
+        every file; the page is out-of-hash either way.) Consumed by the `semantic_wiki` check
+        policy on every `codas check` (drift control: a structural claim whose node/edge no
+        longer resolves is a warning). The prose is advisory and excluded from the doc/wiki claim
+        scans (markdown SKIP_PREFIXES + extract_wiki_claims), so the pages never perturb the
+        byte-identical inventory hash; these claims are position-stripped policy-time facts,
+        never serialized into the inventory.
+        """
+        if "semantic_wiki_claims" not in self._cache:
+            self._cache["semantic_wiki_claims"] = extract_semantic_claims(
+                self.repo, SEMANTIC_WIKI_ROOT, self.files
+            )
+        return self._cache["semantic_wiki_claims"]
 
     def working_snapshot(self) -> FactSnapshot:
         """The code-fact snapshot of the scanned working tree (cached).

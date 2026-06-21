@@ -57,12 +57,14 @@ def extract_wiki_claims(
     """
     prefix = wiki_root.rstrip("/") + "/"
     code_prefix = CODE_ROOT_DEFAULT.rstrip("/") + "/"
+    semantic_prefix = ".codas/wiki/semantic/"
     wiki_files = [
         f
         for f in files
         if f.endswith(".md")
         and (f == wiki_root or f.startswith(prefix))
         and not f.startswith(code_prefix)  # code-wiki prose stays out of the hash
+        and not f.startswith(semantic_prefix)  # semantic-wiki prose stays out of the hash
     ]
     claims: list[WikiClaim] = []
     skipped: list[str] = []

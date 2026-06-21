@@ -14,6 +14,12 @@ from pathlib import Path
 
 CORPUS_ROOT_DEFAULT = ".codas/cache/semantic"
 
+# The drift-controlled semantic wiki (advisory prose out of the inventory hash + verified
+# structural claims) — distinct from the gitignored offline cache above. Read from the
+# DISCOVERED file set (not gitignored, i.e. tracked or staged), not rglob, so it is the
+# committed/staged pages that get verified while the gitignored offline cache does not.
+SEMANTIC_WIKI_ROOT = ".codas/wiki/semantic"
+
 # Grammar (one claim per line, inside a ```atlas:claims fence):
 #   defines:  <concept> -> <node-id>          (concept = UNVERIFIED prose; never confirmed)
 #   calls:    <node-id> -> <node-id>
@@ -45,19 +51,30 @@ class SemanticClaims:
 
 
 def extract_semantic_claims(
-    repo: Path, corpus_root: str = CORPUS_ROOT_DEFAULT
+    repo: Path,
+    corpus_root: str = CORPUS_ROOT_DEFAULT,
+    files: tuple[str, ...] | None = None,
 ) -> SemanticClaims:
     """Parse structural claims from the fenced ``atlas:claims`` block of each ``.md`` page
-    under ``corpus_root`` (read directly from disk; the corpus is gitignored). Robust like
-    the W1 anchor reader — a malformed line is skipped, never a crash. Deterministic: pages
-    sorted by source, claims in file order. utf-8 pinned."""
-    root = repo / corpus_root
-    if not root.is_dir():
-        return SemanticClaims(claims=(), skipped=())
+    under ``corpus_root``. Robust like the W1 anchor reader — a malformed line is skipped,
+    never a crash. Deterministic: pages sorted by source, claims in file order. utf-8 pinned.
 
-    pages = sorted(
-        p.relative_to(repo).as_posix() for p in root.rglob("*.md") if p.is_file()
-    )
+    ``files=None`` → rglob the directory directly off disk (the gitignored OFFLINE cache, which
+    is not in ``ScanContext.files``). ``files`` given → use that TRACKED file list filtered to
+    ``corpus_root`` (the COMMITTED semantic wiki — an uncommitted page is then NOT verified)."""
+    if files is None:
+        root = repo / corpus_root
+        if not root.is_dir():
+            return SemanticClaims(claims=(), skipped=())
+        pages = sorted(
+            p.relative_to(repo).as_posix() for p in root.rglob("*.md") if p.is_file()
+        )
+    else:
+        prefix = corpus_root.rstrip("/") + "/"
+        pages = sorted(
+            f for f in files if f.endswith(".md") and (f == corpus_root or f.startswith(prefix))
+        )
+
     claims: list[StructuralClaim] = []
     skipped: list[str] = []
 

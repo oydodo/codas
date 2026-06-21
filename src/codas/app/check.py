@@ -18,6 +18,7 @@ from codas.policies.generated_wiki_drift import check_generated_wiki_drift
 from codas.policies.missing_owner import check_missing_structure_owner
 from codas.policies.policy_registry import check_policy_registry
 from codas.policies.program_plan import check_program_plan
+from codas.policies.semantic_wiki import check_semantic_wiki
 from codas.policies.stale_claim import check_stale_claim
 from codas.policies.stale_html_claim import check_stale_html_claim
 from codas.policies.stale_wiki_claim import check_stale_wiki_claim
@@ -76,6 +77,7 @@ def run_check_with_context(repo: Path) -> tuple[CheckReport, ScanContext | None]
     findings.extend(check_fact_coupling(ctx))
     findings.extend(check_generated_wiki_drift(ctx))
     findings.extend(check_code_anchor(ctx))
+    findings.extend(check_semantic_wiki(ctx))
     findings.extend(check_policy_registry(ctx))
 
     policies_path = repo / ".codas" / "policies.yml"
