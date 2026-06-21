@@ -92,5 +92,39 @@ spaces, honestly. Determinism is preserved because the book is a hash-excluded d
 
 ## Acceptance (this planning task)
 - [x] The two-part split + the verification-contract model + the `wiki/` book design are recorded.
-- [ ] The roadmap (W4–W8 + deferred placements) lands in `.codas/program.yml`.
-- [ ] No code (each W-phase is its own later Trellis task; W4 is next).
+- [x] The roadmap (W4–W8 + deferred placements) landed in `.codas/program.yml` (P8).
+- [x] No code (each W-phase is its own later Trellis task; W4 is next).
+
+## Codex PLAN review — corrections (2026-06-21, folded into the W4 design)
+The plan's determinism mechanism for `wiki/` was WRONG; codex (af8b542) corrected it. W4 MUST
+build to these, not to the original "hash-excluded like generated/" wording:
+- **BLOCKER (the make-or-break): "hash-excluded like `.codas/wiki/generated/`" is a FALSE
+  precedent.** generated/ is NOT removed from the default inventory hash — `exclude_under=
+  _GENERATED_DIR` is passed only by the wiki builders (`build_atlas_pack`/`_generated_pages`),
+  never by the default `codas inventory`/`check` scan, and `tests/test_atlas_pack.py:121`
+  asserts excluding generated CHANGES the inventory. A committed root `wiki/**` would be
+  DISCOVERED by `discover_files` (git `ls-files --cached --others` AND the walk) → enter the
+  inventory hash + artifact observations + `unowned` BEFORE any doc-claim/SKIP_PREFIXES step.
+  **FIX = a SCANNER-LEVEL derived-prefix exclusion of `wiki/` inside `discover_files` (both
+  `_git_files` and `_walk_files`, structure/index.py)** so the book files are never in the
+  scanned set at all; `SKIP_PREFIXES` is only a secondary guard for any non-hash check that still
+  sees them. This scanner exclusion is W4's FIRST step (W4a) — without it the book breaks
+  byte-identical.
+- **SHOULD-FIX: per-page rendered-source hashes, not the whole-inventory anchor.** Reuse
+  `render_generated_overview`'s narrow per-page hash (hash only the fields the chapter renders),
+  NOT `build_atlas_*`'s whole `source_inventory_hash`, or every chapter restales on any unrelated
+  fact move.
+- **OPEN DECISION before W4 (codex): root `wiki/` vs `.codas/wiki/book/`.** Root = best
+  first-viewport GitHub discoverability (the user's stated intent — "我要看") but needs the
+  scanner exclusion + config/CONTRACT/documents.yml registration (W7). `.codas/wiki/book/` fits
+  the existing wiki model (config wiki path = `.codas/wiki`) with less churn but weaker
+  discoverability. LEANING root `wiki/` per user intent; this is the first thing W4 must lock.
+- **SHOULD-FIX: split W4** — W4a = scanner exclusion + book index + ONE chapter + `--verify`
+  (the current `--write`/`--verify` only renders one hardcoded governance page; generalizing the
+  renderer is itself work); then W5 unify; then W4b = the remaining ~24 chapters.
+- **SHOULD-FIX: `wiki/` verification.** `generated_wiki_drift` is scoped to `wiki_root/generated`
+  only. So `--verify` byte-compare is the book's verifier (chapters need not carry claim blocks);
+  if they do, they need a new parser root — W4 must state which.
+- **NIT: W7 AMENDS CONTRACT.md, not new.** CONTRACT.md:5 currently says an LLM "renders" the
+  wiki; the new model is "Codas renders the book; the LLM only authors the advisory source
+  prose." W7 must fix that sentence, not write a parallel doc.
