@@ -207,4 +207,40 @@ Each step deterministic + idempotent; full suite + check 0 + byte-identical + ve
 
 ## 10. Acceptance — see prd.md. Make-or-break = R1 (the AGENTS block is a deterministic,
 `--verify`'d projection that cannot silently drift) + R6 (determinism/§11/§17 intact).
+
+## 11. AS-BUILT (2026-06-21) — what shipped + deviations
+
+All 4 components + 6 must-holds landed. check 0 · inventory byte-identical 2x · `wiki --verify`
++ `codas agents --verify` clean · 518 tests (18 new in `tests/test_injection.py`).
+
+- **Files:** `app/agents_block.py` (renderer + splice + write/verify), `app/agent_docs.py`
+  (app-layer orchestrator for `codas agents`), `integrations/claude.py` (CLAUDE.md shim +
+  SessionStart hook), `integrations/install_state.py` (the contract + merge writer), extended
+  `app/hooks.py` (agent-injection orchestration), `app/preflight.py` (`_build_digest`),
+  `reporting/console.py` (digest render), `cli.py` (`agents` cmd + `hooks --agent-command`),
+  `structure/index.py` (BLOCKER#1), `adapters/trellis.py` + `structure/inventory.py`
+  (`related_files`), `.codas/policies.yml` (R7 ungateable comment).
+- **DEVIATION 1 (digest signal):** the greenlit "affected units from declared scope" had no
+  path to bind to — `package` is a coarse label (`null`/`"codas"`, 71/71 tasks) and the task row
+  carried no path field. Added `relatedFiles` -> `related_files` to the Trellis adapter + the
+  inventory task row (the honest per-task path signal); the digest derives affected_units +
+  reuse_candidates + advisory_why from it, degrading to EMPTY deterministically (every task today
+  declares none). Fact-stream impact: an always-`[]` field; no book/governance/pack restale (none
+  render tasks); byte-identical holds.
+- **DEVIATION 2 (must-hold #6):** read as "the git installer EMITS its `git_hooks` slice" —
+  `enforcement.install_hooks` calls `_write_git_hook_state`, guarded `if (repo/".codas").is_dir()`
+  so a bare non-Codas repo getting only git hooks is never surprised with a marker file.
+- **DEVIATION 3 (reuse not reimplement):** promoted the table-cell guard to
+  `render_util.guard_table_cell` and refactored BOTH `wiki.py` + `agents_block.py` onto it (the
+  first cut tripped `duplicate_implementation` on `_guard_cell` — the exact semantic-reuse miss the
+  block preaches); the digest reuses `wiki._owning`/`_owner_index` + `book._read_chapter_prose`
+  rather than copying. `wiki.py`'s generated page stays byte-identical (guard is behavior-preserving).
+- **Review:** codex MCP was unusable (nested-spawned background tasks, never surfaced content).
+  An independent Claude-native adversarial review (cavecrew-reviewer) verified all 7
+  correctness invariants (scanner exclusion both paths, doc-claim neutrality, dependency
+  direction + no cycle, determinism, JSON idempotence, prefix ownership, no symbol collisions)
+  and returned ONE should-nit (unify `ensure_ascii=False` in the install-state writer) — applied.
+- **DEFERRED unchanged (per prd):** per-turn hook + `codas status`, Codex/Cursor adapters,
+  Layer 3 PreToolUse deny, MCP. The 1/4 doctor reader consumes `read_install_state` (this task
+  ships the writer + schema = the contract). CI wiring of `codas agents --verify` rides with 1/4.
 </content>
