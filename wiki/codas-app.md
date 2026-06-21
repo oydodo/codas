@@ -186,18 +186,17 @@ graph LR
   n31["src/codas/policies/missing_owner.py"]
   n32["src/codas/policies/policy_registry.py"]
   n33["src/codas/policies/program_plan.py"]
-  n34["src/codas/policies/semantic_wiki.py"]
-  n35["src/codas/policies/stale_claim.py"]
-  n36["src/codas/policies/stale_html_claim.py"]
-  n37["src/codas/policies/stale_wiki_claim.py"]
-  n38["src/codas/policies/structure_drift.py"]
-  n39["src/codas/policies/structure_map.py"]
-  n40["src/codas/policies/trellis_context.py"]
-  n41["src/codas/policies/waivers.py"]
-  n42["src/codas/structure/document_loader.py"]
-  n43["src/codas/structure/inventory.py"]
-  n44["src/codas/structure/loader.py"]
-  n45["src/codas/structure/program_loader.py"]
+  n34["src/codas/policies/stale_claim.py"]
+  n35["src/codas/policies/stale_html_claim.py"]
+  n36["src/codas/policies/stale_wiki_claim.py"]
+  n37["src/codas/policies/structure_drift.py"]
+  n38["src/codas/policies/structure_map.py"]
+  n39["src/codas/policies/trellis_context.py"]
+  n40["src/codas/policies/waivers.py"]
+  n41["src/codas/structure/document_loader.py"]
+  n42["src/codas/structure/inventory.py"]
+  n43["src/codas/structure/loader.py"]
+  n44["src/codas/structure/program_loader.py"]
   n0 --> n6
   n0 --> n11
   n0 --> n13
@@ -229,17 +228,16 @@ graph LR
   n2 --> n38
   n2 --> n39
   n2 --> n40
-  n2 --> n41
   n3 --> n14
-  n3 --> n42
+  n3 --> n41
+  n3 --> n43
   n3 --> n44
-  n3 --> n45
   n4 --> n20
   n5 --> n14
   n5 --> n18
   n5 --> n19
   n6 --> n18
-  n6 --> n43
+  n6 --> n42
   n7 --> n6
   n7 --> n8
   n7 --> n14

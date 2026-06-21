@@ -12,6 +12,7 @@
 
 ### `src/codas/policies/code_anchor.py`
 
+- `_add_path_nodes` *(function)*
 - `check_code_anchor` *(function)*
 
 ### `src/codas/policies/config_sources.py`
@@ -86,11 +87,6 @@
 
 - `check_program_plan` *(function)*
 
-### `src/codas/policies/semantic_wiki.py`
-
-- `_add_path_nodes` *(function)*
-- `check_semantic_wiki` *(function)*
-
 ### `src/codas/policies/stale_claim.py`
 
 - `check_stale_claim` *(function)*
@@ -142,34 +138,33 @@ graph LR
   n13["src/codas/policies/missing_owner.py"]
   n14["src/codas/policies/policy_registry.py"]
   n15["src/codas/policies/program_plan.py"]
-  n16["src/codas/policies/semantic_wiki.py"]
-  n17["src/codas/policies/stale_claim.py"]
-  n18["src/codas/policies/stale_html_claim.py"]
-  n19["src/codas/policies/stale_wiki_claim.py"]
-  n20["src/codas/policies/structure_drift.py"]
-  n21["src/codas/policies/structure_map.py"]
-  n22["src/codas/policies/trellis_context.py"]
-  n23["src/codas/policies/waivers.py"]
-  n24["src/codas/structure/document_loader.py"]
-  n25["src/codas/structure/index.py"]
-  n26["src/codas/structure/loader.py"]
-  n27["src/codas/structure/models.py"]
-  n28["src/codas/structure/program_loader.py"]
+  n16["src/codas/policies/stale_claim.py"]
+  n17["src/codas/policies/stale_html_claim.py"]
+  n18["src/codas/policies/stale_wiki_claim.py"]
+  n19["src/codas/policies/structure_drift.py"]
+  n20["src/codas/policies/structure_map.py"]
+  n21["src/codas/policies/trellis_context.py"]
+  n22["src/codas/policies/waivers.py"]
+  n23["src/codas/structure/document_loader.py"]
+  n24["src/codas/structure/index.py"]
+  n25["src/codas/structure/loader.py"]
+  n26["src/codas/structure/models.py"]
+  n27["src/codas/structure/program_loader.py"]
   n3 --> n1
   n3 --> n2
   n4 --> n0
   n4 --> n1
   n5 --> n1
   n5 --> n2
+  n5 --> n24
   n5 --> n25
-  n5 --> n26
   n6 --> n0
   n6 --> n1
+  n6 --> n24
   n6 --> n25
-  n6 --> n26
   n7 --> n0
   n7 --> n1
-  n7 --> n24
+  n7 --> n23
   n8 --> n0
   n8 --> n1
   n9 --> n0
@@ -182,36 +177,34 @@ graph LR
   n11 --> n2
   n12 --> n1
   n12 --> n2
-  n12 --> n26
-  n12 --> n28
+  n12 --> n25
+  n12 --> n27
   n13 --> n0
   n13 --> n1
+  n13 --> n24
   n13 --> n25
   n13 --> n26
-  n13 --> n27
   n14 --> n0
   n14 --> n1
   n14 --> n2
   n15 --> n0
   n15 --> n1
-  n15 --> n28
+  n15 --> n27
   n16 --> n1
   n16 --> n2
   n17 --> n1
   n17 --> n2
   n18 --> n1
   n18 --> n2
+  n18 --> n7
+  n19 --> n0
   n19 --> n1
-  n19 --> n2
-  n19 --> n7
+  n19 --> n24
+  n19 --> n25
   n20 --> n0
   n20 --> n1
   n20 --> n25
-  n20 --> n26
   n21 --> n0
   n21 --> n1
-  n21 --> n26
-  n22 --> n0
   n22 --> n1
-  n23 --> n1
 ```

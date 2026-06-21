@@ -93,8 +93,6 @@
 
 ### `src/codas/adapters/wiki.py`
 
-- `CodeAnchorClaim` *(class)*
-- `CodeAnchorClaims` *(class)*
 - `GeneratedClaim` *(class)*
 - `GeneratedClaims` *(class)*
 - `GeneratedPage` *(class)*
@@ -103,9 +101,7 @@
 - `_concept_slug` *(function)*
 - `_exists` *(function)*
 - `_heading` *(function)*
-- `_parse_anchor_symbol` *(function)*
 - `_wiki_normalize` *(function)*
-- `extract_code_anchor_claims` *(function)*
 - `extract_generated_claims` *(function)*
 - `extract_wiki_claims` *(function)*
 

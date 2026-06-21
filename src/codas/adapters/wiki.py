@@ -8,10 +8,11 @@ from pathlib import Path
 from codas.adapters.markdown import KNOWN_EXTS, _candidates, _resolve
 
 WIKI_ROOT_DEFAULT = ".codas/wiki"
-# Hand-authored Atlas code-wiki pages (advisory prose + verified code anchors). Their
+# Hand-authored Atlas code-wiki pages (advisory prose + verified structural claims). Their
 # PROSE must never enter the byte-identical inventory hash, so extract_wiki_claims and the
-# markdown doc_claims scan both SKIP this subtree; only extract_code_anchor_claims reads it
-# (position-stripped, policy-time, not serialized into inventory).
+# markdown doc_claims scan both SKIP this subtree; only the code-wiki claim parser
+# (codas.adapters.semantic.extract_semantic_claims, via ScanContext.code_anchor_claims) reads
+# it (position-stripped, policy-time, not serialized into inventory).
 CODE_ROOT_DEFAULT = ".codas/wiki/code"
 
 # Section heading (lowercased) -> claim kind for path refs found under it.
@@ -57,14 +58,12 @@ def extract_wiki_claims(
     """
     prefix = wiki_root.rstrip("/") + "/"
     code_prefix = CODE_ROOT_DEFAULT.rstrip("/") + "/"
-    semantic_prefix = ".codas/wiki/semantic/"
     wiki_files = [
         f
         for f in files
         if f.endswith(".md")
         and (f == wiki_root or f.startswith(prefix))
         and not f.startswith(code_prefix)  # code-wiki prose stays out of the hash
-        and not f.startswith(semantic_prefix)  # semantic-wiki prose stays out of the hash
     ]
     claims: list[WikiClaim] = []
     skipped: list[str] = []
@@ -212,106 +211,6 @@ class GeneratedPage:
 class GeneratedClaims:
     pages: tuple[GeneratedPage, ...]
     skipped: tuple[str, ...]
-
-
-# --- code-wiki atlas:claims (W1) ------------------------------------------------
-
-
-@dataclass(frozen=True)
-class CodeAnchorClaim:
-    """One ``anchor_symbol`` claim from a hand-authored code-wiki page: the page asserts
-    that ``concept`` is defined by symbol ``name`` in ``path``. ``line`` is for human
-    evidence display only — it is NOT part of the claim identity (the claim is the
-    assertion, not its byte position), so a prose edit that shifts lines does not change
-    the policy-time fact."""
-
-    source: str
-    line: int
-    concept: str
-    path: str
-    name: str
-
-
-@dataclass(frozen=True)
-class CodeAnchorClaims:
-    claims: tuple[CodeAnchorClaim, ...]
-    skipped: tuple[str, ...]
-
-
-def extract_code_anchor_claims(
-    repo: Path, files: tuple[str, ...], code_root: str = CODE_ROOT_DEFAULT
-) -> CodeAnchorClaims:
-    """Parse ``anchor_symbol:`` lines from the fenced ``atlas:claims`` block of each
-    hand-authored code-wiki page under ``code_root``.
-
-    Grammar (one anchor per line, inside a ```` ```atlas:claims ```` fence)::
-
-        anchor_symbol: <concept> -> <repo-rel path>:<symbol name>
-
-    Robust like :func:`extract_generated_claims` — a malformed line is skipped, never a
-    crash: split the concept from the target on the LAST `` -> `` (``rpartition``) so a
-    concept may itself contain `` -> ``; split the target into (path, name) on the LAST
-    ``:`` so a path may contain none. Backslashes are normalized to ``/``; a leading
-    ``./`` is stripped; an empty concept/path/name or a path that escapes the repo (``..``)
-    is rejected. The ``symbols`` family these anchors resolve against is OPEN-world, so the
-    consuming policy treats a non-resolving anchor as a WARNING, never an error.
-    Deterministic: pages sorted by source, claims in file order.
-    """
-    prefix = code_root.rstrip("/") + "/"
-    code_files = [
-        f for f in files if f.endswith(".md") and (f == code_root or f.startswith(prefix))
-    ]
-    claims: list[CodeAnchorClaim] = []
-    skipped: list[str] = []
-
-    for source in sorted(code_files):
-        try:
-            text = (repo / source).read_text(errors="ignore")
-        except OSError:
-            skipped.append(source)
-            continue
-        in_block = False
-        for lineno, raw in enumerate(text.splitlines(), start=1):
-            stripped = raw.strip()
-            if not in_block:
-                if stripped.startswith("```") and stripped[3:].strip() == "atlas:claims":
-                    in_block = True
-                continue
-            if stripped.startswith("```"):
-                in_block = False
-                continue
-            if not stripped.startswith("anchor_symbol:"):
-                continue
-            parsed = _parse_anchor_symbol(stripped.split(":", 1)[1])
-            if parsed is None:
-                continue  # malformed -> skip, never crash
-            concept, path, name = parsed
-            claims.append(
-                CodeAnchorClaim(
-                    source=source, line=lineno, concept=concept, path=path, name=name
-                )
-            )
-    return CodeAnchorClaims(claims=tuple(claims), skipped=tuple(sorted(skipped)))
-
-
-def _parse_anchor_symbol(rest: str):
-    """``<concept> -> <path>:<name>`` -> (concept, path, name) or None if malformed."""
-    concept, sep, target = rest.rpartition(" -> ")
-    if not sep:
-        return None
-    concept = concept.strip()
-    path_part, sep2, name = target.rpartition(":")
-    if not sep2:
-        return None
-    path = path_part.strip().replace("\\", "/")
-    while path.startswith("./"):
-        path = path[2:]
-    name = name.strip()
-    if not concept or not path or not name:
-        return None
-    if path == ".." or path.startswith("../"):
-        return None
-    return concept, path, name
 
 
 def extract_generated_claims(

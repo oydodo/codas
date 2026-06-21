@@ -17,19 +17,15 @@ from codas.adapters.python import (
 )
 from codas.adapters.python_parse import ParsedModules, parse_python_modules
 from codas.adapters.wiki import (
-    CodeAnchorClaim,
-    CodeAnchorClaims,
     GeneratedClaim,
     GeneratedClaims,
     GeneratedPage,
     WikiClaim,
     WikiClaims,
-    extract_code_anchor_claims,
     extract_generated_claims,
     extract_wiki_claims,
 )
 from codas.adapters.semantic import (
-    SEMANTIC_WIKI_ROOT,
     SemanticClaims,
     StructuralClaim,
     extract_semantic_claims,
@@ -57,8 +53,6 @@ __all__ = [
     "GeneratedClaim",
     "GeneratedPage",
     "GeneratedClaims",
-    "CodeAnchorClaim",
-    "CodeAnchorClaims",
     "StructuralClaim",
     "SemanticClaims",
     "CallFact",
@@ -185,19 +179,27 @@ class ScanContext:
             )
         return self._cache["generated_claims"]
 
-    def code_anchor_claims(self) -> CodeAnchorClaims:
-        """anchor_symbol claims parsed from hand-authored code-wiki pages (cached).
+    def code_anchor_claims(self) -> SemanticClaims:
+        """Structural claims (defines/calls/contains) parsed from the COMMITTED code-wiki
+        pages under ``.codas/wiki/code/`` (cached).
+
+        W5: the code-wiki and the former committed semantic-wiki are UNIFIED on the full
+        ``defines/calls/contains`` grammar (``extract_semantic_claims``); the old
+        ``anchor_symbol`` keyword is the ``defines``-to-a-top-level-symbol case. Read from the
+        DISCOVERED file set (tracked + untracked-non-ignored), so a still-uncommitted draft is
+        also verified — a helpful warning while authoring.
 
         A policy-time fact consumed by ``code_anchor``; deliberately NOT serialized into
         ``inventory`` (the ``.codas/wiki/code/`` prose is excluded from the doc/wiki claim
-        streams, and these anchors are position-stripped — so the code-wiki never perturbs
-        the byte-identical inventory hash).
+        streams via markdown ``SKIP_PREFIXES`` + ``extract_wiki_claims``, and these claims are
+        position-stripped — so the code-wiki never perturbs the byte-identical inventory hash).
+        Distinct from the gitignored OFFLINE W3 cache ``semantic_corpus_claims()`` reads.
         """
         if "code_anchor_claims" not in self._cache:
             wiki_root = (self.config.raw.get("wiki") or {}).get("path", ".codas/wiki")
             root = wiki_root.rstrip("/") + "/code"
-            self._cache["code_anchor_claims"] = extract_code_anchor_claims(
-                self.repo, self.files, root
+            self._cache["code_anchor_claims"] = extract_semantic_claims(
+                self.repo, root, self.files
             )
         return self._cache["code_anchor_claims"]
 
@@ -209,33 +211,14 @@ class ScanContext:
         hash). Consumed ONLY by the W3 calibrator (`codas wiki --calibrate`), never by a
         check-time policy — so the offline corpus stays off the always-on `codas check`
         path. Requires a git repo for the gitignore exclusion to hold (already an implied
-        operating assumption for the git-based facts). NB the sibling
-        `semantic_wiki_claims()` reads the COMMITTED `.codas/wiki/semantic/` (tracked) and
-        IS consumed by a check policy — do not conflate the two.
+        operating assumption for the git-based facts). NB the sibling `code_anchor_claims()`
+        reads the COMMITTED `.codas/wiki/code/` (tracked) with the SAME grammar and IS consumed
+        by a check policy — do not conflate the offline cache with the committed code-wiki.
         """
         if "semantic_corpus_claims" not in self._cache:
             self._cache["semantic_corpus_claims"] = extract_semantic_claims(self.repo)
         return self._cache["semantic_corpus_claims"]
 
-    def semantic_wiki_claims(self) -> SemanticClaims:
-        """Structural claims from the COMMITTED semantic wiki (cached).
-
-        Reads `.codas/wiki/semantic/` from the DISCOVERED file set (`self.files` = tracked +
-        untracked-non-ignored) — i.e. any page that is NOT gitignored, unlike the gitignored
-        offline cache `semantic_corpus_claims()` reads. (A still-uncommitted draft is therefore
-        also verified — a helpful warning while authoring, and consistent with how Codas scopes
-        every file; the page is out-of-hash either way.) Consumed by the `semantic_wiki` check
-        policy on every `codas check` (drift control: a structural claim whose node/edge no
-        longer resolves is a warning). The prose is advisory and excluded from the doc/wiki claim
-        scans (markdown SKIP_PREFIXES + extract_wiki_claims), so the pages never perturb the
-        byte-identical inventory hash; these claims are position-stripped policy-time facts,
-        never serialized into the inventory.
-        """
-        if "semantic_wiki_claims" not in self._cache:
-            self._cache["semantic_wiki_claims"] = extract_semantic_claims(
-                self.repo, SEMANTIC_WIKI_ROOT, self.files
-            )
-        return self._cache["semantic_wiki_claims"]
 
     def working_snapshot(self) -> FactSnapshot:
         """The code-fact snapshot of the scanned working tree (cached).

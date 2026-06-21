@@ -14,12 +14,11 @@ from pathlib import Path
 
 CORPUS_ROOT_DEFAULT = ".codas/cache/semantic"
 
-# The drift-controlled semantic wiki (advisory prose out of the inventory hash + verified
-# structural claims) — distinct from the gitignored offline cache above. Read from the
-# DISCOVERED file set (not gitignored, i.e. tracked or staged), not rglob, so it is the
-# committed/staged pages that get verified while the gitignored offline cache does not.
-SEMANTIC_WIKI_ROOT = ".codas/wiki/semantic"
-
+# The same parser also reads the COMMITTED code-wiki (`.codas/wiki/code/**`, W5-unified onto
+# this grammar) — passed the DISCOVERED file set via ScanContext.code_anchor_claims, distinct
+# from this gitignored offline cache. One grammar, two corpora (offline cache + committed
+# code-wiki).
+#
 # Grammar (one claim per line, inside a ```atlas:claims fence):
 #   defines:  <concept> -> <node-id>          (concept = UNVERIFIED prose; never confirmed)
 #   calls:    <node-id> -> <node-id>

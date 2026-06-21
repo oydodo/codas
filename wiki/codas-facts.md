@@ -24,7 +24,6 @@
   - `html_claims` *(function)*
   - `imports` *(function)*
   - `semantic_corpus_claims` *(function)*
-  - `semantic_wiki_claims` *(function)*
   - `symbols` *(function)*
   - `wiki_claims` *(function)*
   - `working_snapshot` *(function)*

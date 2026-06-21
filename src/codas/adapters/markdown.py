@@ -7,13 +7,12 @@ from pathlib import Path
 
 KNOWN_EXTS = (".md", ".py", ".html", ".yml", ".yaml", ".json", ".toml", ".txt")
 # `.codas/wiki/code/` holds hand-authored Atlas code-wiki pages whose prose is advisory
-# and must NOT enter the byte-identical inventory hash (only their code anchors are read,
-# position-stripped, by codas.adapters.wiki.extract_code_anchor_claims).
+# and must NOT enter the byte-identical inventory hash (only their structural claims are
+# read, position-stripped, by codas.adapters.semantic.extract_semantic_claims).
 SKIP_PREFIXES = (
     ".trellis/tasks/",
     ".trellis/workspace/",
-    ".codas/wiki/code/",
-    ".codas/wiki/semantic/",  # committed semantic-wiki prose is advisory + out of the hash
+    ".codas/wiki/code/",  # code-wiki prose is advisory + out of the hash (only claims verified)
 )
 
 _LINK_RE = re.compile(r"(!?)\[[^\]]*\]\(([^)]+)\)")

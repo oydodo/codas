@@ -15,14 +15,14 @@ of the wiki (raw repo + facts -> wiki -> **this contract**): the rules a coding 
   **cannot out-rank repository facts or the authored claim sources** (`.codas/*.yml`,
   `docs/*.html`). A path or authority claim made in prose is still verified
   (`stale_wiki_claim` / `stale_claim`); unverifiable prose stays advisory.
-- **Code-wiki (advisory prose + verified anchors):** hand-authored pages under
+- **Code-wiki (advisory prose + verified structural claims):** hand-authored pages under
   `.codas/wiki/code/**` describe a module/concept (the semantic "flesh" facts lack; also an
   agent code-picture). Their **prose is advisory and NOT verified** — and is deliberately
   kept out of the byte-identical inventory hash (excluded from the doc/wiki claim scans).
-  Only their `anchor_symbol` claims are verified by `code_anchor`, **warning-only** under
-  open-world semantics. The `doc -> code` direction is not gated (a user-driven doc edit is
-  followed by the agent, Trellis-style); the gate catches `code -> doc` drift (an anchored
-  symbol renamed/moved without updating the page).
+  Only their `defines`/`calls`/`contains` structural claims are verified by `code_anchor`,
+  **warning-only** under open-world semantics. The `doc -> code` direction is not gated (a
+  user-driven doc edit is followed by the agent, Trellis-style); the gate catches `code -> doc`
+  drift (a claimed symbol/edge renamed/moved without updating the page).
 
 ## Rules for generated pages
 
@@ -43,12 +43,17 @@ of the wiki (raw repo + facts -> wiki -> **this contract**): the rules a coding 
 
 1. The prose is **advisory** — write it for agents/humans, but Codas does not verify its
    meaning, and it must not enter the inventory hash (the scans skip this subtree).
-2. The verified surface is the fenced `atlas:claims` block, one anchor per line:
-   - `anchor_symbol: <concept> -> <repo-rel path>:<symbol name>`
-3. Each `anchor_symbol` **must resolve** to a current symbol fact (module + name). A
-   non-resolving anchor is a `code_anchor` **warning** (never an error) — `symbols` is an
-   open-world family, so absence is a lower bound, not proof: the code may have moved (update
-   the page) or it may take a dynamic/conditional form the extractor misses.
+2. The verified surface is the fenced `atlas:claims` block, one structural claim per line
+   (node-id = `<path>::::<symbol>` for a top-level def, `<path>::<class>::<symbol>` for a
+   method, or a bare repo-rel `<path>` for a module/package):
+   - `defines: <concept> -> <node-id>`
+   - `calls: <node-id> -> <node-id>`
+   - `contains: <node-id>`
+3. Each claim **must resolve** to a current fact (a `defines`/`contains` subject to a known
+   node, a `calls` to a known call edge). A non-resolving claim is a `code_anchor` **warning**
+   (never an error) — `symbols`/`calls` are open-world families, so absence is a lower bound,
+   not proof: the code may have moved (update the page) or it may take a dynamic/conditional
+   form the extractor misses.
 
 ## The W3 semantic judge loop (host-agent contract)
 

@@ -68,22 +68,21 @@ graph LR
   n46["src/codas/policies/missing_owner.py"]
   n47["src/codas/policies/policy_registry.py"]
   n48["src/codas/policies/program_plan.py"]
-  n49["src/codas/policies/semantic_wiki.py"]
-  n50["src/codas/policies/stale_claim.py"]
-  n51["src/codas/policies/stale_html_claim.py"]
-  n52["src/codas/policies/stale_wiki_claim.py"]
-  n53["src/codas/policies/structure_drift.py"]
-  n54["src/codas/policies/structure_map.py"]
-  n55["src/codas/policies/trellis_context.py"]
-  n56["src/codas/policies/waivers.py"]
-  n57["src/codas/reporting/console.py"]
-  n58["src/codas/structure/__init__.py"]
-  n59["src/codas/structure/document_loader.py"]
-  n60["src/codas/structure/index.py"]
-  n61["src/codas/structure/inventory.py"]
-  n62["src/codas/structure/loader.py"]
-  n63["src/codas/structure/models.py"]
-  n64["src/codas/structure/program_loader.py"]
+  n49["src/codas/policies/stale_claim.py"]
+  n50["src/codas/policies/stale_html_claim.py"]
+  n51["src/codas/policies/stale_wiki_claim.py"]
+  n52["src/codas/policies/structure_drift.py"]
+  n53["src/codas/policies/structure_map.py"]
+  n54["src/codas/policies/trellis_context.py"]
+  n55["src/codas/policies/waivers.py"]
+  n56["src/codas/reporting/console.py"]
+  n57["src/codas/structure/__init__.py"]
+  n58["src/codas/structure/document_loader.py"]
+  n59["src/codas/structure/index.py"]
+  n60["src/codas/structure/inventory.py"]
+  n61["src/codas/structure/loader.py"]
+  n62["src/codas/structure/models.py"]
+  n63["src/codas/structure/program_loader.py"]
   n0 --> n26
   n1 --> n5
   n1 --> n9
@@ -124,17 +123,16 @@ graph LR
   n13 --> n53
   n13 --> n54
   n13 --> n55
-  n13 --> n56
   n14 --> n27
-  n14 --> n59
-  n14 --> n62
-  n14 --> n64
+  n14 --> n58
+  n14 --> n61
+  n14 --> n63
   n15 --> n35
   n16 --> n27
   n16 --> n31
   n16 --> n33
   n18 --> n31
-  n18 --> n61
+  n18 --> n60
   n19 --> n18
   n19 --> n20
   n19 --> n27
@@ -167,8 +165,8 @@ graph LR
   n26 --> n24
   n26 --> n25
   n26 --> n27
-  n26 --> n57
-  n26 --> n62
+  n26 --> n56
+  n26 --> n61
   n31 --> n2
   n31 --> n3
   n31 --> n4
@@ -180,7 +178,7 @@ graph LR
   n31 --> n27
   n31 --> n32
   n31 --> n34
-  n31 --> n60
+  n31 --> n59
   n32 --> n2
   n32 --> n6
   n32 --> n34
@@ -188,22 +186,22 @@ graph LR
   n34 --> n3
   n34 --> n6
   n34 --> n7
-  n34 --> n60
+  n34 --> n59
   n36 --> n28
   n36 --> n31
   n37 --> n27
   n37 --> n28
   n38 --> n28
   n38 --> n31
-  n38 --> n60
-  n38 --> n62
+  n38 --> n59
+  n38 --> n61
   n39 --> n27
   n39 --> n28
-  n39 --> n60
-  n39 --> n62
+  n39 --> n59
+  n39 --> n61
   n40 --> n27
   n40 --> n28
-  n40 --> n59
+  n40 --> n58
   n41 --> n27
   n41 --> n28
   n42 --> n27
@@ -216,54 +214,52 @@ graph LR
   n44 --> n31
   n45 --> n28
   n45 --> n31
-  n45 --> n62
-  n45 --> n64
+  n45 --> n61
+  n45 --> n63
   n46 --> n27
   n46 --> n28
-  n46 --> n60
+  n46 --> n59
+  n46 --> n61
   n46 --> n62
-  n46 --> n63
   n47 --> n27
   n47 --> n28
   n47 --> n31
   n48 --> n27
   n48 --> n28
-  n48 --> n64
+  n48 --> n63
   n49 --> n28
   n49 --> n31
   n50 --> n28
   n50 --> n31
   n51 --> n28
   n51 --> n31
+  n51 --> n40
+  n52 --> n27
   n52 --> n28
-  n52 --> n31
-  n52 --> n40
+  n52 --> n59
+  n52 --> n61
   n53 --> n27
   n53 --> n28
-  n53 --> n60
-  n53 --> n62
+  n53 --> n61
   n54 --> n27
   n54 --> n28
-  n54 --> n62
-  n55 --> n27
   n55 --> n28
   n56 --> n28
-  n57 --> n28
+  n57 --> n61
+  n57 --> n62
+  n57 --> n63
+  n58 --> n27
   n58 --> n62
-  n58 --> n63
-  n58 --> n64
-  n59 --> n27
-  n59 --> n63
+  n59 --> n62
+  n60 --> n9
+  n60 --> n27
+  n60 --> n31
+  n60 --> n58
+  n60 --> n59
+  n60 --> n61
   n60 --> n63
-  n61 --> n9
   n61 --> n27
-  n61 --> n31
-  n61 --> n59
-  n61 --> n60
   n61 --> n62
-  n61 --> n64
-  n62 --> n27
-  n62 --> n63
-  n64 --> n27
-  n64 --> n63
+  n63 --> n27
+  n63 --> n62
 ```
