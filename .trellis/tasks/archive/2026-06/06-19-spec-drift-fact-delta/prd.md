@@ -1,5 +1,14 @@
 # spec_drift v2: fact-delta deterministic couplings (retire drift_couplings)
 
+## Triage 2026-06-21 — CLOSED (mechanism shipped; remainder is as-needed, not a task)
+The v2 GATING MECHANISM shipped: the `fact_coupling` policy consuming `ctx.fact_delta()` is
+live (`.codas/claims.yml` `fact_couplings` — the `check_*`→check.py wiring coupling AND the
+anchor-to-source openworld→design.html coupling both in production), and the v1 `drift_couplings`
+file-level layer is RETIRED. The reframed decision (couplings are added SELECTIVELY when a
+specific fact-delta makes a companion obligation always-true; the coarse `must_update_if_changed`
+stays ADVISORY) means there is no discrete "migrate every hint" deliverable — a new coupling is
+authored per-need, each its own small change with codex review. Nothing open here; archived.
+
 ## Status
 
 PLANNING / queued — **v2-A substrate + policy_registry SHIPPED; v2-B couplings DEFERRED.**
