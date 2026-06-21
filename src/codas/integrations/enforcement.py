@@ -28,13 +28,19 @@ def render_hook(hook_name: str, command: str = DEFAULT_CHECK_COMMAND) -> str:
 
     Deterministic — byte-identical across calls for the same args, so a re-install of
     an unchanged hook is a no-op write.
+
+    The command runs as the script's LAST line (no ``exec``): the hook then exits with the
+    command's status, blocking the git op on a non-zero ``codas check``. ``exec`` is avoided
+    deliberately — ``exec VAR=val cmd`` is invalid in sh (exec cannot take an env-var prefix),
+    so a source-checkout command like ``PYTHONPATH=src python3 -m codas check .`` would fail
+    with 'exec: PYTHONPATH=src: not found'; a plain line lets sh parse the assignment.
     """
     return (
         "#!/bin/sh\n"
         f"{HOOK_MARKER} ({hook_name})\n"
         "# Installed by `codas hooks --install`. Blocks the operation when\n"
         "# `codas check` reports error findings. Remove this file to disable.\n"
-        f"exec {command}\n"
+        f"{command}\n"
     )
 
 

@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONPATH=src python3 -m codas preflight  # codas-managed-hook"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -99,7 +99,10 @@ class InstallHooksTests(unittest.TestCase):
             _git_init(repo)
             install_git_hooks(repo, command="PYTHONPATH=src python3 -m codas check .")
             body = (repo / ".git" / "hooks" / "pre-commit").read_text()
-            self.assertIn("exec PYTHONPATH=src python3 -m codas check .\n", body)
+            # No `exec` — `exec VAR=val cmd` is invalid in sh; the command runs as the last
+            # line and the hook exits with its status (env-prefixed commands must work).
+            self.assertIn("\nPYTHONPATH=src python3 -m codas check .\n", body)
+            self.assertNotIn("exec ", body)
 
     def test_marker_substring_in_foreign_hook_not_clobbered(self) -> None:
         # The marker on a non-line-2 comment must NOT mark the hook as Codas-owned.

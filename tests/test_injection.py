@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -296,6 +299,31 @@ class PreflightDigestTests(unittest.TestCase):
             digest = build_context_pack(repo, task_id="t1")["digest"]
             self.assertEqual(digest["affected_units"], [])
             self.assertEqual(digest["reuse_candidates"], [])
+
+
+class HooksCliTests(unittest.TestCase):
+    """Regression: `codas hooks --install` via the CLI. The `--command` flag once collided with
+    the subparsers' `dest="command"` (argparse overwrote the selected command with the flag
+    value), so the CLI path raised 'unknown command' even though the app function worked."""
+
+    def test_hooks_install_cli_end_to_end(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            _write(repo / ".codas" / "config.yml", "version: 1\n")
+            env = {**os.environ, "PYTHONPATH": str(Path.cwd() / "src")}
+            result = subprocess.run(
+                [
+                    sys.executable, "-m", "codas", "hooks", "--install", ".",
+                    "--command", "echo check", "--agent-command", "echo preflight",
+                ],
+                cwd=repo, capture_output=True, text=True, env=env, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("installed pre-commit", result.stdout)
+            self.assertIn("claude session hook: installed", result.stdout)
+            self.assertTrue((repo / ".claude" / "settings.json").is_file())
+            self.assertTrue((repo / ".codas" / ".install-state.json").is_file())
 
 
 if __name__ == "__main__":

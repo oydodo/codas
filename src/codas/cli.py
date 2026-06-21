@@ -172,6 +172,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     hooks.add_argument(
         "--command",
+        dest="check_command",  # NOT `command` — that dest is the subparsers' selected command
         default="codas check .",
         help=(
             "Check command the hooks run. Default 'codas check .' assumes codas is on "
@@ -347,7 +348,7 @@ def main(argv: list[str] | None = None) -> int:
 
         if not args.install:
             parser.error("hooks: use --install to install the git enforcement hooks.")
-        result = install_git_hooks(repo, force=args.force, command=args.command)
+        result = install_git_hooks(repo, force=args.force, command=args.check_command)
         if result is None:
             print(
                 "hooks: no usable git hooks directory (not a git repo, or core.hooksPath is invalid).",
