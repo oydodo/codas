@@ -1,5 +1,11 @@
 # PRD — P5 wiki architecture decision (verified, agent-driven LLM-wiki)
 
+## Triage 2026-06-21 — CLOSED (decision recorded + fully implemented)
+A DECISION RECORD whose decision was made AND implemented end-to-end: P5 D3 (atlas pack +
+generated sections + generated_wiki_drift), W1 code-wiki, Block A (`codas wiki --emit-tree`),
+W3 (S3 `--emit-feed`/`--calibrate`, S1 `--emit-mermaid`/`--emit-html`). Positioning recorded in
+CONTEXT.md `## Positioning` + memory [[codas-wiki-architecture]]. No open work; archived.
+
 Decision record for how Codas does "wiki" (P5 D3 onward). Output of a design
 brainstorm: a 3-lens design workflow + two adversarial codex rounds + an extended
 grill session. The implementation slices (D3a–e) reference this; full reasoning is
