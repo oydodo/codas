@@ -4,7 +4,12 @@ from pathlib import Path
 
 from codas.config.loader import CodasConfig
 from codas.core.models import Evidence, Finding
-from codas.structure.index import discover_files, normalize_path, workspace_roots
+from codas.structure.index import (
+    derived_output_prefixes,
+    discover_files,
+    normalize_path,
+    workspace_roots,
+)
 from codas.structure.loader import StructureMapError, load_structure_map
 
 STRUCTURE_SOURCE = ".codas/structure.yml"
@@ -30,7 +35,7 @@ def check_deprecated_path_used(repo: Path, config: CodasConfig) -> list[Finding]
         return []  # malformedness is structure_map_loads' responsibility
 
     roots = workspace_roots(config.raw)
-    files = discover_files(repo, roots)
+    files = discover_files(repo, roots, derived_output_prefixes(config.raw))
 
     # (prefix, dep) for every non-empty deprecated path. An empty/'.' prefix would
     # match the whole repo: skip it as misconfiguration rather than flag every file.

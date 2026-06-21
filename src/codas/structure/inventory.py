@@ -8,7 +8,13 @@ from codas.config.loader import load_codas_config
 from codas.facts.context import ScanContext
 
 from .document_loader import load_document_manifest
-from .index import build_artifact_index, discover_files, workspace_roots
+from .index import (
+    build_artifact_index,
+    derived_output_prefixes,
+    discover_files,
+    is_derived_output,
+    workspace_roots,
+)
 from .loader import load_structure_map
 from .program_loader import load_program_plan
 
@@ -55,7 +61,7 @@ def build_inventory(
     if ctx is None:
         config = load_codas_config(repo / ".codas" / "config.yml")
         roots = workspace_roots(config.raw)
-        files = discover_files(repo, roots)
+        files = discover_files(repo, roots, derived_output_prefixes(config.raw))
         if exclude_under:
             files = [
                 path
@@ -71,10 +77,13 @@ def build_inventory(
         roots = ctx.roots
 
     files = list(ctx.files)
+    derived_prefixes = derived_output_prefixes(config.raw)
     structure_map = load_structure_map(
         repo / ".codas" / "structure.yml", source=STRUCTURE_SOURCE
     )
-    index = build_artifact_index(repo, roots, structure_map, files=files)
+    index = build_artifact_index(
+        repo, roots, structure_map, files=files, derived_prefixes=derived_prefixes
+    )
 
     units = []
     for unit in sorted(structure_map.units, key=lambda item: item.id):
@@ -131,7 +140,14 @@ def build_inventory(
                     "path": document.path,
                     "authority": document.authority,
                     "owner": document.owner,
-                    "observed": {"exists": (repo / document.path).exists()},
+                    "observed": {
+                        # A documents-role TARGET under the reserved book root resolves ABSENT
+                        # without disk I/O — the book is scanner-invisible, so a role pointing
+                        # at it must not flip exists into the byte-identical inventory hash.
+                        "exists": False
+                        if is_derived_output(document.path, derived_prefixes)
+                        else (repo / document.path).exists()
+                    },
                 }
                 for document in sorted(manifest.documents, key=lambda doc: doc.role)
             ],

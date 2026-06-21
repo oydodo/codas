@@ -31,15 +31,16 @@ Two responsibilities are kept deliberately separate. The loaders (`load_structur
 - `ArtifactIndex` *(class)*
 - `UnitObservation` *(class)*
 - `_git_files` *(function)*
-- `_is_derived_output` *(function)*
 - `_is_glob` *(function)*
 - `_literal_prefix` *(function)*
 - `_matches` *(function)*
 - `_owning_unit` *(function)*
 - `_walk_files` *(function)*
 - `build_artifact_index` *(function)*
+- `derived_output_prefixes` *(function)*
 - `discover_files` *(function)*
 - `filter_to_roots` *(function)*
+- `is_derived_output` *(function)*
 - `normalize_path` *(function)*
 - `workspace_roots` *(function)*
 

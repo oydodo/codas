@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from codas.structure.index import DERIVED_OUTPUT_DEFAULT, is_derived_output
+
 KNOWN_EXTS = (".md", ".py", ".html", ".yml", ".yaml", ".json", ".toml", ".txt")
 # `.codas/wiki/code/` holds hand-authored Atlas code-wiki pages whose prose is advisory
 # and must NOT enter the byte-identical inventory hash (only their structural claims are
@@ -31,12 +33,21 @@ class DocClaim:
     exists: bool
 
 
-def extract_doc_claims(repo: Path, files: tuple[str, ...]) -> list[DocClaim]:
+def extract_doc_claims(
+    repo: Path,
+    files: tuple[str, ...],
+    derived_prefixes: tuple[str, ...] = DERIVED_OUTPUT_DEFAULT,
+) -> list[DocClaim]:
     """Extract repo-relative path references from governance Markdown docs.
 
     Fence-aware; normalizes each candidate (drop external/anchor, split off
     fragment) before a conservative path-shape gate. Index only — the consuming
     `stale_claim` policy is P2.
+
+    ``derived_prefixes`` (config-driven via ``derived_output_prefixes``, default
+    ``("wiki",)``) are the reserved Codas-rendered output roots: a claim TARGET under one
+    resolves ``exists=False`` WITHOUT a ``Path.exists()`` call, so a doc referencing the
+    book never leaks the book's on-disk presence into the byte-identical inventory hash.
     """
     md_files = [
         f for f in files if f.endswith(".md") and not f.startswith(SKIP_PREFIXES)
@@ -58,13 +69,18 @@ def extract_doc_claims(repo: Path, files: tuple[str, ...]) -> list[DocClaim]:
                 if normalized is None:
                     continue
                 raw_path, fragment = normalized
-                path = _resolve(repo, source, raw_path, kind)
+                path = _resolve(repo, source, raw_path, kind, derived_prefixes)
                 if path is None:  # escapes the repo
                     continue
                 key = (source, lineno, path, fragment, kind)
                 if key in seen:
                     continue
                 seen.add(key)
+                exists = (
+                    False
+                    if is_derived_output(path, derived_prefixes)
+                    else (repo / path).exists()
+                )
                 claims.append(
                     DocClaim(
                         source=source,
@@ -72,7 +88,7 @@ def extract_doc_claims(repo: Path, files: tuple[str, ...]) -> list[DocClaim]:
                         path=path,
                         fragment=fragment,
                         kind=kind,
-                        exists=(repo / path).exists(),
+                        exists=exists,
                     )
                 )
 
@@ -97,13 +113,25 @@ def _candidates(line: str) -> list[tuple[str, str]]:
     return found
 
 
-def _resolve(repo: Path, source: str, path: str, kind: str) -> str | None:
+def _resolve(
+    repo: Path,
+    source: str,
+    path: str,
+    kind: str,
+    derived_prefixes: tuple[str, ...] = (),
+) -> str | None:
     """Resolve a reference to a repo-relative path.
 
     Markdown links are relative to the source file's directory; a leading `/`
     means repo root. Backtick code spans are repo-relative by convention, but
     fall back to source-relative when the repo-relative path does not exist.
     Returns None if the result escapes the repository.
+
+    The code-span branch DISAMBIGUATES repo-relative vs source-relative by a
+    ``Path.exists()`` probe, so a reserved derived-output target (the ``wiki/`` book) would
+    serialize a DIFFERENT ``path`` with vs without the book on disk. Guard it: a repo-relative
+    candidate under ``derived_prefixes`` is treated as not-present-at-repo-root (skip the probe,
+    fall through to the source-relative form) so the resolved path is book-presence-invariant.
     """
     if path.startswith("/"):
         resolved = posixpath.normpath(path.lstrip("/"))
@@ -111,7 +139,10 @@ def _resolve(repo: Path, source: str, path: str, kind: str) -> str | None:
         resolved = _join(source, path)
     else:  # code span: repo-relative, with source-relative fallback
         repo_rel = posixpath.normpath(path)
-        if (repo / repo_rel).exists():
+        repo_rel_present = not is_derived_output(repo_rel, derived_prefixes) and (
+            repo / repo_rel
+        ).exists()
+        if repo_rel_present:
             resolved = repo_rel
         else:
             src_rel = _join(source, path)

@@ -18,30 +18,56 @@ _IGNORE_DIRS = {".git", "__pycache__"}
 # corpus-out-of-hash guarantee then holds unconditionally, not only in a git repo.
 _IGNORE_PATHS = {".codas/receipts", ".codas/cache"}
 
-# Repo-relative prefixes for Codas-RENDERED committed output — scanned NEVER as input.
+# Default reserved prefix for Codas-RENDERED committed output — scanned NEVER as input.
 # Distinct from _IGNORE_PATHS (local/regenerable cache + receipts, walk-only): the wiki/
 # book is COMMITTED but DERIVED (a pure render of facts + .codas/wiki/ source prose), so
 # scanning it would be (a) self-referential — the book renders facts and its bytes would
 # then feed the inventory hash the book pins — and (b) churn-amplifying: every prose edit
-# would move the inventory hash. Excluded at filter_to_roots, the ONE funnel shared by
-# discover_files (working-tree scan), head_snapshot (HEAD fact baseline), and the artifact
-# index, so every scan honors the reserved prefix in one place. W7 lifts this into config.
-_DERIVED_OUTPUT_PREFIXES = ("wiki",)
+# would move the inventory hash. The reservation is honored in TWO layers: the FILE SCANNER
+# (filter_to_roots, the ONE funnel shared by discover_files, head_snapshot, and the artifact
+# index) AND every claim/role existence site that resolves a path -> fact (the doc/wiki/html
+# adapters + the documents-role) — a governance doc referencing the book must resolve it
+# ABSENT, never hit Path.exists(), or the book's on-disk presence would leak into the hash.
+# W7 lifts the prefix into config (`wiki.book_root`): default keeps ("wiki",); an explicit
+# empty string opts out so a user's real wiki/ docs are governed normally (no over-reach).
+DERIVED_OUTPUT_DEFAULT = ("wiki",)
 
 
-def _is_derived_output(path: str) -> bool:
-    """True if ``path`` is under a reserved Codas-rendered output prefix. Prefix-boundary
-    safe: ``wiki/`` matches ``wiki`` and ``wiki/x`` but never ``wikipedia.py`` at root.
+def derived_output_prefixes(raw: dict[str, Any]) -> tuple[str, ...]:
+    """Resolve the reserved Codas-rendered output prefixes from raw config.
 
-    NB the exclusion lives at the FILE SCANNER (filter_to_roots) only. The doc/wiki/html
-    claim adapters resolve claim-target existence by hitting the filesystem directly — a
-    governance doc that references a path UNDER the book would leak the book's on-disk
-    presence into the inventory hash. That layer is NOT guarded here because a blanket
-    "wiki/ is absent" rule over-reaches (it would mark a user's real wiki/ docs missing); the
-    fix needs the config-aware book root and lands with W7 (see test_book invariant guard)."""
+    Mirrors :func:`workspace_roots`: pure, reads the raw mapping, never imports the config
+    layer. The single source of the reservation, threaded as DATA to the scanner and the
+    claim/role existence sites so the book is dropped from EVERY scan and resolved absent by
+    EVERY existence check, in one config-driven place. Resolution of ``wiki.book_root``:
+
+      - absent / null  -> default ``("wiki",)`` (the W4a shipped reservation; a repo that
+                          never declares the knob keeps its rendered book invisible to scans).
+      - ``""``          -> ``()`` — explicit OPT-OUT; a user's real ``wiki/`` docs are then
+                          governed normally (this is the escape hatch that dissolves over-reach).
+      - ``<path>``      -> ``(<normalized path>,)``.
+    """
+    wiki = raw.get("wiki")
+    if isinstance(wiki, dict) and "book_root" in wiki:
+        root = wiki.get("book_root")
+        if root is None:
+            return DERIVED_OUTPUT_DEFAULT
+        # normalize_path collapses `.`/`./x`/trailing-slash/backslashes to the repo-relative
+        # forward-slash form used by every scanned path, so the prefix-match cannot silently
+        # miss; an empty/root result is the explicit opt-out.
+        text = normalize_path(str(root))
+        return (text,) if text else ()
+    return DERIVED_OUTPUT_DEFAULT
+
+
+def is_derived_output(path: str, prefixes: tuple[str, ...]) -> bool:
+    """True if ``path`` is under one of the reserved Codas-rendered output ``prefixes``.
+    Prefix-boundary safe: ``wiki/`` matches ``wiki`` and ``wiki/x`` but never ``wikipedia.py``
+    at root. The SINGLE authority used by the scanner AND every existence site (one predicate,
+    no forked rule)."""
     return any(
         path == prefix or path.startswith(prefix + "/")
-        for prefix in _DERIVED_OUTPUT_PREFIXES
+        for prefix in prefixes
     )
 
 
@@ -100,16 +126,26 @@ def _literal_prefix(pattern: str) -> str:
     return pattern[:cut].rstrip("/")
 
 
-def discover_files(repo: Path, roots: tuple[str, ...]) -> list[str]:
+def discover_files(
+    repo: Path,
+    roots: tuple[str, ...],
+    derived_prefixes: tuple[str, ...] = DERIVED_OUTPUT_DEFAULT,
+) -> list[str]:
     files = _git_files(repo)
     if files is None:
-        files = _walk_files(repo)
-    return filter_to_roots(files, roots)
+        files = _walk_files(repo, derived_prefixes)
+    return filter_to_roots(files, roots, derived_prefixes)
 
 
-def filter_to_roots(files: list[str], roots: tuple[str, ...]) -> list[str]:
+def filter_to_roots(
+    files: list[str],
+    roots: tuple[str, ...],
+    derived_prefixes: tuple[str, ...] = DERIVED_OUTPUT_DEFAULT,
+) -> list[str]:
     """Select the files under the configured workspace roots (sorted, unique), minus the
-    reserved Codas-rendered output prefixes (:data:`_DERIVED_OUTPUT_PREFIXES`).
+    reserved Codas-rendered output ``derived_prefixes`` (config-driven via
+    :func:`derived_output_prefixes`; defaults to ``("wiki",)`` so a config-less caller keeps
+    the shipped reservation).
 
     Public so any scan that builds its own file list off-disk — e.g. the
     ``HEAD`` fact snapshot reading ``git ls-tree`` — applies the IDENTICAL root
@@ -119,7 +155,7 @@ def filter_to_roots(files: list[str], roots: tuple[str, ...]) -> list[str]:
     norm_roots = [normalize_path(root) for root in roots] or [""]
     selected: set[str] = set()
     for path in files:
-        if _is_derived_output(path):
+        if is_derived_output(path, derived_prefixes):
             continue
         for root in norm_roots:
             if root == "" or path == root or path.startswith(root + "/"):
@@ -141,7 +177,9 @@ def _git_files(repo: Path) -> list[str] | None:
     return [line.replace("\\", "/") for line in result.stdout.splitlines() if line.strip()]
 
 
-def _walk_files(repo: Path) -> list[str]:
+def _walk_files(
+    repo: Path, derived_prefixes: tuple[str, ...] = DERIVED_OUTPUT_DEFAULT
+) -> list[str]:
     files: list[str] = []
     for dirpath, dirnames, filenames in os.walk(repo):
         dirnames[:] = [
@@ -149,7 +187,9 @@ def _walk_files(repo: Path) -> list[str]:
             for name in dirnames
             if name not in _IGNORE_DIRS
             and (Path(dirpath) / name).relative_to(repo).as_posix() not in _IGNORE_PATHS
-            and not _is_derived_output((Path(dirpath) / name).relative_to(repo).as_posix())
+            and not is_derived_output(
+                (Path(dirpath) / name).relative_to(repo).as_posix(), derived_prefixes
+            )
         ]
         for name in filenames:
             if name.endswith(".pyc"):
@@ -164,11 +204,12 @@ def build_artifact_index(
     roots: tuple[str, ...],
     structure_map: StructureMap,
     files: list[str] | None = None,
+    derived_prefixes: tuple[str, ...] = DERIVED_OUTPUT_DEFAULT,
 ) -> ArtifactIndex:
     if files is None:
-        files = discover_files(repo, roots)
+        files = discover_files(repo, roots, derived_prefixes)
     else:
-        files = filter_to_roots(files, roots)
+        files = filter_to_roots(files, roots, derived_prefixes)
 
     literal_units: list[tuple[str, StructureUnit]] = []
     glob_units: list[tuple[str, StructureUnit]] = []
@@ -200,6 +241,13 @@ def build_artifact_index(
             exists = any(fnmatch.fnmatch(path, prefix) for path in files)
         elif prefix == "":
             exists = True
+        elif is_derived_output(prefix, derived_prefixes):
+            # A literal structure unit pointing at the reserved book root resolves ABSENT
+            # without touching disk — the book is scanner-invisible, so its on-disk presence
+            # must never flip a unit's observed.exists into the byte-identical inventory.
+            # Inert today (no unit declares the book path; registration is config-only), but
+            # guarded preemptively so the existence layer has no unprotected Path.exists().
+            exists = False
         else:
             exists = (repo / prefix).exists()
         observations[unit.id] = UnitObservation(unit.id, exists, counts[unit.id])

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from codas.adapters.markdown import KNOWN_EXTS, _candidates, _resolve
+from codas.structure.index import DERIVED_OUTPUT_DEFAULT, is_derived_output
 
 WIKI_ROOT_DEFAULT = ".codas/wiki"
 # Hand-authored Atlas code-wiki pages (advisory prose + verified structural claims). Their
@@ -44,7 +45,10 @@ class WikiClaims:
 
 
 def extract_wiki_claims(
-    repo: Path, files: tuple[str, ...], wiki_root: str = WIKI_ROOT_DEFAULT
+    repo: Path,
+    files: tuple[str, ...],
+    wiki_root: str = WIKI_ROOT_DEFAULT,
+    derived_prefixes: tuple[str, ...] = DERIVED_OUTPUT_DEFAULT,
 ) -> WikiClaims:
     """Parse structured path assertions from the Atlas Wiki markdown.
 
@@ -106,11 +110,11 @@ def extract_wiki_claims(
                 if normalized is None:
                     continue
                 raw_path, _fragment = normalized
-                path = _resolve(repo, source, raw_path, cand_kind)
+                path = _resolve(repo, source, raw_path, cand_kind, derived_prefixes)
                 if path is None:  # escapes the repo
                     continue
                 path_kind = "glob" if "*" in path else "literal"
-                exists = _exists(repo, path, path_kind)
+                exists = _exists(repo, path, path_kind, derived_prefixes)
                 # The slash-only code-span gate is permissive enough to catch
                 # prose like `read/write`. Keep a claim only when it is a genuine
                 # path reference: a known extension, a glob, or something that
@@ -164,7 +168,18 @@ def _wiki_normalize(candidate: str, kind: str) -> tuple[str, str] | None:
     return path, fragment
 
 
-def _exists(repo: Path, path: str, path_kind: str) -> bool:
+def _exists(
+    repo: Path,
+    path: str,
+    path_kind: str,
+    derived_prefixes: tuple[str, ...] = DERIVED_OUTPUT_DEFAULT,
+) -> bool:
+    # A reserved derived-output target (the wiki/ book — literal path OR a wiki/* glob)
+    # resolves ABSENT without touching disk, so a wiki page citing the book never leaks the
+    # book's presence into the inventory hash. Covers both forms (a `wiki/` literal and a
+    # `wiki/*` glob both match the prefix), short-circuiting before the glob/exists probe.
+    if is_derived_output(path, derived_prefixes):
+        return False
     if path_kind == "glob":
         try:
             return any(True for _ in repo.glob(path))

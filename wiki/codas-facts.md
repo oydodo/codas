@@ -24,6 +24,7 @@ The `facts` package is the **adapter boundary made concrete** — the one seam w
 ### `src/codas/facts/context.py`
 
 - `ScanContext` *(class)*
+  - `_derived_prefixes` *(function)*
   - `_parsed` *(function)*
   - `calls` *(function)*
   - `changed_paths` *(function)*

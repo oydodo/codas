@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from codas.adapters.markdown import DocClaim, _normalize, _resolve
+from codas.structure.index import DERIVED_OUTPUT_DEFAULT, is_derived_output
 
 # Govern authoritative/supporting `.html` docs (Layer 1: path/link existence). HTML is a
 # governance black hole today — the markdown adapter scans `.md` only, so a path
@@ -42,7 +43,11 @@ def _strip_dot_slash(path: str) -> str:
     return cleaned
 
 
-def extract_html_claims(repo: Path, files: list[str]) -> list[DocClaim]:
+def extract_html_claims(
+    repo: Path,
+    files: list[str],
+    derived_prefixes: tuple[str, ...] = DERIVED_OUTPUT_DEFAULT,
+) -> list[DocClaim]:
     """Path/link claims from the given (already config-scoped) ``.html`` files.
 
     Mirrors markdown code/link extraction: a `<code>` span is the ``code`` kind, an
@@ -50,6 +55,10 @@ def extract_html_claims(repo: Path, files: list[str]) -> list[DocClaim]:
     path-shape gate. `<pre>` blocks are illustrative examples (the HTML analogue of a
     markdown fenced block) and excluded. Deterministic: dedup on the identity key, total
     sort.
+
+    ``derived_prefixes`` (default ``("wiki",)``): a claim target under a reserved
+    Codas-rendered output root resolves ``exists=False`` without a ``Path.exists()`` call
+    (parity with ``extract_doc_claims`` — the book never leaks into the inventory hash).
     """
     claims: list[DocClaim] = []
     seen: set[tuple[str, int, str, str, str]] = set()
@@ -66,13 +75,18 @@ def extract_html_claims(repo: Path, files: list[str]) -> list[DocClaim]:
             if normalized is None:
                 continue
             raw_path, fragment = normalized
-            path = _resolve(repo, source, raw_path, kind)
+            path = _resolve(repo, source, raw_path, kind, derived_prefixes)
             if path is None:  # escapes the repo
                 continue
             key = (source, line, path, fragment, kind)
             if key in seen:
                 continue
             seen.add(key)
+            exists = (
+                False
+                if is_derived_output(path, derived_prefixes)
+                else (repo / path).exists()
+            )
             claims.append(
                 DocClaim(
                     source=source,
@@ -80,7 +94,7 @@ def extract_html_claims(repo: Path, files: list[str]) -> list[DocClaim]:
                     path=path,
                     fragment=fragment,
                     kind=kind,
-                    exists=(repo / path).exists(),
+                    exists=exists,
                 )
             )
     claims.sort(

@@ -3,7 +3,12 @@
 The host-agent authoring contract for the Codas Atlas Wiki. This is the *schema* layer
 of the wiki (raw repo + facts -> wiki -> **this contract**): the rules a coding agent
 (or an OSS LLM-wiki backend) must follow when producing or editing Atlas content. Codas
-**grounds** the wiki (verified facts), an LLM **renders** it, and Codas **verifies** it.
+**grounds** the wiki (verified facts) and **renders** the generated pages + the `wiki/`
+book DETERMINISTICALLY — no model; an LLM only **authors** the advisory source prose (kept
+out of the byte-identical inventory hash), and Codas **verifies** the structural claims and
+byte-compares the render. The reader-facing book at `wiki/` is itself a reserved derived
+output (config `wiki.book_root`): excluded from every scan and resolved absent by every
+claim/role existence check, so a doc that links it never feeds the hash the book pins.
 
 ## What is governed vs supporting
 
@@ -132,6 +137,37 @@ node UNCONFIRMED. **Judge verdict (the discipline in action):**
 
 The value: the agent gets the rich semantic layer, yet every structural claim is fact-anchored and
 no LLM assertion can masquerade as ground truth.
+
+## Verification contract
+
+Every wiki artifact falls into one of four classes; each has a defined verifier and a defined
+relationship to the byte-identical inventory hash. Nothing an LLM writes is trusted on faith —
+it is either re-derivable, structurally fact-checked, or explicitly advisory.
+
+| Class | Where | In the hash? | Verifier |
+|---|---|---|---|
+| **FEED** (grounding) | `--emit-pack`/`--emit-tree`/`--emit-feed` stdout | no (ephemeral) | n/a — derived on demand |
+| **GENERATED** (governance pages) | `.codas/wiki/generated/**` | yes (committed facts) | `generated_wiki_drift` (claims) + `codas wiki --verify` (byte-compare) |
+| **WIKI-PAGES** (concept + code prose) | `.codas/wiki/**` incl. `.codas/wiki/code/**` | prose **out**; structural claims verified | `stale_wiki_claim` / `code_anchor` |
+| **CACHE** (offline semantic corpus) | `.codas/cache/semantic/**` | no (gitignored) | `codas wiki --calibrate` (offline only) |
+| **BOOK** (reader-facing) | `wiki/` (config `wiki.book_root`) | no (reserved derived output) | `codas wiki --verify` (byte-compare) |
+
+Verifier routing — which policy owns each claim stream (a claim is reported by exactly one,
+so the `stale_*` policies never double-count):
+
+| Claim stream | Source | Policy |
+|---|---|---|
+| markdown path/link refs | governance `.md` | `stale_claim` |
+| HTML path/link refs | authoritative/supporting `.html` | `stale_html_claim` |
+| wiki structural refs (`canonical_source` / `concept_page` / `evidence` / `sync_target`) | `.codas/wiki/**` pages | `stale_wiki_claim` |
+| generated `atlas:claims` (`unit` / `roadmap` / `source_inventory_hash`) | `.codas/wiki/generated/**` | `generated_wiki_drift` |
+| code-wiki structural claims (`defines` / `calls` / `contains`) | `.codas/wiki/code/**` | `code_anchor` (warning-only, open-world) |
+| the rendered book | `wiki/` | `codas wiki --verify` (not a `codas check` policy) |
+
+The book is verified by RE-RENDER, never by re-scan: `--write` regenerates it deterministically
+and `--verify` byte-compares the committed bytes to a fresh render (exit 1 if stale, incl. an
+orphaned chapter). It carries no `atlas:claims` block and is never an input — its freshness is
+purely "do the committed bytes equal what the facts render today".
 
 ## Author workflow
 

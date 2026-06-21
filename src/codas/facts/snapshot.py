@@ -12,7 +12,7 @@ from codas.adapters.python import (
     extract_symbol_facts_from_parsed,
 )
 from codas.adapters.python_parse import ParsedModules, parse_sources
-from codas.structure.index import filter_to_roots
+from codas.structure.index import DERIVED_OUTPUT_DEFAULT, filter_to_roots
 
 
 @dataclass(frozen=True)
@@ -40,20 +40,24 @@ def snapshot_from_parsed(parsed: ParsedModules) -> FactSnapshot:
     )
 
 
-def head_snapshot(repo: Path, roots: tuple[str, ...]) -> FactSnapshot | None:
+def head_snapshot(
+    repo: Path,
+    roots: tuple[str, ...],
+    derived_prefixes: tuple[str, ...] = DERIVED_OUTPUT_DEFAULT,
+) -> FactSnapshot | None:
     """The code-fact snapshot of the committed tree at ``HEAD``.
 
-    Lists ``.py`` blobs at ``HEAD``, filters to the configured workspace ``roots``
-    with the SAME discipline as the working-tree scan (:func:`filter_to_roots`), reads
-    each blob, parses, and projects. Returns ``None`` when ``HEAD`` does not resolve
-    (no commits / not a repo) OR when any blob read fails — never a partial snapshot,
-    because a missing file would otherwise read as its facts being "removed" (false
-    drift). The caller treats ``None`` as "no baseline".
+    Lists ``.py`` blobs at ``HEAD``, filters to the configured workspace ``roots`` and the
+    reserved ``derived_prefixes`` with the SAME discipline as the working-tree scan
+    (:func:`filter_to_roots`), reads each blob, parses, and projects. Returns ``None`` when
+    ``HEAD`` does not resolve (no commits / not a repo) OR when any blob read fails — never a
+    partial snapshot, because a missing file would otherwise read as its facts being
+    "removed" (false drift). The caller treats ``None`` as "no baseline".
     """
     listed = list_python_paths_at_head(repo)
     if listed is None:
         return None
-    keep = set(filter_to_roots([path for path, _ in listed], roots))
+    keep = set(filter_to_roots([path for path, _ in listed], roots, derived_prefixes))
     sources: dict[str, str] = {}
     for path, blob_sha in listed:  # already sorted by path
         if path not in keep:

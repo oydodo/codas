@@ -171,13 +171,11 @@ class ProseWeaveTests(unittest.TestCase):
 
 class LatentLeakGuardTests(unittest.TestCase):
     def test_no_governance_claim_targets_the_book(self) -> None:
-        # The wiki/ book is excluded at the FILE SCANNER, but the doc/wiki/html claim adapters
-        # resolve claim-target existence by hitting the filesystem directly. So IF a governance
-        # doc ever references a path under the committed book, its `exists` flips on the book's
-        # presence and bleeds into the byte-identical inventory hash. That fix is deferred to
-        # W7 (config-aware book root — a blanket "wiki/ absent" rule over-reaches onto a user's
-        # real wiki/ docs). This guard FAILS the moment that latent leak activates, forcing the
-        # W7 existence fix to land alongside the reference.
+        # W7 CLOSED the leak: a governance claim under the book root now resolves exists=False
+        # (config-aware, see BookReferenceLeakClosedTests). This guard remains as a hygiene
+        # check that Codas's OWN committed docs don't (yet) reference the rendered book — if one
+        # ever does it should appear with exists=False, never perturbing the hash; the active
+        # closure is proven below. A non-empty result here is a heads-up, not a leak.
         from codas.structure.inventory import build_inventory
 
         inv = build_inventory(Path.cwd())
@@ -186,18 +184,99 @@ class LatentLeakGuardTests(unittest.TestCase):
             (inv.get("wiki_claims") or {}).get("claims") or [],
             (inv.get("html_claims") or {}).get("references") or [],
         )
-        offenders = [
-            c["path"]
+        book_refs = [
+            c
             for section in sections
             for c in section
             if str(c.get("path", "")).startswith(f"{BOOK_ROOT}/")
         ]
+        # Whatever the count, NONE may carry exists=True (that would be the leak re-opening).
+        leaked = [c["path"] for c in book_refs if c.get("exists")]
         self.assertEqual(
-            offenders,
+            leaked,
             [],
-            f"governance claim(s) reference the derived {BOOK_ROOT}/ book — activate the W7 "
-            f"config-aware existence fix before this lands: {offenders}",
+            f"governance claim(s) under {BOOK_ROOT}/ resolved exists=True — the W7 existence "
+            f"guard is bypassed somewhere: {leaked}",
         )
+
+
+class BookReferenceLeakClosedTests(unittest.TestCase):
+    """W7 R2/R3: a governance doc referencing the rendered book resolves exists=False and the
+    inventory is byte-identical whether or not the book is on disk (the leak is CLOSED), while
+    an explicit opt-out (`wiki.book_root: ""`) governs a real `wiki/` dir normally."""
+
+    # A single non-catch-all unit (owns `src` only) so a SCANNED wiki/ file surfaces as
+    # `unowned` — the signal that distinguishes "reserved" (invisible) from "governed".
+    _STRUCTURE = (
+        "version: 1\n"
+        "kind: structure_map\n"
+        "units:\n"
+        "  code:\n"
+        "    path: src\n"
+        "    kind: package\n"
+        "    owner: O\n"
+        "    purpose: x\n"
+        "    canonical_placement: x\n"
+    )
+
+    def _scaffold(self, repo: Path, book_root: str, with_book: bool) -> None:
+        (repo / ".codas").mkdir(parents=True, exist_ok=True)
+        (repo / ".codas" / "config.yml").write_text(
+            f'version: 1\nwiki:\n  book_root: "{book_root}"\n', encoding="utf-8"
+        )
+        (repo / ".codas" / "structure.yml").write_text(self._STRUCTURE, encoding="utf-8")
+        # A supporting governance doc that references the rendered book (link + code span).
+        (repo / "README.md").write_text(
+            f"# r\n\nSee [the book]({BOOK_ROOT}/index.md) and `{BOOK_ROOT}/codas-app.md`.\n",
+            encoding="utf-8",
+        )
+        if with_book:
+            (repo / BOOK_ROOT).mkdir(parents=True, exist_ok=True)
+            (repo / BOOK_ROOT / "index.md").write_text("# book\n", encoding="utf-8")
+            (repo / BOOK_ROOT / "codas-app.md").write_text("# chapter\n", encoding="utf-8")
+
+    def _book_refs(self, inv: dict) -> list[dict]:
+        return [
+            r
+            for r in (inv.get("doc_claims") or {}).get("references") or []
+            if str(r["path"]).startswith(f"{BOOK_ROOT}/")
+        ]
+
+    def test_book_reference_does_not_move_inventory(self) -> None:
+        from codas.structure.inventory import build_inventory
+
+        with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
+            present, absent = Path(a), Path(b)
+            self._scaffold(present, "wiki", with_book=True)
+            self._scaffold(absent, "wiki", with_book=False)
+            inv_present = build_inventory(present)
+            inv_absent = build_inventory(absent)
+
+            # the README's book references are scanned (real doc claims)...
+            refs = self._book_refs(inv_present)
+            self.assertEqual({r["path"] for r in refs}, {"wiki/index.md", "wiki/codas-app.md"})
+            # ...but resolve exists=False DESPITE the book being on disk (the guard fires).
+            self.assertTrue(all(r["exists"] is False for r in refs), refs)
+            # and the book's on-disk presence does not move the inventory at all.
+            self.assertEqual(
+                json.dumps(inv_present, sort_keys=True),
+                json.dumps(inv_absent, sort_keys=True),
+            )
+
+    def test_opt_out_governs_real_wiki_dir(self) -> None:
+        # R3: `book_root: ""` disables the reservation — the `wiki/` dir is scanned normally and
+        # a doc reference to it resolves exists=True (no over-reach onto a user's real docs).
+        from codas.structure.inventory import build_inventory
+
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            self._scaffold(repo, "", with_book=True)
+            inv = build_inventory(repo)
+            refs = self._book_refs(inv)
+            self.assertTrue(refs)
+            self.assertTrue(all(r["exists"] is True for r in refs), refs)
+            # the wiki/ files are now part of the scanned set (governed, not reserved).
+            self.assertIn("wiki/index.md", inv.get("unowned") or [])
 
 
 if __name__ == "__main__":

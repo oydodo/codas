@@ -34,7 +34,11 @@ from codas.config.loader import CodasConfig
 from codas.facts.delta import FactDelta, diff_snapshots
 from codas.facts.snapshot import FactSnapshot
 from codas.facts.snapshot import head_snapshot as compute_head_snapshot
-from codas.structure.index import discover_files, workspace_roots
+from codas.structure.index import (
+    derived_output_prefixes,
+    discover_files,
+    workspace_roots,
+)
 
 # The facts seam surfaces the normalized fact vocabulary so policies can name the
 # fact types (DocClaim/SymbolFact/ImportFact) without importing an ecosystem
@@ -94,10 +98,24 @@ class ScanContext:
     files: tuple[str, ...]
     _cache: dict = field(default_factory=dict, init=False, compare=False, repr=False)
 
+    def _derived_prefixes(self) -> tuple[str, ...]:
+        """The config-driven reserved Codas-rendered output prefixes (cached).
+
+        Resolved from config and handed to the claim adapters + the HEAD snapshot as DATA,
+        so a doc/wiki/html claim targeting the rendered book resolves ABSENT (never a
+        ``Path.exists()``) and the book never leaks into the byte-identical inventory hash.
+        §11: this seam holds config; the adapters receive the resolved tuple, not the config.
+        """
+        if "derived_prefixes" not in self._cache:
+            self._cache["derived_prefixes"] = derived_output_prefixes(self.config.raw)
+        return self._cache["derived_prefixes"]
+
     def doc_claims(self) -> tuple[DocClaim, ...]:
         """Markdown doc claims for the scanned tree (cached, adapter-sorted)."""
         if "doc_claims" not in self._cache:
-            self._cache["doc_claims"] = tuple(extract_doc_claims(self.repo, self.files))
+            self._cache["doc_claims"] = tuple(
+                extract_doc_claims(self.repo, self.files, self._derived_prefixes())
+            )
         return self._cache["doc_claims"]
 
     def html_claims(self) -> tuple[DocClaim, ...]:
@@ -112,7 +130,9 @@ class ScanContext:
         if "html_claims" not in self._cache:
             patterns = self.config.authoritative_sources + self.config.supporting_sources
             scoped = governed_html_files(self.files, patterns)
-            self._cache["html_claims"] = tuple(extract_html_claims(self.repo, scoped))
+            self._cache["html_claims"] = tuple(
+                extract_html_claims(self.repo, scoped, self._derived_prefixes())
+            )
         return self._cache["html_claims"]
 
     def _parsed(self) -> ParsedModules:
@@ -143,7 +163,7 @@ class ScanContext:
         if "wiki_claims" not in self._cache:
             wiki_root = (self.config.raw.get("wiki") or {}).get("path", ".codas/wiki")
             self._cache["wiki_claims"] = extract_wiki_claims(
-                self.repo, self.files, wiki_root
+                self.repo, self.files, wiki_root, self._derived_prefixes()
             )
         return self._cache["wiki_claims"]
 
@@ -240,7 +260,9 @@ class ScanContext:
         / not a repo / a blob read failed — never a partial snapshot).
         """
         if "head_snapshot" not in self._cache:
-            self._cache["head_snapshot"] = compute_head_snapshot(self.repo, self.roots)
+            self._cache["head_snapshot"] = compute_head_snapshot(
+                self.repo, self.roots, self._derived_prefixes()
+            )
         return self._cache["head_snapshot"]
 
     def fact_delta(self) -> FactDelta:
@@ -261,5 +283,5 @@ class ScanContext:
 def build_scan_context(repo: Path, config: CodasConfig) -> ScanContext:
     """Build the per-run `ScanContext`: resolve roots and scan the tree once."""
     roots = workspace_roots(config.raw)
-    files = tuple(discover_files(repo, roots))
+    files = tuple(discover_files(repo, roots, derived_output_prefixes(config.raw)))
     return ScanContext(repo=repo, config=config, roots=roots, files=files)

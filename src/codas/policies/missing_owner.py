@@ -6,6 +6,7 @@ from codas.config.loader import CodasConfig
 from codas.core.models import Evidence, Finding
 from codas.structure.index import (
     build_artifact_index,
+    derived_output_prefixes,
     discover_files,
     normalize_path,
     workspace_roots,
@@ -38,8 +39,11 @@ def check_missing_structure_owner(repo: Path, config: CodasConfig) -> list[Findi
         return []  # malformedness is structure_map_loads' responsibility
 
     roots = workspace_roots(config.raw)
-    files = discover_files(repo, roots)
-    index = build_artifact_index(repo, roots, structure_map, files=files)
+    derived_prefixes = derived_output_prefixes(config.raw)
+    files = discover_files(repo, roots, derived_prefixes)
+    index = build_artifact_index(
+        repo, roots, structure_map, files=files, derived_prefixes=derived_prefixes
+    )
 
     findings: list[Finding] = []
     for artifact in index.unowned:

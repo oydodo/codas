@@ -14,7 +14,7 @@ from codas.facts.openworld import open_world_gaps
 # GitHub-browsable knowledge base for PEOPLE (agents read the FEED + .codas/wiki/ claims;
 # `wiki/` is for the reader). A PURE projection of the inventory dict — like
 # `project_atlas_pack`/`project_atlas_tree`: no LLM (§17), no ScanContext, no adapter import
-# (§11). The book is hash-EXCLUDED at the scanner (structure/index._DERIVED_OUTPUT_PREFIXES),
+# (§11). The book is hash-EXCLUDED at the scanner (structure/index.derived_output_prefixes,
 # so it never enters the byte-identical inventory; its freshness is `codas wiki --verify`
 # byte-compare. Renders ONLY stable source facts (unit id/path/owner, the knowledge-tree
 # slice, import edges) — NEVER volatile observations (e.g. artifact_count) — so a chapter
@@ -267,7 +267,7 @@ def project_book(
 def book_pages(repo: Path) -> dict[Path, str]:
     """The deterministic ``{absolute path: content}`` for every book page — the single render
     source shared by ``--write`` and ``--verify``. The inventory already excludes the book
-    (scanner-level ``_DERIVED_OUTPUT_PREFIXES``), so the book never feeds its own render. Reads
+    (scanner + existence sites, config ``wiki.book_root``), so it never feeds its own render. Reads
     the authored ``.codas/wiki/code/<unit>.md`` prose (out-of-hash) to weave each chapter."""
     inventory = run_inventory(repo)
     by_id = _unit_by_id(inventory.get("units") or [])

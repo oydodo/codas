@@ -126,12 +126,16 @@ graph LR
   n6["src/codas/adapters/trellis.py"]
   n7["src/codas/adapters/wiki.py"]
   n8["src/codas/config/loader.py"]
+  n9["src/codas/structure/index.py"]
   n0 --> n3
   n0 --> n6
   n1 --> n4
   n1 --> n5
   n2 --> n3
+  n2 --> n9
+  n3 --> n9
   n4 --> n5
   n6 --> n8
   n7 --> n3
+  n7 --> n9
 ```

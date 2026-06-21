@@ -36,11 +36,14 @@ class MarkdownAdapterTests(unittest.TestCase):
     def test_relative_link_resolved_against_source_dir(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
-            _write(repo / "wiki" / "concepts" / "a.md", "x")
-            _write(repo / "wiki" / "index.md", "[a](concepts/a.md) and [b](./b.md)\n")
+            # NB `docs/` (not `wiki/`): the default reserved book root is `wiki/`, so a
+            # `wiki/`-relative target now resolves exists=False (the W7 existence guard). This
+            # test is about source-dir relative-link resolution; the dir name is incidental.
+            _write(repo / "docs" / "concepts" / "a.md", "x")
+            _write(repo / "docs" / "index.md", "[a](concepts/a.md) and [b](./b.md)\n")
             claims = {c.path: c.exists for c in self._claims(repo)}
-            self.assertTrue(claims.get("wiki/concepts/a.md"))
-            self.assertIn("wiki/b.md", claims)  # resolved, missing
+            self.assertTrue(claims.get("docs/concepts/a.md"))
+            self.assertIn("docs/b.md", claims)  # resolved, missing
 
     def test_titled_link_strips_title(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

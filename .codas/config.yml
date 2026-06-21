@@ -66,6 +66,11 @@ wiki:
   require_evidence: true
   product_roots:
     - src/codas
+  # Repo-relative root of the Codas-rendered human book. Reserved from EVERY scan and
+  # resolved ABSENT by every claim/role existence site, so the committed-but-derived book
+  # never feeds the inventory hash it pins. Default ("wiki"); set "" to opt out (govern a
+  # real wiki/ docs dir normally). See structure/index.derived_output_prefixes.
+  book_root: wiki
 
 receipts:
   path: .codas/receipts

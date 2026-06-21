@@ -6,7 +6,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from codas.structure.index import build_artifact_index, filter_to_roots, normalize_path
+from codas.structure.index import (
+    DERIVED_OUTPUT_DEFAULT,
+    build_artifact_index,
+    derived_output_prefixes,
+    filter_to_roots,
+    is_derived_output,
+    normalize_path,
+)
 from codas.structure.models import StructureMap, StructureUnit
 
 
@@ -143,6 +150,23 @@ class ArtifactIndexTests(unittest.TestCase):
             self.assertIn("src/keep.py", index.files)
             self.assertNotIn("wiki/index.md", index.files)
 
+    def test_derived_prefix_opt_out_keeps_wiki_in_scan(self) -> None:
+        # With the reservation opted out (derived_prefixes=()), a real wiki/ dir is governed
+        # normally — filter_to_roots keeps it (parity with a user setting wiki.book_root: "").
+        selected = filter_to_roots(
+            ["wiki/index.md", "src/codas/x.py"], (".",), derived_prefixes=()
+        )
+        self.assertEqual(selected, ["src/codas/x.py", "wiki/index.md"])
+
+    def test_custom_derived_prefix_reserves_that_root(self) -> None:
+        selected = filter_to_roots(
+            ["docs/book/x.md", "wiki/keep.md", "src/y.py"],
+            (".",),
+            derived_prefixes=("docs/book",),
+        )
+        # docs/book is reserved; wiki/ is NOT (the knob moved the reservation).
+        self.assertEqual(selected, ["src/y.py", "wiki/keep.md"])
+
     @unittest.skipUnless(shutil.which("git"), "git not available")
     def test_gitignored_file_excluded(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -155,6 +179,34 @@ class ArtifactIndexTests(unittest.TestCase):
             index = build_artifact_index(repo, (".",), MAP)
             self.assertIn("src/keep.py", index.files)
             self.assertNotIn("src/drop.log", index.files)
+
+
+class DerivedOutputResolverTests(unittest.TestCase):
+    def test_default_when_unset_or_no_knob(self) -> None:
+        self.assertEqual(derived_output_prefixes({}), DERIVED_OUTPUT_DEFAULT)
+        self.assertEqual(derived_output_prefixes({"wiki": {}}), DERIVED_OUTPUT_DEFAULT)
+        self.assertEqual(DERIVED_OUTPUT_DEFAULT, ("wiki",))
+
+    def test_explicit_empty_is_opt_out(self) -> None:
+        self.assertEqual(derived_output_prefixes({"wiki": {"book_root": ""}}), ())
+
+    def test_null_falls_back_to_default(self) -> None:
+        # `book_root:` (bare null) is NOT the opt-out; the opt-out is an explicit "".
+        self.assertEqual(
+            derived_output_prefixes({"wiki": {"book_root": None}}), DERIVED_OUTPUT_DEFAULT
+        )
+
+    def test_custom_path_normalized(self) -> None:
+        self.assertEqual(
+            derived_output_prefixes({"wiki": {"book_root": ".\\docs/book/"}}),
+            ("docs/book",),
+        )
+
+    def test_is_derived_output_prefix_boundary(self) -> None:
+        self.assertTrue(is_derived_output("wiki", ("wiki",)))
+        self.assertTrue(is_derived_output("wiki/x.md", ("wiki",)))
+        self.assertFalse(is_derived_output("wikipedia.py", ("wiki",)))
+        self.assertFalse(is_derived_output("wiki/x.md", ()))  # opted out -> never derived
 
 
 if __name__ == "__main__":
