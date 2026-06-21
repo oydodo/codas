@@ -1,5 +1,15 @@
 # Grill Codas Domain Terminology
 
+## Triage 2026-06-21 — CLOSED (acceptance met by CONTEXT.md)
+The acceptance is satisfied by the current `CONTEXT.md`: it resolves the layered domain language
+(Product / Fact / Structure / Orientation / Governance / Task / Role layers), Fact / Claim /
+Governance Fact (the Fact Layer + the `## Perception Model` TMS framing), Domain Role / Role
+Integration (Role Layer), Repository Structure + Structure Architect/Steward (Structure Layer),
+plus the `## Concept Map` and `## Positioning`. `docs/codas-design.html` + `-implementation-plan.html`
+reflect the terminology. The interactive one-question-at-a-time grill was overtaken by the actual
+design work (perception model, concept map, positioning) that resolved the same terms. Archived;
+re-open if a fresh terminology stress-test is wanted.
+
 ## Problem
 
 Codas has several closely related terms: Fact, Claim, Governance Fact, Wiki,
