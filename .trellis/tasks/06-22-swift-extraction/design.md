@@ -52,10 +52,12 @@ def symbols(self):
     return cache["symbols"]
 ```
 
-`_merge_symbol_facts` concatenates `definitions`, re-sorts by `(module, line, name, kind)`, and
-concatenates+sorts `skipped`. Empty extra → identical bytes (re-sorting an already-sorted
-Python-only list is a no-op). Same for `imports()` (sort key TBD to match current import order).
-`calls()` is UNCHANGED (Swift contributes no call edges — thin slice).
+`_merge_symbol_facts` **EARLY-RETURNS the unchanged Python `SymbolFacts` object when the extra
+facts are empty** (review B3) — byte-identical BY INSPECTION, not by an argument about sort
+stability. Only when extra is non-empty does it concatenate `definitions` + re-sort by
+`(module, line, name, kind)` and concatenate+sort `skipped`. Same for `imports()` (key
+`(module, line, target)`, `python.py:126`). Identity test: `merge(py, EMPTY)` returns `py`
+unchanged. `calls()` is UNCHANGED (Swift contributes no call edges — thin slice).
 
 ## 4. Swift extraction (tree-sitter)
 
@@ -84,6 +86,13 @@ Python-only list is a no-op). Same for `imports()` (sort key TBD to match curren
   imports → **no false positives** (verified against the policy's logic). Swift dep-direction is
   a later task once a Swift module map exists.
 - **Swift member-level symbols** (methods, nested types) — top-level first.
+- **Swift fact-delta / fact_coupling** (review N1) — `head_snapshot` reads `.py` blobs ONLY
+  (`snapshot.py:43`→`git.list_python_paths_at_head`, `.py` filter at `git.py:87`), while the
+  merge lands in `working_snapshot` via `symbols()`/`imports()`. So on a Swift repo every Swift
+  symbol/import would read as permanently "added" in `fact_delta` → `fact_coupling` could
+  mis-fire. HARMLESS on Codas (zero `.swift`) and NEVER serialized (delta/snapshots are
+  out-of-inventory, `context.py:176-185`). Swift is OUT OF SCOPE for `fact_delta`/`fact_coupling`
+  until a Swift HEAD-blob reader exists; an impl must NOT naively assume symmetry.
 - **`ciri` adoption** — running real governance on the user's repo is post-capability.
 
 ## 6. LanguageAdapter abstraction (light)
@@ -111,12 +120,26 @@ language exists (YAGNI)? The registry is ~15 lines and makes the merge call lang
 
 ## 7. Gate-semantics & invariants
 
-- **Byte-identical**: PROVE the Codas inventory is unchanged (no `.swift` → empty extra →
-  identical). Test: inventory hash before/after the seam change is equal; a snapshot test over
-  `symbols()`/`imports()` on a Python-only fixture is unchanged.
-- **No new gate teeth on existing repos**: Swift symbols can introduce `duplicate_symbol`
-  (warning) / `duplicate_implementation` (error) across `.swift` files — correct + desired, but
-  only fires when `.swift` files exist. Document that Swift dup-detection is real.
+- **Byte-identical**: PROVE the Codas inventory is unchanged (no `.swift` → empty extra → §3
+  early-return → identical). Test: inventory hash before/after the seam change is equal; a
+  snapshot test over `symbols()`/`imports()` on a Python-only fixture is unchanged. **CRITICAL
+  (review B1): never commit a `.swift` fixture under a scanned root.** Codas's `.codas/config.yml`
+  has `roots: ["."]` → the whole repo (incl. `tests/`) is scanned, and the scanner is
+  extension-agnostic (`index.py`: no `.py` allowlist; the `.py` filter is adapter-only) → a
+  committed `.swift` would enter Codas's OWN inventory and move the hash. Today `tests/` has ZERO
+  committed non-`.py` files (every fixture is `tmp_path`). The Swift fixture MUST be written to
+  `tmp_path` at test time, like every other Codas fixture — see §8.
+- **Swift-repo determinism requires the extra installed UNIFORMLY (review B2)**: on a repo WITH
+  scanned `.swift`, the inventory bytes depend on whether `codas[swift]` is installed — present →
+  real Swift facts, absent → those `.swift` paths in `inventory[...].skipped` (`inventory.py:235,
+  250`). Both are individually deterministic, but MIXED environments (CI with the extra, a dev
+  without) produce DIVERGENT inventories on a Swift repo. Operational rule: any environment that
+  runs `codas check` on a Swift repo must install `codas[swift]`. (Codas itself is immune — zero
+  scanned `.swift`.)
+- **Swift dup-detection scope (review N3)**: `duplicate_implementation`/`duplicate_symbol` gate on
+  `module.startswith("src/")` (`SCOPE_PREFIX="src/"`). Swift dup-detection fires ONLY for `.swift`
+  under `src/`; a `Sources/`-layout Swift repo gets none (a later scope-config concern, not this
+  task).
 - **structure ownership**: new files `adapters/swift.py`, `adapters/swift_parse.py`,
   `facts/languages.py` land under owned units (`codas-adapters`, `codas-facts`) →
   `missing_structure_owner` clean. tests under `tests`.
@@ -126,12 +149,22 @@ language exists (YAGNI)? The registry is ~15 lines and makes the merge call lang
 - **§11 dependency direction**: `facts/languages.py` (codas-facts) imports `adapters/swift`
   (codas-adapters) — the SAME direction `facts` already imports `adapters/python` (allowed).
   No new violation.
+- **`kind` is opaque to policies EXCEPT `policy_registry.py:64` (review N2)**: it switches on
+  `kind == "function"`, but path-gated to `src/codas/policies/` (`_POLICY_PREFIX`) + `check_`
+  prefix → a Swift `func` can never reach it. Safe; do NOT govern Swift under that prefix.
+- **tree-sitter pin (review N4, resolved)**: `tree-sitter-swift==0.7.3` depends on
+  `tree-sitter~=0.23` (verified PyPI metadata), requires-python ≥3.8 (Codas ≥3.9 OK), abi3 wheels
+  cp38+ incl. macOS arm64. Pin the extra as `tree-sitter~=0.23, tree-sitter-swift~=0.7`; verify
+  the `Language()/Parser()` API against the installed `tree-sitter` at impl (0.23 surface).
 - **Determinism**: tree-sitter parse is deterministic; sort all outputs; no dict-order leakage.
 
 ## 8. Test plan
 
-- `tests/_swift/` fixture: a small `.swift` file (class/struct/enum/protocol/extension/func +
-  imports) committed as test data.
+- Swift fixture is WRITTEN TO `tmp_path` at test time (a `.swift` string with
+  class/struct/enum/protocol/extension/func + imports), **NEVER committed under a scanned root**
+  (review B1) — exactly like every existing Codas fixture.
+- `test_merge_empty_extra_is_identity`: `merge(py_facts, EMPTY)` returns the Python object
+  unchanged (review B3) — the byte-identical guarantee by inspection.
 - `test_swift_adapter`: symbols (each kind, top-level only, sorted) + imports (target=module,
   target_path=None) from the fixture; skipped on a malformed `.swift`.
 - `test_swift_graceful_degrade`: with tree-sitter import forced to fail (monkeypatch), `.swift`
@@ -141,7 +174,32 @@ language exists (YAGNI)? The registry is ~15 lines and makes the merge call lang
 - `test_merge_orders_deterministically`: mixed py+swift facts sort stably.
 - Full suite + `codas check` 0 + `agents`/`wiki --verify` clean.
 
-## 9. Open questions for codex review
+## 10. Design review — APPROVE-WITH-CHANGES (folded 2026-06-22)
+
+Adversarial review (Claude-native; codex MCP stalled — known-flaky in this repo). Architecture
+APPROVED with evidence: schema-neutral facts, scanner extension-agnostic (`.swift` already flows
+into `ScanContext.files`, no `.py` allowlist — Q7 confirmed), merge-seam location correct,
+`target_path=None` makes `dependency_direction` skip Swift at `dependency_direction.py:42`
+(`if edge.target_path is None: continue`) → zero false positives (Q4 confirmed). 3 blockers + 4
+nits folded above:
+
+- **B1 → §7/§8**: never commit a `.swift` fixture (Codas scans `roots:["."]` incl. `tests/`;
+  zero committed non-`.py` there today) — use `tmp_path`.
+- **B2 → §7**: Swift-repo inventory determinism requires the `swift` extra installed uniformly;
+  mixed envs diverge. Documented operational rule.
+- **B3 → §3/§8**: empty-extra merge is an EARLY-RETURN of the unchanged Python object + identity
+  test; byte-identical by inspection.
+- **N1 → §5**: `head_snapshot` is `.py`-only → Swift out of scope for `fact_delta`/`fact_coupling`
+  until a Swift HEAD-blob reader; harmless on Codas, a noted Swift-repo gap.
+- **N2 → §7**: `kind` opaque except `policy_registry.py:64` (path-gated, Swift-unreachable).
+- **N3 → §7**: dup-detection only for `src/`-rooted Swift (`SCOPE_PREFIX="src/"`).
+- **N4 → §7**: pin `tree-sitter~=0.23, tree-sitter-swift~=0.7` (verified compatible, ≥3.9, abi3).
+
+Open-question answers: Q1 optional-extra approved (+B2 caveat); Q2 no byte-diff IF early-return
+(B3); Q3 build the thin registry (clean home for the early-return + ext filter); Q4 confirmed;
+Q5 safe (+N2); Q6 resolved (N4); Q7 confirmed (scanner agnostic).
+
+## 9. Open questions for codex review (RESOLVED — see §10)
 
 1. **Optional-extra + graceful-degrade** — right call vs hard-depending on tree-sitter? Is the
    lazy-import-in-parse the cleanest guard, or should ScanContext probe availability once?

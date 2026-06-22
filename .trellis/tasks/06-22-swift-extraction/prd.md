@@ -43,8 +43,10 @@ graceful degrade, deferred call-graph/dep-direction).
   is language-blind; Python stays its own stdlib path. (codex to confirm registry-now vs YAGNI.)
 
 ### R5 — Tests on a Swift fixture
-- Committed `.swift` fixture; tests for each symbol kind, imports, malformed→skipped,
-  graceful-degrade (tree-sitter absent), byte-identical Python-only, deterministic merge sort.
+- `tmp_path` `.swift` fixture (NEVER committed under a scanned root — review B1; Codas scans
+  `roots:["."]` incl. `tests/`); tests for each symbol kind, imports, malformed→skipped,
+  graceful-degrade (tree-sitter absent), byte-identical Python-only, empty-extra-merge identity
+  (review B3), deterministic merge sort.
 
 ## Acceptance Criteria
 
@@ -63,9 +65,13 @@ graceful degrade, deferred call-graph/dep-direction).
 
 - **Gate-semantics** (touches fact extraction → byte-identical hash) → codex DESIGN review
   BEFORE impl (done as part of this task), and byte-identical must be proven, not assumed.
-- Python core stays zero-new-deps; tree-sitter is optional-extra only.
+- Python core stays zero-new-deps; tree-sitter is optional-extra only (pin `tree-sitter~=0.23,
+  tree-sitter-swift~=0.7`).
 - §11: `facts` may import `adapters` (existing direction); no new dependency_direction violation.
-- Determinism: sort all outputs; tree-sitter parse is deterministic.
+- Determinism: sort all outputs; tree-sitter parse is deterministic. NOTE (review B2): on a
+  Swift repo, inventory bytes depend on the `swift` extra being installed — every env running
+  `codas check` on a Swift repo must install it (mixed envs diverge). Codas itself is immune.
+- NEVER commit a `.swift` (or any non-`.py`) fixture under a scanned root (review B1).
 
 ## Notes
 
