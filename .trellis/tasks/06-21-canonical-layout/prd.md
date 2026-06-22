@@ -1,39 +1,113 @@
-# Opinionated canonical repo layout + scaffolding — Codas manages repo structure
+# Paradigm-constraint onboarding — Codas governs ARCHITECTURE, not directory layout
 
-## Status: BACKLOG / DEFERRED (big task — do NOT work now)
+> REFRAMED 2026-06-22 (architect decision). This task was "opinionated canonical LAYOUT +
+> scaffolding". That framing is REJECTED: scaffolding an opinionated directory layout
+> (src/ docs/ tests/) is domain-blind, taste-imposing, and violates screaming architecture.
+> The real feature is: Codas helps a repo DECLARE its architecture paradigm (as dependency
+> constraints) and ENFORCES it — the project owns naming, the paradigm owns the skeleton.
+> This is an EPIC (decision record + design + sub-task breakdown), not a single PR.
 
-Placed as a tracked backlog item (2026-06-21). Same onboarding bucket as W8 packaging +
-cross-repo scaffolding. Revisit after the injection MVP + W8.
+## Status: PLANNING (design fixed; sub-tasks not started). Gate-adjacent pieces need DESIGN review.
 
-## Goal
+## Why (the onboarding gap)
 
-Make Codas opinionated about repo STRUCTURE, not just per-file ownership — so a new repo gets a
-canonical layout out of the box and "Codas manages the repo structure" becomes real onboarding,
-not just a per-file `missing_owner` check.
+`codas init` today scaffolds an EMPTY `.codas/` skeleton (single root catch-all unit). The
+biggest cross-repo friction is empty `.codas/` → real governance. Codas's core (owner): assist
+agentic coding · avoid duplication · follow best practices · honor design principles (MVC / DDD /
+clean-arch / hexagonal / screaming). So onboarding must let a repo express + enforce a known
+PARADIGM with near-zero ceremony — without Codas imposing a layout or taste.
 
-## Sketch (not a committed design)
+## Decision record (architect, 2026-06-22; basis = 4-lens workflow wf_530b46c4-380)
 
-- `codas init` scaffolds a canonical layout (e.g. `src/` product, `.codas/` meta, `docs/`,
-  `wiki/` book) + sets `workspace.roots` to those (tighter than `["."]`) + seeds
-  `structure.yml` with canonical units + `canonical_placement`.
-- A new policy: **product code outside the canonical roots = finding** — this CLOSES the
-  governance hole a tight whitelist would otherwise open (you can tighten scope AND still catch
-  code slipped outside the canonical dirs). This is the piece that makes a whitelist safe.
-- Distinct from `06-21-scope-exclude-knob` (that = the exclude LEVER / hash-scope decoupling;
-  this = an opinionated DEFAULT layout + scaffolding + the outside-canonical policy).
-- `structure.yml` ALREADY manages structure (units / owner / canonical_placement /
-  deprecated_paths); this layers an opinionated default + scaffolding + onboarding on top.
+1. **A preset encodes the PARADIGM CONSTRAINT (roles + `must_not_depend_on`), NOT directory
+   names.** Paradigm owns the skeleton; project owns the naming. Carrier already exists
+   (`structure.yml` `must_not_depend_on` + gated `dependency_direction`) → no new gate to express it.
+2. **UNIT = BOUNDED CONTEXT (vertical), layers NESTED inside it — NOT top-level layers.**
+   `_owning_unit_of` resolves by PATH PREFIX → a unit must be a contiguous subtree. A context
+   (`orders/`) spans all layers and IS contiguous; a top-level `domain/` layer is the anti-screaming,
+   technical decomposition. So the preset is a per-context STAMP: `orders/domain` ¬dep
+   `orders/adapters`, replicated under each context. longest-prefix gates it with zero new mechanism.
+   The path-prefix constraint is a COMPASS (it forces the screaming-correct shape), not a limitation.
+3. **`--paradigm` is OPT-IN, planned-by-default; default is `none`/flat.** Role units seeded
+   `status: planned` (so `structure_drift`, a gated error on absent `active` paths, does NOT fire on
+   turn 1). A role arms (`planned`→`active`, its dep rule starts enforcing) only when mapped to a
+   REAL existing directory. Default `none` = today's minimal skeleton.
+4. **avoid-duplicate is the FREE day-1 value, DECOUPLED from paradigm.** `duplicate_implementation`
+   (SCOPE_PREFIX `src/`) self-activates on any `src/` tree, zero roles/paradigm. Do NOT market
+   "avoid-dup + dep-hygiene" as one init deliverable; dep-hygiene is a LATENT contract that arms
+   post-mapping.
+5. **ECOSYSTEM HONESTY is a hard requirement, not a nice-to-have.** The gate's import resolver is
+   PYTHON-ONLY (`adapters/callgraph.py` + `python_parse.py`). On a non-Python repo a paradigm preset
+   writes rules + a green gate that enforces NOTHING while AGENTS.md claims governance = manufactured
+   false confidence (worse than no preset). init MUST detect the ecosystem and, without a resolver,
+   write the preset ADVISORY-only + say so in CLI output AND the injected AGENTS.md. Each preset
+   carries an `enforceable_for` tag.
+6. **NEW differentiated gate = CROSS-CONTEXT PUBLISHED-INTERFACE.** Cross-context imports must go
+   through one declared published-interface path per context; everything else is `must_not_depend_on`.
+   Decidable, gateable, the real bounded-context invariant — more valuable than another layer check.
+7. **role→path mapping = Nx TAGS model** (role carried by `unit_id`, naming by `path`). For existing
+   repos, PROPOSE bindings from IMPORT-GRAPH coupling clusters (NOT directory-name sniffing — names =
+   intent, not compliance; name-sniffing a paradigm is itself a §17 violation). Show the violations a
+   binding WOULD raise BEFORE arming (informed consent). Map LAZILY when files appear.
+8. **WHITE-SPACE = the AGENTIC angle.** Declare-then-enforce dep rules is COMMODITY (import-linter,
+   ArchUnit, dependency-cruiser, Nx all do it, none scaffold). Codas's edge is machine-queryable atlas
+   + AGENTS.md injection + preflight reuse digest feeding the agent — NULLIFIED if the gate under the
+   injection is mute (hence #5). Onboarding narrative sells the agentic angle, not dep enforcement.
 
-## Open questions (for when it's picked up)
+## §17 / determinism discipline
 
-- How opinionated? A single canonical layout vs a few presets (lib-layout, src-layout, monorepo).
-- Does tightening default roots break the default-govern safety property? (The outside-canonical
-  policy is what makes it safe — design it together.)
-- Interaction with `wiki.product_roots` (already config-driven) + the scope-exclude knob.
-- Migration: how an EXISTING repo adopts the canonical layout without churn.
+- A preset is curated deterministic DATA (YAML: role-unit ids + `must_not_depend_on` edges + nested
+  layer roles + `canonical_placement` prose templates + `enforceable_for`); adopting it is a USER
+  DECLARATION, not inference. Built-in tuple + user `.codas/presets/` + community (eslint
+  shareable-config model). Overridable lazy defaults.
+- init WRITES only declarations the user adopts; it never invents repo facts. Paradigm detection /
+  cluster-suggestion is host-agent (§17-external) → PROPOSE text the user confirms; only the confirmed
+  declaration is written + gated. Sniffing never enters the deterministic core.
+- Two-layer split: GATE = (a) intra-context layer direction (b) cross-context published-interface —
+  both decidable once contexts are DECLARED. INJECTION = which contexts exist + naming + the proposed
+  mapping — judgement, agent-assisted. NB dep-hygiene is parasitic on the mapping (it is only as good
+  as the declared paths); avoid-dup is pure-gate-free.
 
-## Notes
+## Sub-task breakdown (implementation sequence)
 
-- Big, gate-adjacent (new policy + scan-scope defaults) -> codex DESIGN review when picked up.
-- DO NOT start without an explicit decision to take it off the backlog.
-</content>
+- **S1 — packaging (W8a, PREREQUISITE).** Verify `pip`/`pipx install` (codas on PATH, `resolve_codas_command`
+  switches off `PYTHONPATH=src`); README quickstart; `init` writes policy ENABLEMENT (today writes
+  `policies: {}` → `dependency_direction` inert); ecosystem-detect primitive. Small, no gate change.
+- **S2 — honest `none` default + avoid-dup decouple.** `codas init` default = minimal skeleton + turn
+  on `duplicate_*` + policy enablement; docs state avoid-dup is the day-1 value. Small.
+- **S3 — paradigm preset MECHANISM (data only, reuses `dependency_direction`).** `--paradigm X` opt-in;
+  preset = context-shaped role units (`planned`) + nested layer roles + `must_not_depend_on` +
+  `canonical_placement` templates + `enforceable_for`; built-in few + user + community loader;
+  ecosystem-honest advisory fallback. Dogfood: this repo's own `.codas` IS a hexagonal preset
+  (codas-app/policies/core declare `must_not_depend_on: codas-adapters`) → first fixture + sample. Medium.
+- **S4 — role→path mapping + existing-repo suggest.** Nx-tags mapping writes `unit.path` + flips
+  `planned`→`active` against a real dir; existing repo: import-cluster suggestion (reuse
+  `ScanContext.imports`), show would-be violations before arming, lazy bind. Medium-large.
+- **S5 — GATE: cross-context published-interface policy.** New gated policy (#6). gate-adjacent →
+  adversarial DESIGN review FIRST. Large.
+- **S6 — GATE: role-membership / catch-all handling.** When a paradigm is active, "code outside the
+  declared roles = finding" — needs dropping/neutralizing the root catch-all OR a new role_placement
+  policy (today `missing_structure_owner` never fires with a root unit present, so the placement layer
+  has no teeth). gate-adjacent → DESIGN review FIRST. Large.
+
+Dependencies: S1 → S2 → S3 → S4; S5/S6 need S3 (context units exist), independent of S4. S5 before
+S6 (published-interface is the higher-value tooth).
+
+## Acceptance (epic-level)
+
+- [ ] `codas init` (no paradigm) → minimal skeleton + avoid-dup live + policy enablement; check 0.
+- [ ] `codas init --paradigm <ctx-preset>` seeds `planned` context+layer units; first `check` is
+      GREEN (no structure_drift on planned), and INERT until mapped (documented, not silently sold).
+- [ ] mapping a role to a real dir arms its dep rule; a real intra-context / cross-context violation
+      is caught; non-Python repo → preset advisory-only + CLI + AGENTS.md SAY enforcement is off.
+- [ ] presets are overridable data (built-in + user + community); a custom paradigm is a data file.
+- [ ] every gate-adjacent sub-task (S5, S6) passed an adversarial DESIGN review before code.
+- [ ] check 0; inventory byte-identical; agents/wiki --verify clean; suite green.
+
+## Notes / open
+
+- Rejected: scaffold a directory layout; top-level layer skeleton (anti-screaming, can't express
+  contexts); directory-name sniffing; auto-imposing a sniffed paradigm.
+- Neighbor `06-21-scope-exclude-knob` (exclude lever / hash-scope decouple) interacts with S4's
+  root tightening — reconcile when S4/S6 are picked up.
+- Full reasoning + the 5 code-verified false-claims in memory [[codas-ship-positioning]].
