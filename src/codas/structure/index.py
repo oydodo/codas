@@ -19,7 +19,14 @@ _IGNORE_DIRS = {".git", "__pycache__"}
 # BOTH walked dir names (whole-subtree prune) AND walked file names: `.codas/.install-state.json`
 # is the machine-local agent/git install-state marker (gitignored on the git path) — a FILE,
 # not a subtree, so the filename check in _walk_files is what keeps it out of the hash here.
-_IGNORE_PATHS = {".codas/receipts", ".codas/cache", ".codas/.install-state.json"}
+# `.codas/.status-seen.json` is the per-turn-injection scratch (session baseline sha +
+# already-injected finding fingerprints) — same machine-local, gitignored, out-of-hash rule.
+_IGNORE_PATHS = {
+    ".codas/receipts",
+    ".codas/cache",
+    ".codas/.install-state.json",
+    ".codas/.status-seen.json",
+}
 
 # Default reserved prefix for Codas-RENDERED committed output — scanned NEVER as input.
 # Distinct from _IGNORE_PATHS (local/regenerable cache + receipts, walk-only): the wiki/

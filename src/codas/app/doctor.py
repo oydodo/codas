@@ -7,7 +7,13 @@ from typing import Callable
 
 from codas.app.agents_block import verify_agents_block
 from codas.config.loader import load_codas_config, load_policies, load_waivers
-from codas.integrations.claude import session_hook_status, verify_claude_shim
+from codas.facts.context import repo_git_baseline
+from codas.integrations.claude import (
+    claude_hook_status,
+    session_hook_status,
+    turn_hook_specs,
+    verify_claude_shim,
+)
 from codas.integrations.enforcement import git_hook_status
 from codas.integrations.install_state import read_install_state
 from codas.structure.document_loader import load_document_manifest
@@ -83,6 +89,7 @@ def run_doctor(repo: Path) -> list[Diagnostic]:
     state = read_install_state(repo)
     results.append(_git_hooks(repo, state))
     results.append(_agent_hook(repo, state))
+    results.append(_turn_hooks(repo))
     results.append(_agents_block(repo))
     results.append(_claude_shim(repo))
 
@@ -209,6 +216,32 @@ def _agent_hook(repo: Path, state: dict) -> Diagnostic:
             "run `codas hooks --install`"
         )
     return Diagnostic("agent_hook", "warn", detail)
+
+
+def _turn_hooks(repo: Path) -> Diagnostic:
+    """The per-turn injection hooks (gap 3): Stop / SubagentStop / PostToolUse×3. WARN-only
+    (visibility, like the other hooks). Reports how many groups are live-installed, and — S9 —
+    whether the check is INERT because there is no git baseline to diff (the hooks fire but
+    surface nothing). ``ok`` only when fully installed AND functional."""
+    specs = turn_hook_specs()
+    statuses = {
+        spec.key: claude_hook_status(repo, spec.event, spec.matcher) for spec in specs
+    }
+    if any(status == "malformed" for status in statuses.values()):
+        return Diagnostic("turn_hooks", "warn", ".claude/settings.json is malformed")
+    installed = sorted(key for key, status in statuses.items() if status == "installed")
+    if not installed:
+        return Diagnostic(
+            "turn_hooks",
+            "warn",
+            "per-turn injection hooks not installed — run `codas hooks --install`",
+        )
+    detail = f"{len(installed)}/{len(specs)} per-turn injection hooks installed"
+    inert = repo_git_baseline(repo) is None
+    if inert:
+        detail += " — INERT: no git baseline to diff (commit something)"
+    healthy = len(installed) == len(specs) and not inert
+    return Diagnostic("turn_hooks", "ok" if healthy else "warn", detail)
 
 
 def _freshness(repo: Path, name: str, filename: str, verify, fix: str) -> Diagnostic:

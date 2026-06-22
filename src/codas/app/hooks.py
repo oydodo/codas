@@ -10,6 +10,7 @@ from codas.config.loader import ConfigLoadError
 from codas.integrations.claude import (
     ClaudeHookResult,
     install_claude_session_hook,
+    install_claude_turn_hooks,
     verify_claude_shim,
 )
 from codas.integrations.enforcement import (
@@ -19,6 +20,16 @@ from codas.integrations.enforcement import (
 )
 from codas.integrations.install_state import hook_state, merge_install_state
 from codas.structure.loader import StructureMapError
+
+
+def emit_claude_turn_hook(event: str) -> int:
+    """App-layer bridge for the ``codas claude-hook <Event>`` CLI subcommand (the CLI may not
+    import ``role-integrations``; this layer is the permitted bridge). Delegates to the
+    integrations envelope entrypoint, which reads the hook input from stdin and prints the
+    Claude ``additionalContext`` envelope. Always returns 0 (the never-block invariant)."""
+    from codas.integrations.claude_hook import run_claude_hook
+
+    return run_claude_hook([event])
 
 
 def install_git_hooks(
@@ -39,11 +50,35 @@ def install_git_hooks(
 
 @dataclass(frozen=True)
 class AgentInjectionResult:
-    """Outcome of installing the Claude SessionStart injection hook + recording state."""
+    """Outcome of installing the Claude injection hooks + recording state."""
 
-    claude: ClaudeHookResult
+    claude: ClaudeHookResult  # the SessionStart preflight + baseline group
     agents_block: str  # current | stale | absent
     claude_shim: str  # current | stale | absent
+    turn_hooks: dict[str, ClaudeHookResult]  # the per-turn injection groups (gap 3)
+
+
+# Machine-local scratch the installers write — must be gitignored on the consumer repo, or
+# `git ls-files --others` surfaces them as "changed" (polluting `codas status`) and the user
+# might commit a per-machine marker. Kept in sync with structure.index._IGNORE_PATHS + .gitignore.
+_SCRATCH_IGNORES = (".codas/.install-state.json", ".codas/.status-seen.json")
+
+
+def _ensure_gitignored(repo: Path, patterns: tuple[str, ...]) -> None:
+    """Append each missing pattern to the repo's ``.gitignore`` (idempotent, best-effort —
+    never raises). A no-op when every pattern is already present."""
+    try:
+        path = repo / ".gitignore"
+        existing = path.read_text(encoding="utf-8") if path.is_file() else ""
+        present = {line.strip() for line in existing.splitlines()}
+        missing = [pattern for pattern in patterns if pattern not in present]
+        if not missing:
+            return
+        text = existing if existing.endswith("\n") or not existing else existing + "\n"
+        text += "".join(f"{pattern}\n" for pattern in missing)
+        path.write_text(text, encoding="utf-8")
+    except OSError:
+        pass
 
 
 def _doc_freshness(
@@ -75,27 +110,40 @@ def install_agent_injection(
     independent ``agent_hooks`` / ``agents_block`` / ``claude_shim`` keys.
     """
     claude = install_claude_session_hook(repo, command=command, force=force)
+    # Per-turn injection groups (gap 3): Stop / SubagentStop / PostToolUse×3. Disjoint events
+    # from SessionStart, so this RMW preserves the group just written above.
+    turn_hooks = install_claude_turn_hooks(repo, force=force)
+    # The dedup + install-state scratch must be gitignored or it surfaces as a "changed" file.
+    _ensure_gitignored(repo, _SCRATCH_IGNORES)
     block = _doc_freshness(repo, "AGENTS.md", verify_agents_block)
     shim = _doc_freshness(repo, "CLAUDE.md", verify_claude_shim)
+    claude_hooks_state = {
+        "session_start": hook_state(
+            claude.status,
+            expected_command=claude.expected_command,
+            installed_command=claude.installed_command,
+            settings_path=claude.settings_path,
+            marker_id=claude.marker_id,
+            # Claude workspace-trust cannot be detected programmatically; the installer
+            # prints the approve step and the doctor reports unknown.
+            trusted="unknown",
+        )
+    }
+    for key, result in turn_hooks.items():
+        claude_hooks_state[key] = hook_state(
+            result.status,
+            expected_command=result.expected_command,
+            installed_command=result.installed_command,
+            settings_path=result.settings_path,
+            marker_id=result.marker_id,
+            trusted="unknown",
+        )
     merge_install_state(
         repo,
         {
-            "agent_hooks": {
-                "claude": {
-                    "session_start": hook_state(
-                        claude.status,
-                        expected_command=claude.expected_command,
-                        installed_command=claude.installed_command,
-                        settings_path=claude.settings_path,
-                        marker_id=claude.marker_id,
-                        # Claude workspace-trust cannot be detected programmatically; the
-                        # installer prints the approve step and the doctor reports unknown.
-                        trusted="unknown",
-                    )
-                }
-            },
+            "agent_hooks": {"claude": claude_hooks_state},
             "agents_block": block,
             "claude_shim": shim,
         },
     )
-    return AgentInjectionResult(claude, block, shim)
+    return AgentInjectionResult(claude, block, shim, turn_hooks)

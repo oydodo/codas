@@ -39,8 +39,10 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 
 - `_git_lines` *(function)*
 - `extract_changed_paths` *(function)*
+- `head_commit` *(function)*
 - `list_python_paths_at_head` *(function)*
 - `read_blob_at_head` *(function)*
+- `ref_resolves` *(function)*
 
 ### `src/codas/adapters/html.py`
 

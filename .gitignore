@@ -10,3 +10,4 @@ build/
 .codas/receipts/*.json
 .codas/cache/
 .codas/.install-state.json
+.codas/.status-seen.json

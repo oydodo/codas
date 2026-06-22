@@ -188,3 +188,37 @@ findings actually change main-agent behavior.
 every worker incl. mcp-codex/committed, because it checks git since the session baseline whenever the
 main agent yields). SubagentStop / PostToolUse:Agent / PostToolUse:Edit are earlier-firing
 optimizations on top. All inject the MAIN agent, factually, deduped, capped, never-raising.
+
+## 8. IMPLEMENTED + IMPL-review (workflow wf_1b15bf1a-7b8, 4-lens — codex unusable → Claude-native)
+
+SHIPPED: `app/status.py` (neutral core, ~150ms, never-raises) · `codas status [--since|--since-baseline|
+--json|--additional-context|--record-baseline]` · `integrations/claude_hook.py` envelope entrypoint +
+`codas claude-hook <Event>` CLI subcommand · generalized (event,matcher) installer
+(`install_claude_turn_hooks`: Stop/SubagentStop/PostToolUse×3 incl. `mcp__.*codex.*`) + SessionStart
+2-command group (preflight + `status --record-baseline`) · doctor `_turn_hooks` (per-group probe + S9
+inert) · dedup scratch `.codas/.status-seen.json` (gitignored + `_IGNORE_PATHS`). The verified Claude
+contract (`{"hookSpecificOutput":{"hookEventName","additionalContext"}}` + exit 0; matcher = JS-regex;
+Stop has no built-in loop guard → our dedup IS the guard) drove the shim. B1 proven end-to-end: a worker
+that COMMITS before returning is invisible to the working-tree diff but caught by the baseline diff.
+
+4-lens adversarial review → 1 blocker + 6 should + 5 nits. ALL fixed except N5 (note-only):
+- **B1 (blocker, FIXED):** installed runner was bare `python3 -m codas.integrations.claude_hook` →
+  ModuleNotFoundError at IMPORT time (before the never-raises guard) when codas is pipx/venv-installed
+  with a different `python3`, exiting 1 every turn. Fixed by routing through a `codas claude-hook` CLI
+  subcommand so the runner resolves the SAME base codas invocation as SessionStart (symmetric).
+- **S1 (FIXED):** dedup marked ALL fresh findings seen but only the rendered (capped) subset injects →
+  capped-out findings silently dropped. Now persists exactly the rows `_shown_rows` returns.
+- **S2/N1 (FIXED):** a stale/orphaned `--since` baseline silently degraded to a clean-looking run. Now
+  `ref_resolves` → `git="stale-baseline"` surfaced in render_text (self-heals at next SessionStart).
+- **S3 (FIXED):** install now appends the scratch files to the consumer `.gitignore` (idempotent).
+- **S4 (FIXED):** byte-identical re-install now reports `installed` (was always `refreshed`).
+- **S5/S6/N2/N3/N4 (tests/guards added):** both-sides-changed dup fan-out · doctor malformed+partial
+  branches · envelope over all 3 events + non-injecting event · imperative-blacklist over all 3 kinds ·
+  oversized-single-finding → empty (no header-only noise).
+- **N5 (NOTE only, pre-existing, out of scope):** `test_book` runs `write_book(Path.cwd())` against the
+  REAL repo — benign while the committed book stays fresh (CI `wiki --verify` enforces it), but it
+  re-renders the working-tree book during a suite run. This task surfaced + regenerated the book for the
+  new symbols. A future cleanup: point `test_book` at a temp copy instead of mutating cwd.
+
+GAUNTLET: 563 tests green · `check` 0 · inventory byte-identical 2× · agents/wiki `--verify` clean ·
+book regenerated for the new public symbols (`ref_resolves`, `emit_claude_turn_hook`, …).

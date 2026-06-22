@@ -137,9 +137,60 @@ class GateVisibilityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo = _valid_repo(Path(tmp))  # .codas + .trellis, but no hooks / .claude / AGENTS
             diagnostics = run_doctor(repo)
-            for name in ("git_hooks", "agent_hook", "agents_block", "claude_shim"):
+            for name in ("git_hooks", "agent_hook", "turn_hooks", "agents_block", "claude_shim"):
                 self.assertEqual(self._diag(diagnostics, name).status, "warn", name)
             self.assertFalse(doctor_has_failures(diagnostics))  # visibility, never a gate
+
+    def test_turn_hooks_reported_after_install(self) -> None:
+        from codas.app.hooks import install_agent_injection
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _valid_repo(Path(tmp))
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@t"], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True)
+            install_agent_injection(repo, command="echo preflight")
+            # Installed but no commit yet -> the hooks fire but are INERT (no baseline to diff).
+            inert = self._diag(run_doctor(repo), "turn_hooks")
+            self.assertEqual(inert.status, "warn")
+            self.assertIn("INERT", inert.detail)
+            # After a commit the baseline exists -> fully healthy.
+            subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "commit", "-q", "-m", "base"], check=True
+            )
+            healthy = self._diag(run_doctor(repo), "turn_hooks")
+            self.assertEqual(healthy.status, "ok")
+            self.assertIn("5/5", healthy.detail)
+
+    def test_turn_hooks_malformed_and_partial(self) -> None:
+        import json
+
+        from codas.app.hooks import install_agent_injection
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _valid_repo(Path(tmp))
+            (repo / ".claude").mkdir(parents=True, exist_ok=True)
+            (repo / ".claude" / "settings.json").write_text("{not json")
+            malformed = self._diag(run_doctor(repo), "turn_hooks")
+            self.assertEqual(malformed.status, "warn")
+            self.assertIn("malformed", malformed.detail)
+
+            # Partial install: drop one group (Stop) after a clean install + commit.
+            (repo / ".claude" / "settings.json").unlink()
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@t"], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True)
+            install_agent_injection(repo, command="echo preflight")
+            subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+            subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "b"], check=True)
+            settings_path = repo / ".claude" / "settings.json"
+            settings = json.loads(settings_path.read_text())
+            del settings["hooks"]["Stop"]  # 4/5 remain installed
+            settings_path.write_text(json.dumps(settings))
+            partial = self._diag(run_doctor(repo), "turn_hooks")
+            self.assertEqual(partial.status, "warn")
+            self.assertIn("4/5", partial.detail)
 
     def test_installed_hooks_and_docs_report_ok(self) -> None:
         from codas.app.agent_docs import write_agent_docs

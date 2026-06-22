@@ -23,14 +23,31 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 ### `src/codas/integrations/claude.py`
 
 - `ClaudeHookResult` *(class)*
+- `TurnHookSpec` *(class)*
+- `_group` *(function)*
 - `_is_ours` *(function)*
+- `_load_settings` *(function)*
+- `_marked` *(function)*
+- `_merge_codas_groups` *(function)*
+- `_write_settings` *(function)*
+- `baseline_record_command` *(function)*
+- `claude_hook_status` *(function)*
 - `claude_shim_pages` *(function)*
 - `install_claude_session_hook` *(function)*
+- `install_claude_turn_hooks` *(function)*
 - `render_claude_shim` *(function)*
 - `resolve_agent_command` *(function)*
+- `resolve_codas_command` *(function)*
+- `resolve_hook_runner` *(function)*
 - `session_hook_status` *(function)*
+- `turn_hook_specs` *(function)*
 - `verify_claude_shim` *(function)*
 - `write_claude_shim` *(function)*
+
+### `src/codas/integrations/claude_hook.py`
+
+- `_repo_from_stdin` *(function)*
+- `run_claude_hook` *(function)*
 
 ### `src/codas/integrations/enforcement.py`
 
@@ -55,9 +72,12 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 ```mermaid
 graph LR
   n0["src/codas/app/agents_block.py"]
-  n1["src/codas/integrations/claude.py"]
-  n2["src/codas/integrations/enforcement.py"]
-  n3["src/codas/integrations/install_state.py"]
-  n1 --> n0
-  n2 --> n3
+  n1["src/codas/app/status.py"]
+  n2["src/codas/integrations/claude.py"]
+  n3["src/codas/integrations/claude_hook.py"]
+  n4["src/codas/integrations/enforcement.py"]
+  n5["src/codas/integrations/install_state.py"]
+  n2 --> n0
+  n3 --> n1
+  n4 --> n5
 ```

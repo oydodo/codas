@@ -3,7 +3,7 @@
   "name": "per-turn-injection",
   "title": "Per-turn injection: codas status + check-on-return hooks (gap 3)",
   "description": "Edit-time/return-time error injection. NEW fast 'codas status' (git-delta -> cheap policy subset: missing_owner + deprecated_path + duplicate_symbol, filtered to changed files, ~100ms, no cache). Thin platform shim wires it to project-level Claude hooks (SubagentStop + PostToolUse Agent = check-on-return main path; PostToolUse Edit = main-agent bonus), all injecting the MAIN agent via additionalContext as FACTUAL statements. Universal across subagent/codex/human because it diffs git, not tool events.",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

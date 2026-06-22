@@ -150,6 +150,69 @@ def build_parser() -> argparse.ArgumentParser:
     )
     schema.add_argument("repo", nargs="?", default=".")
 
+    status = subparsers.add_parser(
+        "status",
+        help=(
+            "Advisory facts about files changed this session — the per-turn-injection "
+            "core (unowned / deprecated-path / duplicate-symbol on changed files only)."
+        ),
+    )
+    status.add_argument("repo", nargs="?", default=".")
+    status.add_argument(
+        "--path",
+        action="append",
+        default=None,
+        metavar="PATH",
+        help="Scope findings to this repo-relative path or prefix (repeatable).",
+    )
+    status_since = status.add_mutually_exclusive_group()
+    status_since.add_argument(
+        "--since",
+        metavar="REF",
+        help=(
+            "Diff baseline: surface everything changed since REF (committed AND "
+            "uncommitted), catching changes a worker committed before returning."
+        ),
+    )
+    status_since.add_argument(
+        "--since-baseline",
+        action="store_true",
+        dest="since_baseline",
+        help="Use the recorded session baseline (see --record-baseline) as the diff ref.",
+    )
+    status_out = status.add_mutually_exclusive_group()
+    status_out.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the findings as JSON ({path, kind, message}).",
+    )
+    status_out.add_argument(
+        "--additional-context",
+        action="store_true",
+        dest="additional_context",
+        help="Print the capped factual advisory string (empty when clean).",
+    )
+    status.add_argument(
+        "--record-baseline",
+        action="store_true",
+        dest="record_baseline",
+        help="Record current HEAD as the session baseline (for --since-baseline) and exit.",
+    )
+
+    claude_hook = subparsers.add_parser(
+        "claude-hook",
+        help=(
+            "Internal: emit the Claude per-turn additionalContext envelope for a hook event "
+            "(reads the hook input on stdin). Invoked by the installed Stop/PostToolUse hooks."
+        ),
+    )
+    claude_hook.add_argument(
+        "event",
+        nargs="?",
+        default="Stop",
+        help="The firing hook event (Stop | SubagentStop | PostToolUse).",
+    )
+
     doctor = subparsers.add_parser("doctor", help="Diagnose Codas installation.")
     doctor.add_argument("repo", nargs="?", default=".")
     doctor.add_argument(
@@ -212,6 +275,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    # claude-hook reads the repo from the hook input on stdin (not args.repo) and must never
+    # crash a turn — dispatch it BEFORE the repo resolution below, which it has no arg for.
+    if args.command == "claude-hook":
+        from .app.hooks import emit_claude_turn_hook
+
+        return emit_claude_turn_hook(args.event)
 
     repo = Path(args.repo).expanduser().resolve()
 
@@ -367,8 +437,14 @@ def main(argv: list[str] | None = None) -> int:
         claude = agent.claude
         ran = claude.installed_command or claude.expected_command
         print(f"claude session hook: {claude.status} -> {claude.settings_path} ({ran})")
+        turn = agent.turn_hooks
+        live = sum(1 for r in turn.values() if r.status in ("installed", "refreshed"))
+        print(
+            f"claude per-turn hooks: {live}/{len(turn)} groups "
+            "(Stop, SubagentStop, PostToolUse: Agent/codex/edit)"
+        )
         if claude.status in ("installed", "refreshed"):
-            print("  approve the hook in Claude Code when prompted (workspace trust).")
+            print("  approve the hooks in Claude Code when prompted (workspace trust).")
         if agent.agents_block != "current" or agent.claude_shim != "current":
             print(
                 f"  agent docs: AGENTS.md block {agent.agents_block}, CLAUDE.md shim "
@@ -422,6 +498,31 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(render_impact_text(result))
         return 0
+
+    if args.command == "status":
+        from .app.status import (
+            read_baseline,
+            record_baseline,
+            render_additional_context,
+            render_text,
+            run_status,
+        )
+
+        if args.record_baseline:
+            sha = record_baseline(repo)
+            print(sha or "no git baseline")
+            return 0
+        since = read_baseline(repo) if args.since_baseline else args.since
+        result = run_status(repo, paths=tuple(args.path or ()), since=since)
+        if args.json:
+            print(json.dumps(list(result.findings), indent=2, sort_keys=True))
+        elif args.additional_context:
+            text = render_additional_context(result)
+            if text:
+                print(text)
+        else:
+            print(render_text(result))
+        return 0  # advisory: status never sets a non-zero exit.
 
     if args.command == "doctor":
         from .app.doctor import doctor_has_failures, run_doctor
