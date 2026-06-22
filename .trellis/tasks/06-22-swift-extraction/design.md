@@ -94,6 +94,10 @@ unchanged. `calls()` is UNCHANGED (Swift contributes no call edges — thin slic
   out-of-inventory, `context.py:176-185`). Swift is OUT OF SCOPE for `fact_delta`/`fact_coupling`
   until a Swift HEAD-blob reader exists; an impl must NOT naively assume symmetry.
 - **`ciri` adoption** — running real governance on the user's repo is post-capability.
+- **CodeGraph multi-language fact adapter** — the bigger direction this slice feeds: an
+  external multi-language fact source (CodeGraph) for the ADVISORY tier (impact / reuse /
+  multi-lang claim resolution), while THIS hand-built tree-sitter Swift adapter stays the
+  gate-grade DETERMINISTIC tier. See `docs/codas-fact-claim-maintenance-milestone.md`.
 
 ## 6. LanguageAdapter abstraction (light)
 
