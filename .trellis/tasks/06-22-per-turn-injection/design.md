@@ -86,3 +86,105 @@ Ship (1)+(2) first — `codas status` is valuable on its own (manual + CI), de-r
 - `additionalContext` size: keep compact (only changed-file findings); never dump the whole repo.
 - Determinism / byte-identical: `codas status` is NOT in the inventory and must not be wired into
   `check`; confirm it cannot affect the hash.
+
+## 7. FOLDED design-review changes (workflow wf_cce9c4b1-2ad, 3-lens — APPROVE-WITH-CHANGES)
+
+codex MCP unusable → Claude-native 3-lens adversarial review. The ~100ms premise was VERIFIED
+SOUND (lazy ScanContext is real; relabel the NUMBER). Build to these.
+
+**B1 (BLOCKER) — committed-worker empty-diff blinds the check exactly when it matters.** The main
+worker class (codex/tmux, many Claude subagents) COMMITS before returning, so at the return
+boundary the working tree is CLEAN → `changed_paths()` = () → status silent → gap-3 stays open for
+exactly the workers we care about. FIX: do NOT derive scope from working-tree-vs-HEAD alone.
+Record a session/delegation BASELINE commit sha (at SessionStart, and/or when a delegation is
+dispatched) and add `codas status --since <ref>` = `git diff baseline..HEAD` ∪ working-tree. Store
+the baseline in a gitignored scratch (see S2). At minimum, surface the empty-diff case explicitly
+rather than silently claiming universality.
+
+**B2 (BLOCKER) — duplicate_symbol is src/-hardcoded + the filter IS new logic.** `duplicate_symbol.py`
+hardcodes `SCOPE_PREFIX='src/'` and takes no affected-set param. (a) The "filter to changed files"
+is a status-specific POST-filter over `Finding.evidence` → that IS new logic that can diverge from
+the gate — DROP the "no new logic" framing; spell the filter out as a precise TESTED predicate in
+`app/status.py` (a duplicate finding counts iff a symbol DEFINED in an affected file also exists
+elsewhere). (b) On a non-`src/` layout (lib-/app-layout) status silently reports ZERO duplicate
+findings while advertising it as one of three pillars — either DOCUMENT "duplicate-symbol status is
+src-only (matches the policy's scope)" OR make `duplicate_symbol` honor `wiki.product_roots` (the
+cross-repo work never reached it). MVP: document the limitation + a test pinning it.
+
+**S1 — strip imperative recommendations.** All three policies carry imperative `recommendation`
+fields ("Add a Structure Unit…", "Move it under…", "Consolidate…"). Claude's prompt-injection
+defense flags out-of-band imperatives. Emit ONLY `{path, kind, message}` (factual); drop
+`recommendation` from text AND --json; TEST that no imperative leaks into `--additional-context`.
+
+**S2 — ship the dedup, don't defer it.** `changed_paths()`/baseline-diff grows monotonically in a
+session → every return re-injects every standing finding; and the receiver is the MAIN agent (didn't
+author the code) → an unactionable finding (owner needs a human structure.yml decision) drives a
+re-delegate/re-inject LOOP. FIX: fingerprint injected findings (hash of path+kind+message) in a
+gitignored `.codas/.status-seen.json` (add to BOTH `.gitignore` AND `index.py::_IGNORE_PATHS`, like
+`.install-state.json`); inject only unseen; add an "unactionable → suppress after N / needs-human"
+carve-out. This scratch also holds the S/B1 baseline sha.
+
+**S3 — hard-cap the additionalContext payload (TESTED).** missing_owner emits one finding per
+unowned artifact, re-injected every return → erodes the very context window this protects. Top-N
+(e.g. 10) + deterministic order + a "+K more, run `codas status`" tail + a byte cap, as a tested
+invariant, not prose.
+
+**S4 — the REAL universal net is the `Stop` hook (mcp-codex is NOT caught at return otherwise).**
+`PostToolUse:Agent|Task` + `SubagentStop` fire ONLY for the native Task/Agent tool — **mcp-codex
+workers spawn via `mcp__*` tools, so NO return-boundary hook matches them, and that is the user's
+PREFERRED backend (global CLAUDE.md).** FIX: make the `Stop` hook (fires when the MAIN agent yields
+its turn — catches EVERYTHING git-visible regardless of who edited) the real universal net; DEMOTE
+SubagentStop/PostToolUse:Agent to earlier-firing optimizations; also add a `PostToolUse` matcher for
+the MCP codex tool name(s) (`mcp__*codex*`). State explicitly that mcp-codex changes surface at the
+next `Stop`/edit. (Stop + baseline-diff from B1 = the actually-universal combination.)
+
+**S5 — budget the COLD cost; never block/crash the turn.** The ~150ms is IN-PROCESS after imports;
+the hook spawns a fresh `python3 -m codas status` per fire (cold interpreter + codas/adapters/yaml
+import ≈ 300–600ms wall), synchronously on every fire. FIX: (a) budget end-to-end COLD with ~200ms+
+headroom; (b) hook `timeout` so a stalled git/status never blocks the turn; (c) drop/debounce
+`PostToolUse:Edit` to avoid the per-edit tax (Edit can also fire mid-edit on a syntactically broken
+file); (d) `parse_python_modules` must skip SyntaxError files (test it) and the whole status path
+must be wrapped so ANY exception → exit 0 + empty additionalContext ("status NEVER raises" invariant).
+
+**S6 — generalize the install/state model to (event, matcher) groups.** `install_claude_session_hook`
+/ `_is_ours` / `session_hook_status` are hardwired to one `hooks.SessionStart` group; the new hooks
+live under `Stop`, `SubagentStop`, and matcher-keyed `PostToolUse`. Specify the schema before build:
+`agent_hooks.claude.{session_start, stop, subagent_stop, post_tool_use_agent, post_tool_use_edit}`
+each a `hook_state`; generalize the installer + a `claude_hook_status(repo, event, matcher)` doctor
+calls per group; reuse the `# codas-managed-hook` marker per group; PRESERVE foreign matchers in the
+same event; keep the doctor hyphen→underscore key convention collision-free. Tests: foreign
+PostToolUse:Edit preserved; re-install idempotent across all events; partial install.
+
+**S7 — restate the perf budget honestly.** "~100ms" is symbol-only-in-isolation; the FULL status
+path measured ~145–155ms (dup_symbol ~77ms parse + missing_owner ~23 + deprecated_path ~21 +
+changed_paths ~16 + ctx ~10) and scales with the parse of ALL `.py` under the workspace root.
+Restate everywhere as "~150ms on this ~150-file repo, scaling with full-tree parse"; assert
+acceptance against ~200ms+ headroom. Re-measure after wiring.
+
+**S8 — fix the "one ScanContext drives all three" framing (§2/§6).** `missing_owner.py` +
+`deprecated_path.py` take `(repo, config)` NOT `(ctx)`; each re-runs its OWN `discover_files`
+(missing_owner also rebuilds `build_artifact_index`) → a status run does THREE file scans and
+`ctx.files` is computed-then-ignored by 2 of 3. Only `duplicate_symbol(ctx)` is resolution-adjacent;
+ITS laziness is what holds the budget. Correct §2/§6 to the real signatures (accept the cheap
+3-scan duplication for MVP, or note a future `ctx.files` dedupe).
+
+**S9 — state the git precondition + degraded behavior.** No-commits / non-git / mid-rebase →
+`extract_changed_paths()` returns () → hook silently inert. `codas status` must DISTINGUISH "clean"
+from "no git baseline"; doctor surfaces "inert: no git" when the hook is installed but can't function.
+
+**S10 — dogfood the gate on the new source.** `app/status.py` + CLI wiring are themselves governed.
+Build plan: after wiring, `codas check .` 0 + inventory byte-identical 2x; confirm new public symbol
+names (`run_status`/`status`/…) don't collide under duplicate_symbol's src/ scope.
+
+**NITS:** N1 changed-file filtering is OUTPUT-scoping/noise control, NOT a speedup (the ~150ms floor
+is the full-tree parse; doesn't shrink with a smaller diff) — note it so "why still 150ms for one
+file" isn't a surprise. N2 duplicate_symbol's src/ + public-only (non-underscore) scope narrows
+coverage — don't claim universal "symbol already exists." N3 state the bound (findings ≤ dirty×3,
+re-injected until fixed/committed) — superseded by S2 dedup. N4 factual-phrasing rests on a
+model-behavior assumption that can drift; keep phrasing tunable + empirically verify injected
+findings actually change main-agent behavior.
+
+**REVISED trigger (folding B1+S4):** the load-bearing pair is **`Stop` hook + baseline-diff** (catches
+every worker incl. mcp-codex/committed, because it checks git since the session baseline whenever the
+main agent yields). SubagentStop / PostToolUse:Agent / PostToolUse:Edit are earlier-firing
+optimizations on top. All inject the MAIN agent, factually, deduped, capped, never-raising.
