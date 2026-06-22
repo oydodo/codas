@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 # noqa note: this module is the platform shim — it may import the neutral app/ renderer
@@ -17,9 +16,12 @@ from codas.app.agents_block import BLOCK_END, BLOCK_START, splice_managed_block
 from codas.integrations.hook_settings import (
     HookResult,
     TurnHookSpec,
+    baseline_record_command,
     group_status,
     install_session_group,
     install_turn_groups,
+    resolve_hook_runner,
+    resolve_preflight_command,
     session_group_status,
 )
 
@@ -40,10 +42,6 @@ _CLAUDE_SHIM_BODY = (
     "\n"
     "@AGENTS.md\n"
 )
-# Portable default codas invocation for a source checkout (codas not on PATH); an installed
-# codas resolves to its absolute binary. A committed settings.json must stay machine-
-# independent, so the default is portable rather than a machine-absolute path.
-DEFAULT_CODAS_COMMAND = "PYTHONPATH=src python3 -m codas"
 
 
 def render_claude_shim() -> str:
@@ -77,42 +75,6 @@ def verify_claude_shim(repo: Path) -> list[Path]:
     return sorted(stale)
 
 
-def resolve_codas_command() -> str:
-    """The base ``codas`` invocation: an installed ``codas`` on PATH (absolute, since PATH is
-    unresolved in a non-interactive ``sh -c``), else the portable source-checkout module form.
-    Shared by the SessionStart preflight + the baseline-record commands so they agree."""
-    found = shutil.which("codas")
-    return found if found else DEFAULT_CODAS_COMMAND
-
-
-def resolve_agent_command(command: str | None) -> str:
-    """The SessionStart preflight command. Explicit ``command`` wins; else ``<codas> preflight``."""
-    if command:
-        return command
-    return f"{resolve_codas_command()} preflight"
-
-
-def resolve_hook_runner(runner: str | None) -> str:
-    """The per-turn injection entrypoint invocation. Explicit ``runner`` wins; else the SAME
-    base codas invocation as SessionStart plus the neutral ``agent-hook`` subcommand — so the
-    runner carries codas's OWN interpreter (the absolute console-script binary when installed,
-    the PYTHONPATH=src module form in a source checkout). Routing through the CLI (not a bare
-    ``python3 -m codas.integrations.agent_hook``) avoids the installed-but-different-``python3``
-    failure that would raise ModuleNotFoundError at import time — BEFORE the never-raises
-    guard — on every turn."""
-    if runner:
-        return runner
-    return f"{resolve_codas_command()} agent-hook"
-
-
-def baseline_record_command() -> str:
-    """The SessionStart command (chained alongside preflight) that records the session
-    BASELINE sha ``codas status --since-baseline`` diffs against — so a worker that COMMITS
-    before returning is not invisible to the per-turn check (B1). Output redirected so the sha
-    never pollutes the SessionStart context injection."""
-    return f"{resolve_codas_command()} status --record-baseline > /dev/null 2>&1"
-
-
 def session_hook_status(repo: Path) -> str:
     """Live state of the Claude SessionStart hook (``installed | absent | malformed``)."""
     return session_group_status(repo, CLAUDE_SETTINGS_REL)
@@ -129,7 +91,7 @@ def install_claude_session_hook(
     """Merge the Codas ``SessionStart`` group into ``.claude/settings.json``. The group runs
     TWO commands: the preflight digest injection AND the baseline recorder (B1). Idempotent +
     foreign-safe (delegates to the neutral ``hook_settings`` machinery)."""
-    commands = [resolve_agent_command(command), baseline_record_command()]
+    commands = [resolve_preflight_command(command), baseline_record_command()]
     return install_session_group(repo, CLAUDE_SETTINGS_REL, commands, force=force)
 
 

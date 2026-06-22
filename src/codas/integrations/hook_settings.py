@@ -15,6 +15,7 @@ never copied, so ``duplicate_implementation`` stays quiet).
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,6 +23,49 @@ from pathlib import Path
 # run) so re-install recognises and refreshes ITS OWN groups and never tramples a foreign one.
 # Shared across all events AND all agents.
 SESSION_HOOK_MARKER = "codas-managed-hook"
+
+# Portable default codas invocation for a source checkout (codas not on PATH); an installed
+# codas resolves to its absolute binary. A committed settings file must stay machine-
+# independent, so the default is portable rather than a machine-absolute path.
+DEFAULT_CODAS_COMMAND = "PYTHONPATH=src python3 -m codas"
+
+
+def resolve_codas_command() -> str:
+    """The base ``codas`` invocation: an installed ``codas`` on PATH (absolute, since PATH is
+    unresolved in a non-interactive ``sh -c``), else the portable source-checkout module form.
+    Shared by the SessionStart preflight + the baseline-record commands so they agree. Agent-
+    neutral — Claude and Codex resolve the same way."""
+    found = shutil.which("codas")
+    return found if found else DEFAULT_CODAS_COMMAND
+
+
+def resolve_preflight_command(command: str | None) -> str:
+    """The SessionStart preflight command (its stdout is injected as context). Explicit
+    ``command`` wins; else ``<codas> preflight``."""
+    if command:
+        return command
+    return f"{resolve_codas_command()} preflight"
+
+
+def baseline_record_command() -> str:
+    """The SessionStart command (chained alongside preflight) that records the session BASELINE
+    sha ``codas status --since-baseline`` diffs against — so a worker that COMMITS before
+    returning is not invisible to the per-turn check (B1). Output redirected so the sha never
+    pollutes the SessionStart context injection."""
+    return f"{resolve_codas_command()} status --record-baseline > /dev/null 2>&1"
+
+
+def resolve_hook_runner(runner: str | None) -> str:
+    """The per-turn injection entrypoint invocation. Explicit ``runner`` wins; else the SAME
+    base codas invocation as SessionStart plus the neutral ``agent-hook`` subcommand — so the
+    runner carries codas's OWN interpreter (the absolute console-script binary when installed,
+    the PYTHONPATH=src module form in a source checkout). Routing through the CLI (not a bare
+    ``python3 -m codas.integrations.agent_hook``) avoids the installed-but-different-``python3``
+    failure that would raise ModuleNotFoundError at import time — BEFORE the never-raises
+    guard — on every turn. Agent-neutral (Claude + Codex share the ``agent-hook`` entrypoint)."""
+    if runner:
+        return runner
+    return f"{resolve_codas_command()} agent-hook"
 
 
 @dataclass(frozen=True)

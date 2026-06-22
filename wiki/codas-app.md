@@ -71,24 +71,27 @@ The third is byte-identical determinism. The Atlas pack, knowledge tree, generat
 ### `src/codas/app/doctor.py`
 
 - `Diagnostic` *(class)*
-- `_agent_hook` *(function)*
+- `_agent_session_diag` *(function)*
 - `_agents_block` *(function)*
 - `_claude_shim` *(function)*
+- `_codex_diags` *(function)*
 - `_freshness` *(function)*
 - `_git_hooks` *(function)*
 - `_git_repo` *(function)*
 - `_legacy_prototype` *(function)*
 - `_optional` *(function)*
 - `_required` *(function)*
-- `_session_state` *(function)*
+- `_session_slice` *(function)*
 - `_trellis_context` *(function)*
-- `_turn_hooks` *(function)*
+- `_turn_diag` *(function)*
 - `doctor_has_failures` *(function)*
 - `run_doctor` *(function)*
 
 ### `src/codas/app/hooks.py`
 
 - `AgentInjectionResult` *(class)*
+- `AgentInstall` *(class)*
+- `_agent_hook_state` *(function)*
 - `_doc_freshness` *(function)*
 - `_ensure_gitignored` *(function)*
 - `emit_agent_turn_hook` *(function)*
@@ -237,38 +240,40 @@ graph LR
   n23["src/codas/integrations/agent_hook.py"]
   n24["src/codas/integrations/claude.py"]
   n25["src/codas/integrations/enforcement.py"]
-  n26["src/codas/integrations/install_state.py"]
-  n27["src/codas/policies/code_anchor.py"]
-  n28["src/codas/policies/config_sources.py"]
-  n29["src/codas/policies/dependency_direction.py"]
-  n30["src/codas/policies/deprecated_path.py"]
-  n31["src/codas/policies/document_set.py"]
-  n32["src/codas/policies/dogfooding.py"]
-  n33["src/codas/policies/duplicate_implementation.py"]
-  n34["src/codas/policies/duplicate_symbol.py"]
-  n35["src/codas/policies/fact_coupling.py"]
-  n36["src/codas/policies/generated_wiki_drift.py"]
-  n37["src/codas/policies/missing_owner.py"]
-  n38["src/codas/policies/policy_registry.py"]
-  n39["src/codas/policies/program_plan.py"]
-  n40["src/codas/policies/stale_claim.py"]
-  n41["src/codas/policies/stale_html_claim.py"]
-  n42["src/codas/policies/stale_wiki_claim.py"]
-  n43["src/codas/policies/structure_drift.py"]
-  n44["src/codas/policies/structure_map.py"]
-  n45["src/codas/policies/trellis_context.py"]
-  n46["src/codas/policies/waivers.py"]
-  n47["src/codas/structure/document_loader.py"]
-  n48["src/codas/structure/inventory.py"]
-  n49["src/codas/structure/loader.py"]
-  n50["src/codas/structure/models.py"]
-  n51["src/codas/structure/program_loader.py"]
+  n26["src/codas/integrations/hook_settings.py"]
+  n27["src/codas/integrations/install_state.py"]
+  n28["src/codas/integrations/registry.py"]
+  n29["src/codas/policies/code_anchor.py"]
+  n30["src/codas/policies/config_sources.py"]
+  n31["src/codas/policies/dependency_direction.py"]
+  n32["src/codas/policies/deprecated_path.py"]
+  n33["src/codas/policies/document_set.py"]
+  n34["src/codas/policies/dogfooding.py"]
+  n35["src/codas/policies/duplicate_implementation.py"]
+  n36["src/codas/policies/duplicate_symbol.py"]
+  n37["src/codas/policies/fact_coupling.py"]
+  n38["src/codas/policies/generated_wiki_drift.py"]
+  n39["src/codas/policies/missing_owner.py"]
+  n40["src/codas/policies/policy_registry.py"]
+  n41["src/codas/policies/program_plan.py"]
+  n42["src/codas/policies/stale_claim.py"]
+  n43["src/codas/policies/stale_html_claim.py"]
+  n44["src/codas/policies/stale_wiki_claim.py"]
+  n45["src/codas/policies/structure_drift.py"]
+  n46["src/codas/policies/structure_map.py"]
+  n47["src/codas/policies/trellis_context.py"]
+  n48["src/codas/policies/waivers.py"]
+  n49["src/codas/structure/document_loader.py"]
+  n50["src/codas/structure/inventory.py"]
+  n51["src/codas/structure/loader.py"]
+  n52["src/codas/structure/models.py"]
+  n53["src/codas/structure/program_loader.py"]
   n0 --> n1
   n0 --> n24
   n1 --> n13
   n1 --> n17
-  n1 --> n49
-  n1 --> n50
+  n1 --> n51
+  n1 --> n52
   n2 --> n8
   n2 --> n13
   n2 --> n16
@@ -281,8 +286,6 @@ graph LR
   n4 --> n17
   n4 --> n18
   n4 --> n21
-  n4 --> n27
-  n4 --> n28
   n4 --> n29
   n4 --> n30
   n4 --> n31
@@ -301,27 +304,32 @@ graph LR
   n4 --> n44
   n4 --> n45
   n4 --> n46
+  n4 --> n47
+  n4 --> n48
   n5 --> n1
   n5 --> n17
   n5 --> n21
   n5 --> n24
   n5 --> n25
-  n5 --> n26
-  n5 --> n47
+  n5 --> n27
+  n5 --> n28
   n5 --> n49
   n5 --> n51
+  n5 --> n53
   n6 --> n1
   n6 --> n17
   n6 --> n23
   n6 --> n24
   n6 --> n25
   n6 --> n26
-  n6 --> n49
+  n6 --> n27
+  n6 --> n28
+  n6 --> n51
   n7 --> n17
   n7 --> n21
   n7 --> n22
   n8 --> n21
-  n8 --> n48
+  n8 --> n50
   n9 --> n2
   n9 --> n8
   n9 --> n10
@@ -339,9 +347,9 @@ graph LR
   n14 --> n17
   n14 --> n18
   n14 --> n21
-  n14 --> n30
-  n14 --> n34
-  n14 --> n37
+  n14 --> n32
+  n14 --> n36
+  n14 --> n39
   n15 --> n13
   n15 --> n16
   n15 --> n22
