@@ -68,13 +68,26 @@ PARADIGM with near-zero ceremony — without Codas imposing a layout or taste.
   mapping — judgement, agent-assisted. NB dep-hygiene is parasitic on the mapping (it is only as good
   as the declared paths); avoid-dup is pure-gate-free.
 
+> MECHANISM CORRECTION (2026-06-22, verified `app/check.py:61-79`): `run_check` runs EVERY policy
+> UNCONDITIONALLY; `policies.yml` does NOT gate which run nor override severity (each emits its own).
+> It feeds only `dogfooding` + `policy_registry` (whose "implemented" set is `check_*` under
+> `src/codas/policies/`, absent on a consumer → 0-vs-0 → passes). ⇒ `duplicate_*` / `dependency_direction`
+> ALREADY run on ANY `.codas/` repo — `policies: {}` is the correct consumer default, there is NOTHING
+> to "enable". The S1/S2 "policy enablement" idea below was a FALSE premise; struck. A paradigm preset
+> works by JUST writing structure units with `must_not_depend_on` (S3) — `dependency_direction` enforces
+> them with no enablement step. The epic SHRINKS accordingly.
+
 ## Sub-task breakdown (implementation sequence)
 
-- **S1 — packaging (W8a, PREREQUISITE).** Verify `pip`/`pipx install` (codas on PATH, `resolve_codas_command`
-  switches off `PYTHONPATH=src`); README quickstart; `init` writes policy ENABLEMENT (today writes
-  `policies: {}` → `dependency_direction` inert); ecosystem-detect primitive. Small, no gate change.
-- **S2 — honest `none` default + avoid-dup decouple.** `codas init` default = minimal skeleton + turn
-  on `duplicate_*` + policy enablement; docs state avoid-dup is the day-1 value. Small.
+- **S1 — packaging (W8a, PREREQUISITE). ✅ SHIPPED `961a029`+`3f00e94`.** Broadened `requires-python`
+  to `>=3.9` (verified) + README `## Install` quickstart; pip-install on 3.9 + console script (no
+  `PYTHONPATH`) verified; check 0 / byte-identical / 563 tests. (Dropped the "init writes policy
+  enablement" item — false premise per the correction above.)
+- **S2 — honest framing only (NO code; was "avoid-dup decouple + policy enablement").** avoid-dup +
+  the gate are ALREADY delivered by `codas init` alone (policies run unconditionally). S2 reduces to
+  DOCS: state that `codas init` immediately gates duplicate top-level symbols under `src/` (the free
+  day-1 value) and that `policies: {}` is the consumer's own (empty) registry, not a disable switch.
+  Trivial; possibly fold into S3 docs.
 - **S3 — paradigm preset MECHANISM (data only, reuses `dependency_direction`).** `--paradigm X` opt-in;
   preset = context-shaped role units (`planned`) + nested layer roles + `must_not_depend_on` +
   `canonical_placement` templates + `enforceable_for`; built-in few + user + community loader;
