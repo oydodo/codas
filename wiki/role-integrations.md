@@ -20,6 +20,11 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 
 ## Modules & symbols
 
+### `src/codas/integrations/agent_hook.py`
+
+- `_repo_from_stdin` *(function)*
+- `run_agent_hook` *(function)*
+
 ### `src/codas/integrations/claude.py`
 
 - `baseline_record_command` *(function)*
@@ -35,11 +40,6 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 - `turn_hook_specs` *(function)*
 - `verify_claude_shim` *(function)*
 - `write_claude_shim` *(function)*
-
-### `src/codas/integrations/claude_hook.py`
-
-- `_repo_from_stdin` *(function)*
-- `run_claude_hook` *(function)*
 
 ### `src/codas/integrations/enforcement.py`
 
@@ -80,13 +80,13 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 graph LR
   n0["src/codas/app/agents_block.py"]
   n1["src/codas/app/status.py"]
-  n2["src/codas/integrations/claude.py"]
-  n3["src/codas/integrations/claude_hook.py"]
+  n2["src/codas/integrations/agent_hook.py"]
+  n3["src/codas/integrations/claude.py"]
   n4["src/codas/integrations/enforcement.py"]
   n5["src/codas/integrations/hook_settings.py"]
   n6["src/codas/integrations/install_state.py"]
-  n2 --> n0
-  n2 --> n5
-  n3 --> n1
+  n2 --> n1
+  n3 --> n0
+  n3 --> n5
   n4 --> n6
 ```

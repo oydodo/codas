@@ -22,14 +22,14 @@ from codas.integrations.install_state import hook_state, merge_install_state
 from codas.structure.loader import StructureMapError
 
 
-def emit_claude_turn_hook(event: str) -> int:
-    """App-layer bridge for the ``codas claude-hook <Event>`` CLI subcommand (the CLI may not
+def emit_agent_turn_hook(event: str) -> int:
+    """App-layer bridge for the ``codas agent-hook <Event>`` CLI subcommand (the CLI may not
     import ``role-integrations``; this layer is the permitted bridge). Delegates to the
     integrations envelope entrypoint, which reads the hook input from stdin and prints the
-    Claude ``additionalContext`` envelope. Always returns 0 (the never-block invariant)."""
-    from codas.integrations.claude_hook import run_claude_hook
+    agent-neutral ``additionalContext`` envelope. Always returns 0 (the never-block invariant)."""
+    from codas.integrations.agent_hook import run_agent_hook
 
-    return run_claude_hook([event])
+    return run_agent_hook([event])
 
 
 def install_git_hooks(

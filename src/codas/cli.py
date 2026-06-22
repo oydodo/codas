@@ -199,19 +199,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Record current HEAD as the session baseline (for --since-baseline) and exit.",
     )
 
-    claude_hook = subparsers.add_parser(
-        "claude-hook",
-        help=(
-            "Internal: emit the Claude per-turn additionalContext envelope for a hook event "
-            "(reads the hook input on stdin). Invoked by the installed Stop/PostToolUse hooks."
-        ),
-    )
-    claude_hook.add_argument(
-        "event",
-        nargs="?",
-        default="Stop",
-        help="The firing hook event (Stop | SubagentStop | PostToolUse).",
-    )
+    # The per-turn envelope entrypoint. ``agent-hook`` is the neutral name (Claude + Codex);
+    # ``claude-hook`` is a DEPRECATED one-release alias so hooks already baked into an existing
+    # .claude/settings.json keep working until their next reinstall (codex review B4).
+    for _name, _deprecated in (("agent-hook", False), ("claude-hook", True)):
+        _hook = subparsers.add_parser(
+            _name,
+            help=(
+                "DEPRECATED alias for agent-hook. " if _deprecated else ""
+            )
+            + (
+                "Internal: emit the per-turn additionalContext envelope for a hook event "
+                "(reads the hook input on stdin). Invoked by the installed per-turn hooks."
+            ),
+        )
+        _hook.add_argument(
+            "event",
+            nargs="?",
+            default="Stop",
+            help="The firing hook event (Stop | SubagentStop | PostToolUse | UserPromptSubmit).",
+        )
 
     doctor = subparsers.add_parser("doctor", help="Diagnose Codas installation.")
     doctor.add_argument("repo", nargs="?", default=".")
@@ -276,12 +283,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    # claude-hook reads the repo from the hook input on stdin (not args.repo) and must never
-    # crash a turn — dispatch it BEFORE the repo resolution below, which it has no arg for.
-    if args.command == "claude-hook":
-        from .app.hooks import emit_claude_turn_hook
+    # agent-hook (and its deprecated claude-hook alias) reads the repo from the hook input on
+    # stdin (not args.repo) and must never crash a turn — dispatch it BEFORE the repo resolution
+    # below, which it has no arg for.
+    if args.command in ("agent-hook", "claude-hook"):
+        from .app.hooks import emit_agent_turn_hook
 
-        return emit_claude_turn_hook(args.event)
+        return emit_agent_turn_hook(args.event)
 
     repo = Path(args.repo).expanduser().resolve()
 

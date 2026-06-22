@@ -91,7 +91,7 @@ The third is byte-identical determinism. The Atlas pack, knowledge tree, generat
 - `AgentInjectionResult` *(class)*
 - `_doc_freshness` *(function)*
 - `_ensure_gitignored` *(function)*
-- `emit_claude_turn_hook` *(function)*
+- `emit_agent_turn_hook` *(function)*
 - `install_agent_injection` *(function)*
 - `install_git_hooks` *(function)*
 
@@ -234,8 +234,8 @@ graph LR
   n20["src/codas/core/receipt.py"]
   n21["src/codas/facts/context.py"]
   n22["src/codas/facts/openworld.py"]
-  n23["src/codas/integrations/claude.py"]
-  n24["src/codas/integrations/claude_hook.py"]
+  n23["src/codas/integrations/agent_hook.py"]
+  n24["src/codas/integrations/claude.py"]
   n25["src/codas/integrations/enforcement.py"]
   n26["src/codas/integrations/install_state.py"]
   n27["src/codas/policies/code_anchor.py"]
@@ -264,7 +264,7 @@ graph LR
   n50["src/codas/structure/models.py"]
   n51["src/codas/structure/program_loader.py"]
   n0 --> n1
-  n0 --> n23
+  n0 --> n24
   n1 --> n13
   n1 --> n17
   n1 --> n49
@@ -304,7 +304,7 @@ graph LR
   n5 --> n1
   n5 --> n17
   n5 --> n21
-  n5 --> n23
+  n5 --> n24
   n5 --> n25
   n5 --> n26
   n5 --> n47

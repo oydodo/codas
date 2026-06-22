@@ -94,15 +94,15 @@ def resolve_agent_command(command: str | None) -> str:
 
 def resolve_hook_runner(runner: str | None) -> str:
     """The per-turn injection entrypoint invocation. Explicit ``runner`` wins; else the SAME
-    base codas invocation as SessionStart plus the ``claude-hook`` subcommand — so the runner
-    carries codas's OWN interpreter (the absolute console-script binary when installed, the
-    PYTHONPATH=src module form in a source checkout). Routing through the CLI (not a bare
-    ``python3 -m codas.integrations.claude_hook``) avoids the installed-but-different-``python3``
+    base codas invocation as SessionStart plus the neutral ``agent-hook`` subcommand — so the
+    runner carries codas's OWN interpreter (the absolute console-script binary when installed,
+    the PYTHONPATH=src module form in a source checkout). Routing through the CLI (not a bare
+    ``python3 -m codas.integrations.agent_hook``) avoids the installed-but-different-``python3``
     failure that would raise ModuleNotFoundError at import time — BEFORE the never-raises
     guard — on every turn."""
     if runner:
         return runner
-    return f"{resolve_codas_command()} claude-hook"
+    return f"{resolve_codas_command()} agent-hook"
 
 
 def baseline_record_command() -> str:
@@ -151,7 +151,7 @@ def install_claude_turn_hooks(
     repo: Path, *, runner: str | None = None, force: bool = False
 ) -> dict[str, ClaudeHookResult]:
     """Merge the per-turn injection groups (Stop / SubagentStop / PostToolUse×3) into
-    ``.claude/settings.json``. Each group runs ``claude-hook <Event>`` (the envelope
+    ``.claude/settings.json``. Each group runs ``agent-hook <Event>`` (the envelope
     entrypoint). Marker-guarded, idempotent, foreign-safe (neutral ``hook_settings`` core)."""
     runner = resolve_hook_runner(runner)
     return install_turn_groups(repo, CLAUDE_SETTINGS_REL, turn_hook_specs(), runner, force=force)

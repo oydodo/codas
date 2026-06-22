@@ -68,8 +68,8 @@ graph LR
   n35["src/codas/facts/delta.py"]
   n36["src/codas/facts/openworld.py"]
   n37["src/codas/facts/snapshot.py"]
-  n38["src/codas/integrations/claude.py"]
-  n39["src/codas/integrations/claude_hook.py"]
+  n38["src/codas/integrations/agent_hook.py"]
+  n39["src/codas/integrations/claude.py"]
   n40["src/codas/integrations/enforcement.py"]
   n41["src/codas/integrations/hook_settings.py"]
   n42["src/codas/integrations/install_state.py"]
@@ -114,7 +114,7 @@ graph LR
   n10 --> n5
   n10 --> n66
   n11 --> n12
-  n11 --> n38
+  n11 --> n39
   n12 --> n25
   n12 --> n30
   n12 --> n68
@@ -154,7 +154,7 @@ graph LR
   n16 --> n12
   n16 --> n30
   n16 --> n34
-  n16 --> n38
+  n16 --> n39
   n16 --> n40
   n16 --> n42
   n16 --> n65
@@ -239,9 +239,9 @@ graph LR
   n37 --> n6
   n37 --> n7
   n37 --> n66
-  n38 --> n12
-  n38 --> n41
-  n39 --> n26
+  n38 --> n26
+  n39 --> n12
+  n39 --> n41
   n40 --> n42
   n43 --> n31
   n43 --> n34
