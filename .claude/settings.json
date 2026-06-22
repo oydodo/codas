@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PYTHONPATH=src python3 -m codas claude-hook Stop  # codas-managed-hook"
+            "command": "PYTHONPATH=src python3 -m codas agent-hook Stop  # codas-managed-hook"
           }
         ]
       }
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PYTHONPATH=src python3 -m codas claude-hook SubagentStop  # codas-managed-hook"
+            "command": "PYTHONPATH=src python3 -m codas agent-hook SubagentStop  # codas-managed-hook"
           }
         ]
       }
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PYTHONPATH=src python3 -m codas claude-hook PostToolUse  # codas-managed-hook"
+            "command": "PYTHONPATH=src python3 -m codas agent-hook PostToolUse  # codas-managed-hook"
           }
         ]
       },
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PYTHONPATH=src python3 -m codas claude-hook PostToolUse  # codas-managed-hook"
+            "command": "PYTHONPATH=src python3 -m codas agent-hook PostToolUse  # codas-managed-hook"
           }
         ]
       },
@@ -58,7 +58,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PYTHONPATH=src python3 -m codas claude-hook PostToolUse  # codas-managed-hook"
+            "command": "PYTHONPATH=src python3 -m codas agent-hook PostToolUse  # codas-managed-hook"
           }
         ]
       }
