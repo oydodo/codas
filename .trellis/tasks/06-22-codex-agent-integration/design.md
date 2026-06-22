@@ -97,34 +97,39 @@ Mirrors `claude.py` minus shim, using D1 helpers with `settings_path = repo/".co
 `.claude/settings.json`). Do NOT mutate `~/.codex/config.toml` (user-owned TOML; JSON file is
 cleaner + isolatable). The file's top-level IS `{"hooks": {…}}` — same key the merge operates on.
 
-**D3b — turn specs (Codex).** Drop the Claude-tool-specific matchers; keep the portable net:
-- `Stop` (no matcher) — universal net (catches every worker via baseline diff).
-- `SubagentStop` (no matcher) — Codex subagents.
-- `PostToolUse` matcher `apply_patch|Edit|Write` — Codex's edit tool (doc: matcher reports
-  `tool_name: apply_patch`; `Edit`/`Write` aliases accepted).
-- DROP `Task|Agent` (Claude subagent tool) and `mcp__.*codex.*` (Claude catching codex-via-MCP)
-  — both meaningless when Codex IS the host. ← codex: confirm Codex's subagent/tool names so
-  the edit matcher + SubagentStop fully cover the per-turn surface.
+**D3b — turn specs (Codex). [REVISED per codex review B1+B2]** Codex docs document
+`additionalContext` injection for `SessionStart`, `UserPromptSubmit`, `PostToolUse` — NOT
+confirmed for `Stop`/`SubagentStop` (those carry continuation/block semantics). And
+`PostToolUse:apply_patch|Edit|Write` misses shell-driven writes (`unified_exec`). So:
+- **`UserPromptSubmit` (no matcher) — PRIMARY per-turn carrier.** Fires every prompt;
+  `inject_context` reads the git changed-file set, so it catches EVERY edit regardless of
+  tool (apply_patch, Edit/Write, or shell/unified_exec). Documented injection point. This
+  is Codex's robust replacement for Claude's `Stop` universal-net.
+- `PostToolUse` matcher `apply_patch|Edit|Write` — immediate edit feedback (doc: matcher
+  reports `tool_name: apply_patch`; `Edit`/`Write` aliases accepted).
+- `Stop` / `SubagentStop` — **TEST-GATED**: include ONLY if an integration test against a
+  real Codex CLI proves the envelope is accepted as injected context; otherwise DROP.
+- DROP `Task|Agent` + `mcp__.*codex.*` (Claude-specific). Consider `SubagentStart` if
+  Codex subagents need context BEFORE work (documented carrier) — optional.
 
 **D3c — SessionStart.** Same two chained commands as Claude: `<codas> preflight` (digest) +
 `<codas> status --record-baseline` (B1). Reuse `resolve_agent_command` + `baseline_record_command`.
 
 **D3d — runner.** `<codas> agent-hook <Event>` (the neutralized envelope, D4).
 
-### D4 — Neutralize the envelope
+### D4 — Neutralize the envelope [REVISED per codex review B4/OQ3]
 Rename `integrations/claude_hook.py` → `integrations/agent_hook.py`; `run_claude_hook` →
 `run_agent_hook`; `app/hooks.py:emit_claude_turn_hook` → `emit_agent_turn_hook`. The emitted
-envelope is unchanged (already neutral). **No back-compat alias** — this repo dogfoods, so the
-existing Claude hooks get reinstalled (their command strings flip `claude-hook`→`agent-hook`)
-as part of the task. (Existing installs on OTHER repos would re-point on their next
-`hooks --install`; acceptable, pre-1.0.) ← codex: is a one-release `claude-hook` alias worth
-the churn-avoidance, or is rename-only fine given dogfood reinstall?
+envelope is unchanged (already neutral). **Keep a thin `claude-hook` CLI alias → `agent-hook`
+for one release**: existing installs bake `codas claude-hook <Event>` into `.claude/settings.json`
+and would hit a missing-command error after upgrade before they reinstall. The alias dispatches
+to the same `emit_agent_turn_hook`. Mark it deprecated; remove next release.
 
 ### D5 — CLI
 - Rename subcommand `claude-hook` → `agent-hook` (`cli.py:202`, dispatch `:281`).
-- `hooks --install` gains `--agent {claude|codex|all}` (default **`all`** — installs every
-  registry agent; matches "govern whatever agent edits this repo"). `:417–449` iterates the
-  selected agents. ← codex: default `all` vs `claude` (back-compat) — `all` chosen; confirm.
+- `hooks --install` gains `--agent {claude|codex|all}`. **[REVISED per codex review OQ4]
+  Default = `claude`** (back-compat; never silently write `.codex/` for a non-Codex user).
+  `codex` / `all` are explicit opt-in. `:417–449` iterates the selected agents.
 
 ### D6 — doctor
 `_agent_hook` / `_turn_hooks` / `_session_state` iterate `AGENTS`, reading
@@ -139,10 +144,12 @@ in `~/.codex/config.toml`) as an advisory `warn`, not a hard fail — parallel t
 
 ## 3. Invariants to preserve (gate + boundaries)
 - NOT gate-semantics: no change to `codas check`, fact extraction, or the byte-identical hash.
-  `.codex/hooks.json` is a per-machine install artifact → MUST be gitignored + added to
-  `_SCRATCH_IGNORES` (`app/hooks.py:64`) + `structure.index._IGNORE_PATHS` so it never
-  surfaces in `codas status` or the inventory. ← codex: confirm `.codex/hooks.json` ignore
-  wiring matches the `.install-state.json` precedent (BLOCKER#1).
+  `.codex/hooks.json` is a per-machine install artifact → MUST be gitignored AND added to
+  BOTH `_SCRATCH_IGNORES` (`app/hooks.py:64`) AND `structure.index._IGNORE_PATHS`
+  (`index.py:24,190`) so it never surfaces in `git ls-files --others` / `codas status` / the
+  inventory. **[codex review B3 — CONFIRMED HARD BLOCKER]** both sites are currently missing
+  it; omitting either breaks the byte-identical acceptance criterion. Mirror the
+  `.install-state.json` precedent exactly (injection-MVP BLOCKER#1).
 - §11/§17: `integrations` may import `app`; the CLI may not import the envelope module
   (`agent_hook`) — it goes through `app/hooks.emit_agent_turn_hook`. Preserve.
 - `duplicate_implementation` (S10): keep `run_agent_hook` a unique top-level name (not `main`).
@@ -166,7 +173,28 @@ in `~/.codex/config.toml`) as an advisory `warn`, not a hard fail — parallel t
 4. `codas hooks --install --agent all` on this repo → `.codex/hooks.json` written (gitignored).
 5. Verify a Codex session in this repo picks up AGENTS.md + the per-turn injection.
 
-## 6. Open questions for codex review
+## 6b. codex review — APPROVE-WITH-CHANGES (folded 2026-06-22)
+
+Reviewer: codex-rescue. Independent WebFetch of the Codex hooks doc corroborated Q5.
+All blockers folded above; verdict items mapped:
+- **B1+B2 → D3b revised**: `UserPromptSubmit` is now the primary per-turn carrier (catches
+  shell/`unified_exec` writes; documented injector); `Stop`/`SubagentStop` are test-gated.
+- **B3 → §3 upgraded**: `.codex/hooks.json` MUST be added to `_SCRATCH_IGNORES` +
+  `_IGNORE_PATHS` (both). Hard blocker for byte-identical.
+- **B4 → D4 revised**: keep a one-release deprecated `claude-hook` alias.
+- **B5 → D3c note**: SessionStart stdout-as-context CONFIRMED. Caveat — Codex runs multiple
+  matching command handlers CONCURRENTLY (not serially); our preflight (stdout→context) +
+  baseline (stdout→/dev/null) are order-independent, so concurrency is safe. Fallback if it
+  regresses: emit the JSON envelope from `agent-hook SessionStart` + lean on `UserPromptSubmit`.
+- **N1/OQ1 → D1 confirmed**: pure move first, Claude tests green BEFORE adding Codex.
+- **N2**: no new `structure.yml` unit — `role-integrations` already owns `src/codas/integrations/`.
+- **N3**: no §11 violation while CLI→app→integrations holds.
+- **N4 (impl constraint)**: the extraction is a MOVE — DELETE the helpers from `claude.py`
+  and import from `hook_settings.py`. Leaving same-named `_load_settings`/`_group`/etc. in both
+  trips `duplicate_implementation` (repeated top-level symbol across `src/`).
+- **OQ4 → D5 revised**: default `--agent claude`; `codex`/`all` explicit opt-in.
+
+## 6. Open questions for codex review (RESOLVED — see 6b)
 1. D1 extraction risk vs import-from-claude shortcut — worth the churn?
 2. D3b — do Codex's subagent + edit tool names fully covered by `SubagentStop` +
    `apply_patch|Edit|Write`? Any missed per-turn surface (e.g. `UserPromptSubmit` as an

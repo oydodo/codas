@@ -57,9 +57,13 @@ Out of scope: Swift / multi-language extraction (separate queued task); MCP carr
   user's `config.toml`).
 - SessionStart hook chains the same two commands the Claude hook does (`codas preflight`
   digest + `codas status --record-baseline`).
-- Per-turn hooks: `Stop`, `SubagentStop`, `PostToolUse` (matcher `apply_patch|Edit|Write`
-  for edits; the existing `mcp__.*codex.*` matcher is Claude-side, N/A here) → each runs
-  `codas agent-hook <Event>`.
+- Per-turn hooks **[revised per codex review B1+B2]**: `UserPromptSubmit` (primary carrier —
+  documented injector; catches all edits incl. shell/`unified_exec` since `inject_context`
+  reads the git diff), `PostToolUse` (matcher `apply_patch|Edit|Write`, immediate edit
+  feedback). `Stop`/`SubagentStop` only if an integration test proves Codex accepts the
+  injected envelope for them. Each runs `codas agent-hook <Event>`.
+- `.codex/hooks.json` MUST be added to `_SCRATCH_IGNORES` + `structure.index._IGNORE_PATHS`
+  (both) so it stays out of the byte-identical inventory (codex review B3, hard blocker).
 - Marker convention mirrors the Claude installer so groups are idempotently
   detected/updated/removed.
 
@@ -69,8 +73,9 @@ Out of scope: Swift / multi-language extraction (separate queued task); MCP carr
 - Replace the 5 hardcoded "claude" dispatch sites:
   `app/hooks.py:144` (install-state key), `app/doctor.py:195` (probe lookup),
   `cli.py` subcommand def + dispatch branch + `hooks --install` orchestration.
-- `codas hooks --install --agent {claude|codex|all}` (default `all` or current behavior;
-  state the default in design). Doctor iterates the registry.
+- `codas hooks --install --agent {claude|codex|all}` (default **`claude`** per codex review
+  OQ4 — `codex`/`all` explicit opt-in, never silently write `.codex/` for a non-Codex user).
+  Doctor iterates the registry.
 
 ### R4 — install-state + doctor
 - Write Codex hook state under `agent_hooks["codex"]` (namespace already exists).
@@ -86,8 +91,10 @@ Out of scope: Swift / multi-language extraction (separate queued task); MCP carr
 ## Acceptance Criteria
 
 - [ ] `codas hooks --install --agent codex` writes a valid `<repo>/.codex/hooks.json`
-      with SessionStart + Stop + SubagentStop + PostToolUse groups; re-running is
-      idempotent (no duplicate groups).
+      with SessionStart + UserPromptSubmit + PostToolUse groups (+ Stop/SubagentStop only if
+      proven); re-running is idempotent (no duplicate groups); a foreign group is preserved.
+- [ ] `.codex/hooks.json` does NOT appear in `codas status` / the inventory; `codas check .`
+      inventory stays byte-identical with the file present (ignore wiring proven).
 - [ ] A Codex hook invocation (stdin `cwd` JSON → `codas agent-hook <Event>`) emits the
       `hookSpecificOutput.additionalContext` envelope identical to the Claude path on a
       dirty repo, and emits nothing (exit 0) on a clean turn.
