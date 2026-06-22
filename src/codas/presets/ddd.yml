@@ -1,0 +1,27 @@
+# Built-in Codas paradigm preset (curated data — no LLM, no repo facts).
+# The screaming-architecture, default-recommended shape: each bounded context is a
+# vertical slice; the four layers are nested INSIDE each context; contexts stay isolated.
+# `codas init --paradigm ddd` renders one example context's nested layers as a STAMP to
+# replicate under each real bounded context. Cross-context isolation becomes a gate once
+# you declare published interfaces (epic sub-task S5).
+name: ddd
+description: Bounded contexts — each context is a vertical slice with layers nested inside; contexts stay isolated.
+enforceable_for: [python]
+top_level: contexts
+layers:
+  - id: domain
+    must_not_depend_on: [application, adapters, infrastructure]
+    purpose: Context business rules and entities.
+    canonical_placement: Pure business rules for this context; no I/O or framework imports.
+  - id: application
+    must_not_depend_on: [adapters, infrastructure]
+    purpose: Use-case orchestration within the context.
+    canonical_placement: Coordinates the context's domain; no adapter or infrastructure imports.
+  - id: adapters
+    must_not_depend_on: [infrastructure]
+    purpose: Controllers, presenters and gateways for the context.
+    canonical_placement: Interface adapters for this context; not infrastructure.
+  - id: infrastructure
+    must_not_depend_on: []
+    purpose: Databases, web frameworks and external I/O for the context.
+    canonical_placement: Frameworks and drivers; the context's outermost layer.

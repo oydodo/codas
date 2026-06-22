@@ -17,3 +17,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+# Built-in paradigm presets are curated YAML data loaded at runtime; ship them in the wheel
+# (setuptools>=68 includes a package's subdirectory data globs without needing an __init__.py).
+codas = ["presets/*.yml"]

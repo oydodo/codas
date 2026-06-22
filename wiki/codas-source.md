@@ -23,6 +23,7 @@ The correctness core is deliberately LLM-free. `app/check.py`'s `run_check_with_
 
 ### `src/codas/cli.py`
 
+- `_print_paradigms` *(function)*
 - `build_parser` *(function)*
 - `main` *(function)*
 
@@ -51,90 +52,90 @@ graph LR
   n18["src/codas/app/impact.py"]
   n19["src/codas/app/init.py"]
   n20["src/codas/app/inventory.py"]
-  n21["src/codas/app/preflight.py"]
-  n22["src/codas/app/provenance.py"]
-  n23["src/codas/app/query.py"]
-  n24["src/codas/app/receipt.py"]
-  n25["src/codas/app/render_util.py"]
-  n26["src/codas/app/status.py"]
-  n27["src/codas/app/views.py"]
-  n28["src/codas/app/wiki.py"]
-  n29["src/codas/cli.py"]
-  n30["src/codas/config/loader.py"]
-  n31["src/codas/core/models.py"]
-  n32["src/codas/core/provenance.py"]
-  n33["src/codas/core/receipt.py"]
-  n34["src/codas/facts/context.py"]
-  n35["src/codas/facts/delta.py"]
-  n36["src/codas/facts/openworld.py"]
-  n37["src/codas/facts/snapshot.py"]
-  n38["src/codas/integrations/__init__.py"]
-  n39["src/codas/integrations/agent_hook.py"]
-  n40["src/codas/integrations/claude.py"]
-  n41["src/codas/integrations/codex.py"]
-  n42["src/codas/integrations/enforcement.py"]
-  n43["src/codas/integrations/hook_settings.py"]
-  n44["src/codas/integrations/install_state.py"]
-  n45["src/codas/integrations/registry.py"]
-  n46["src/codas/policies/code_anchor.py"]
-  n47["src/codas/policies/config_sources.py"]
-  n48["src/codas/policies/dependency_direction.py"]
-  n49["src/codas/policies/deprecated_path.py"]
-  n50["src/codas/policies/document_set.py"]
-  n51["src/codas/policies/dogfooding.py"]
-  n52["src/codas/policies/duplicate_implementation.py"]
-  n53["src/codas/policies/duplicate_symbol.py"]
-  n54["src/codas/policies/fact_coupling.py"]
-  n55["src/codas/policies/generated_wiki_drift.py"]
-  n56["src/codas/policies/missing_owner.py"]
-  n57["src/codas/policies/policy_registry.py"]
-  n58["src/codas/policies/program_plan.py"]
-  n59["src/codas/policies/stale_claim.py"]
-  n60["src/codas/policies/stale_html_claim.py"]
-  n61["src/codas/policies/stale_wiki_claim.py"]
-  n62["src/codas/policies/structure_drift.py"]
-  n63["src/codas/policies/structure_map.py"]
-  n64["src/codas/policies/trellis_context.py"]
-  n65["src/codas/policies/waivers.py"]
-  n66["src/codas/reporting/console.py"]
-  n67["src/codas/structure/__init__.py"]
-  n68["src/codas/structure/document_loader.py"]
-  n69["src/codas/structure/index.py"]
-  n70["src/codas/structure/inventory.py"]
-  n71["src/codas/structure/loader.py"]
-  n72["src/codas/structure/models.py"]
-  n73["src/codas/structure/program_loader.py"]
-  n0 --> n29
+  n21["src/codas/app/paradigm.py"]
+  n22["src/codas/app/preflight.py"]
+  n23["src/codas/app/provenance.py"]
+  n24["src/codas/app/query.py"]
+  n25["src/codas/app/receipt.py"]
+  n26["src/codas/app/render_util.py"]
+  n27["src/codas/app/status.py"]
+  n28["src/codas/app/views.py"]
+  n29["src/codas/app/wiki.py"]
+  n30["src/codas/cli.py"]
+  n31["src/codas/config/loader.py"]
+  n32["src/codas/core/models.py"]
+  n33["src/codas/core/provenance.py"]
+  n34["src/codas/core/receipt.py"]
+  n35["src/codas/facts/context.py"]
+  n36["src/codas/facts/delta.py"]
+  n37["src/codas/facts/openworld.py"]
+  n38["src/codas/facts/snapshot.py"]
+  n39["src/codas/integrations/__init__.py"]
+  n40["src/codas/integrations/agent_hook.py"]
+  n41["src/codas/integrations/claude.py"]
+  n42["src/codas/integrations/codex.py"]
+  n43["src/codas/integrations/enforcement.py"]
+  n44["src/codas/integrations/hook_settings.py"]
+  n45["src/codas/integrations/install_state.py"]
+  n46["src/codas/integrations/registry.py"]
+  n47["src/codas/policies/code_anchor.py"]
+  n48["src/codas/policies/config_sources.py"]
+  n49["src/codas/policies/dependency_direction.py"]
+  n50["src/codas/policies/deprecated_path.py"]
+  n51["src/codas/policies/document_set.py"]
+  n52["src/codas/policies/dogfooding.py"]
+  n53["src/codas/policies/duplicate_implementation.py"]
+  n54["src/codas/policies/duplicate_symbol.py"]
+  n55["src/codas/policies/fact_coupling.py"]
+  n56["src/codas/policies/generated_wiki_drift.py"]
+  n57["src/codas/policies/missing_owner.py"]
+  n58["src/codas/policies/policy_registry.py"]
+  n59["src/codas/policies/program_plan.py"]
+  n60["src/codas/policies/stale_claim.py"]
+  n61["src/codas/policies/stale_html_claim.py"]
+  n62["src/codas/policies/stale_wiki_claim.py"]
+  n63["src/codas/policies/structure_drift.py"]
+  n64["src/codas/policies/structure_map.py"]
+  n65["src/codas/policies/trellis_context.py"]
+  n66["src/codas/policies/waivers.py"]
+  n67["src/codas/reporting/console.py"]
+  n68["src/codas/structure/__init__.py"]
+  n69["src/codas/structure/document_loader.py"]
+  n70["src/codas/structure/index.py"]
+  n71["src/codas/structure/inventory.py"]
+  n72["src/codas/structure/loader.py"]
+  n73["src/codas/structure/models.py"]
+  n74["src/codas/structure/program_loader.py"]
+  n0 --> n30
   n1 --> n5
   n1 --> n9
   n2 --> n6
   n2 --> n7
   n4 --> n5
-  n4 --> n69
-  n5 --> n69
+  n4 --> n70
+  n5 --> n70
   n6 --> n7
-  n9 --> n30
+  n9 --> n31
   n10 --> n5
-  n10 --> n69
+  n10 --> n70
   n11 --> n12
-  n11 --> n40
-  n12 --> n25
-  n12 --> n30
-  n12 --> n71
+  n11 --> n41
+  n12 --> n26
+  n12 --> n31
   n12 --> n72
+  n12 --> n73
   n13 --> n20
-  n13 --> n25
-  n13 --> n28
-  n13 --> n30
-  n13 --> n36
-  n14 --> n28
-  n14 --> n30
-  n14 --> n34
-  n14 --> n36
-  n15 --> n30
+  n13 --> n26
+  n13 --> n29
+  n13 --> n31
+  n13 --> n37
+  n14 --> n29
+  n14 --> n31
+  n14 --> n35
+  n14 --> n37
   n15 --> n31
-  n15 --> n34
-  n15 --> n46
+  n15 --> n32
+  n15 --> n35
   n15 --> n47
   n15 --> n48
   n15 --> n49
@@ -154,179 +155,183 @@ graph LR
   n15 --> n63
   n15 --> n64
   n15 --> n65
+  n15 --> n66
   n16 --> n12
-  n16 --> n30
-  n16 --> n34
-  n16 --> n40
-  n16 --> n42
-  n16 --> n44
+  n16 --> n31
+  n16 --> n35
+  n16 --> n41
+  n16 --> n43
   n16 --> n45
-  n16 --> n68
-  n16 --> n71
-  n16 --> n73
+  n16 --> n46
+  n16 --> n69
+  n16 --> n72
+  n16 --> n74
   n17 --> n12
-  n17 --> n30
-  n17 --> n39
+  n17 --> n31
   n17 --> n40
-  n17 --> n42
+  n17 --> n41
   n17 --> n43
   n17 --> n44
   n17 --> n45
-  n17 --> n71
-  n18 --> n30
-  n18 --> n34
-  n18 --> n36
-  n20 --> n34
-  n20 --> n70
-  n21 --> n13
-  n21 --> n20
-  n21 --> n22
-  n21 --> n28
-  n21 --> n30
-  n21 --> n34
+  n17 --> n46
+  n17 --> n72
+  n18 --> n31
+  n18 --> n35
+  n18 --> n37
+  n19 --> n21
+  n20 --> n35
+  n20 --> n71
+  n21 --> n31
+  n22 --> n13
   n22 --> n20
-  n22 --> n30
-  n22 --> n32
-  n22 --> n34
+  n22 --> n23
+  n22 --> n29
+  n22 --> n31
+  n22 --> n35
   n23 --> n20
-  n24 --> n22
-  n24 --> n31
-  n24 --> n33
-  n26 --> n30
-  n26 --> n31
-  n26 --> n34
-  n26 --> n49
-  n26 --> n53
-  n26 --> n56
-  n27 --> n25
-  n27 --> n28
-  n27 --> n36
-  n28 --> n20
-  n28 --> n25
-  n28 --> n30
-  n28 --> n32
-  n28 --> n36
-  n29 --> n11
-  n29 --> n13
-  n29 --> n14
-  n29 --> n15
-  n29 --> n16
-  n29 --> n17
-  n29 --> n18
-  n29 --> n19
+  n23 --> n31
+  n23 --> n33
+  n23 --> n35
+  n24 --> n20
+  n25 --> n23
+  n25 --> n32
+  n25 --> n34
+  n27 --> n31
+  n27 --> n32
+  n27 --> n35
+  n27 --> n50
+  n27 --> n54
+  n27 --> n57
+  n28 --> n26
+  n28 --> n29
+  n28 --> n37
   n29 --> n20
-  n29 --> n21
-  n29 --> n22
-  n29 --> n23
-  n29 --> n24
   n29 --> n26
-  n29 --> n27
-  n29 --> n28
-  n29 --> n30
-  n29 --> n66
-  n29 --> n71
-  n34 --> n2
-  n34 --> n3
-  n34 --> n4
-  n34 --> n5
-  n34 --> n6
-  n34 --> n7
-  n34 --> n8
-  n34 --> n10
-  n34 --> n30
-  n34 --> n35
-  n34 --> n37
-  n34 --> n69
+  n29 --> n31
+  n29 --> n33
+  n29 --> n37
+  n30 --> n11
+  n30 --> n13
+  n30 --> n14
+  n30 --> n15
+  n30 --> n16
+  n30 --> n17
+  n30 --> n18
+  n30 --> n19
+  n30 --> n20
+  n30 --> n21
+  n30 --> n22
+  n30 --> n23
+  n30 --> n24
+  n30 --> n25
+  n30 --> n27
+  n30 --> n28
+  n30 --> n29
+  n30 --> n31
+  n30 --> n67
+  n30 --> n72
   n35 --> n2
+  n35 --> n3
+  n35 --> n4
+  n35 --> n5
   n35 --> n6
-  n35 --> n37
-  n37 --> n2
-  n37 --> n3
-  n37 --> n6
-  n37 --> n7
-  n37 --> n69
-  n39 --> n26
-  n40 --> n12
-  n40 --> n43
-  n41 --> n43
+  n35 --> n7
+  n35 --> n8
+  n35 --> n10
+  n35 --> n31
+  n35 --> n36
+  n35 --> n38
+  n35 --> n70
+  n36 --> n2
+  n36 --> n6
+  n36 --> n38
+  n38 --> n2
+  n38 --> n3
+  n38 --> n6
+  n38 --> n7
+  n38 --> n70
+  n40 --> n27
+  n41 --> n12
+  n41 --> n44
   n42 --> n44
-  n45 --> n38
-  n45 --> n40
-  n45 --> n41
-  n45 --> n43
-  n46 --> n31
-  n46 --> n34
-  n47 --> n30
-  n47 --> n31
+  n43 --> n45
+  n46 --> n39
+  n46 --> n41
+  n46 --> n42
+  n46 --> n44
+  n47 --> n32
+  n47 --> n35
   n48 --> n31
-  n48 --> n34
-  n48 --> n69
-  n48 --> n71
-  n49 --> n30
-  n49 --> n31
-  n49 --> n69
-  n49 --> n71
-  n50 --> n30
+  n48 --> n32
+  n49 --> n32
+  n49 --> n35
+  n49 --> n70
+  n49 --> n72
   n50 --> n31
-  n50 --> n68
-  n51 --> n30
+  n50 --> n32
+  n50 --> n70
+  n50 --> n72
   n51 --> n31
-  n52 --> n30
+  n51 --> n32
+  n51 --> n69
   n52 --> n31
-  n52 --> n34
+  n52 --> n32
   n53 --> n31
-  n53 --> n34
-  n54 --> n30
-  n54 --> n31
-  n54 --> n34
+  n53 --> n32
+  n53 --> n35
+  n54 --> n32
+  n54 --> n35
   n55 --> n31
-  n55 --> n34
-  n55 --> n71
-  n55 --> n73
-  n56 --> n30
-  n56 --> n31
-  n56 --> n69
-  n56 --> n71
+  n55 --> n32
+  n55 --> n35
+  n56 --> n32
+  n56 --> n35
   n56 --> n72
-  n57 --> n30
+  n56 --> n74
   n57 --> n31
-  n57 --> n34
-  n58 --> n30
+  n57 --> n32
+  n57 --> n70
+  n57 --> n72
+  n57 --> n73
   n58 --> n31
-  n58 --> n73
+  n58 --> n32
+  n58 --> n35
   n59 --> n31
-  n59 --> n34
-  n60 --> n31
-  n60 --> n34
-  n61 --> n31
-  n61 --> n34
-  n61 --> n50
-  n62 --> n30
-  n62 --> n31
-  n62 --> n69
-  n62 --> n71
-  n63 --> n30
+  n59 --> n32
+  n59 --> n74
+  n60 --> n32
+  n60 --> n35
+  n61 --> n32
+  n61 --> n35
+  n62 --> n32
+  n62 --> n35
+  n62 --> n51
   n63 --> n31
-  n63 --> n71
-  n64 --> n30
+  n63 --> n32
+  n63 --> n70
+  n63 --> n72
   n64 --> n31
+  n64 --> n32
+  n64 --> n72
   n65 --> n31
-  n66 --> n31
-  n67 --> n71
-  n67 --> n72
-  n67 --> n73
-  n68 --> n30
+  n65 --> n32
+  n66 --> n32
+  n67 --> n32
   n68 --> n72
-  n69 --> n72
-  n70 --> n9
-  n70 --> n30
-  n70 --> n34
-  n70 --> n68
-  n70 --> n69
-  n70 --> n71
+  n68 --> n73
+  n68 --> n74
+  n69 --> n31
+  n69 --> n73
   n70 --> n73
-  n71 --> n30
+  n71 --> n9
+  n71 --> n31
+  n71 --> n35
+  n71 --> n69
+  n71 --> n70
   n71 --> n72
-  n73 --> n30
-  n73 --> n72
+  n71 --> n74
+  n72 --> n31
+  n72 --> n73
+  n74 --> n31
+  n74 --> n73
 ```

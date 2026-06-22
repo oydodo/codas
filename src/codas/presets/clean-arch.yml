@@ -1,0 +1,24 @@
+# Built-in Codas paradigm preset (curated data — no LLM, no repo facts).
+# `codas init --paradigm clean-arch` renders these roles as one example context's
+# nested layer units. Rename the context + map each path to arm enforcement (S4).
+name: clean-arch
+description: Clean architecture — dependencies point inward toward the domain.
+enforceable_for: [python]
+top_level: layers          # framework/IO-shaped top level (a "technical-library" preset, not screaming)
+roles:
+  - id: domain
+    must_not_depend_on: [application, adapters, infrastructure]
+    purpose: Enterprise business rules and entities.
+    canonical_placement: Pure business rules; no I/O or framework imports.
+  - id: application
+    must_not_depend_on: [adapters, infrastructure]
+    purpose: Use-case orchestration over the domain.
+    canonical_placement: Coordinates the domain; no adapter or infrastructure imports.
+  - id: adapters
+    must_not_depend_on: [infrastructure]
+    purpose: Controllers, presenters and gateways.
+    canonical_placement: Interface adapters; convert between use cases and the outside; not infrastructure.
+  - id: infrastructure
+    must_not_depend_on: []
+    purpose: Databases, web frameworks and external I/O.
+    canonical_placement: Frameworks and drivers; the outermost layer; depended on by no inner layer.

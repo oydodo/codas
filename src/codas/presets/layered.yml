@@ -1,0 +1,20 @@
+# Built-in Codas paradigm preset (curated data — no LLM, no repo facts).
+# Classic n-tier layering: dependencies point downward; a layer must not depend on a
+# layer above it. A "technical-library" preset (top level is IO/role-shaped, not screaming).
+name: layered
+description: Layered n-tier — dependencies point downward; no layer depends on a layer above it.
+enforceable_for: [python]
+top_level: layers
+roles:
+  - id: presentation
+    must_not_depend_on: []
+    purpose: UI, controllers and view rendering.
+    canonical_placement: Entry points and presentation; depends downward only.
+  - id: business
+    must_not_depend_on: [presentation]
+    purpose: Application services and business logic.
+    canonical_placement: Use-case and domain logic; must not import the presentation layer.
+  - id: persistence
+    must_not_depend_on: [presentation, business]
+    purpose: Repositories and data access.
+    canonical_placement: Data access and storage; the lowest layer; must not import layers above it.
