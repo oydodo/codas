@@ -22,14 +22,6 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 
 ### `src/codas/integrations/claude.py`
 
-- `ClaudeHookResult` *(class)*
-- `TurnHookSpec` *(class)*
-- `_group` *(function)*
-- `_is_ours` *(function)*
-- `_load_settings` *(function)*
-- `_marked` *(function)*
-- `_merge_codas_groups` *(function)*
-- `_write_settings` *(function)*
 - `baseline_record_command` *(function)*
 - `claude_hook_status` *(function)*
 - `claude_shim_pages` *(function)*
@@ -61,6 +53,21 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 - `render_hook` *(function)*
 - `render_workflow` *(function)*
 
+### `src/codas/integrations/hook_settings.py`
+
+- `HookResult` *(class)*
+- `TurnHookSpec` *(class)*
+- `_group` *(function)*
+- `_is_ours` *(function)*
+- `_load_settings` *(function)*
+- `_marked` *(function)*
+- `_merge_codas_groups` *(function)*
+- `_write_settings` *(function)*
+- `group_status` *(function)*
+- `install_session_group` *(function)*
+- `install_turn_groups` *(function)*
+- `session_group_status` *(function)*
+
 ### `src/codas/integrations/install_state.py`
 
 - `hook_state` *(function)*
@@ -76,8 +83,10 @@ graph LR
   n2["src/codas/integrations/claude.py"]
   n3["src/codas/integrations/claude_hook.py"]
   n4["src/codas/integrations/enforcement.py"]
-  n5["src/codas/integrations/install_state.py"]
+  n5["src/codas/integrations/hook_settings.py"]
+  n6["src/codas/integrations/install_state.py"]
   n2 --> n0
+  n2 --> n5
   n3 --> n1
-  n4 --> n5
+  n4 --> n6
 ```
