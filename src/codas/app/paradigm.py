@@ -66,7 +66,6 @@ class Preset:
     enforceable_for: tuple[str, ...]
     top_level: str  # "layers" | "contexts"
     roles: tuple[LayerRole, ...]
-    cross_context: str | None
     source: str
     path: Path
 
@@ -156,8 +155,6 @@ def _parse_preset(path: Path, source: str) -> Preset:
         )
 
     roles = _parse_roles(roles_raw, path)
-    cross_context = raw.get("cross_context")
-    cross_context = str(cross_context) if cross_context is not None else None
 
     return Preset(
         name=name,
@@ -165,7 +162,6 @@ def _parse_preset(path: Path, source: str) -> Preset:
         enforceable_for=tuple(enforceable_for),
         top_level=top_level,
         roles=roles,
-        cross_context=cross_context,
         source=source,
         path=path,
     )

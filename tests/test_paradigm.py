@@ -38,11 +38,10 @@ class PresetLoadTests(unittest.TestCase):
                 self.assertIn(preset.top_level, ("layers", "contexts"))
                 self.assertTrue(preset.enforceable_for)
 
-    def test_ddd_is_contexts_shaped_with_cross_context_marker(self) -> None:
+    def test_ddd_is_contexts_shaped(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             preset = load_preset(Path(tmp), "ddd")
             self.assertEqual(preset.top_level, "contexts")
-            self.assertEqual(preset.cross_context, "published-interface")
             self.assertEqual(
                 [r.id for r in preset.roles],
                 ["domain", "application", "adapters", "infrastructure"],
