@@ -249,8 +249,18 @@ class InstallStateTests(unittest.TestCase):
             self.assertIn("src/a.py", walked)
 
 
+def _git(repo: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-C", str(repo), *args], check=True, capture_output=True, text=True
+    )
+
+
 class PreflightDigestTests(unittest.TestCase):
-    def _repo(self, repo: Path, related: list[str]) -> None:
+    """The digest derives affected code from the git WORKING-TREE diff (a fact), NOT a declared
+    Trellis relatedFiles field — so it lights up for whatever code the agent is currently
+    touching, and is empty when the tree is clean."""
+
+    def _repo(self, repo: Path) -> None:
         _write(
             repo / ".codas" / "config.yml",
             "version: 1\nworkspace:\n  roots:\n    - .\n"
@@ -271,34 +281,42 @@ class PreflightDigestTests(unittest.TestCase):
         )
         _write(
             repo / ".trellis" / "tasks" / "t1" / "task.json",
-            json.dumps({"id": "t1", "status": "in_progress", "relatedFiles": related}),
+            json.dumps({"id": "t1", "status": "in_progress"}),
         )
+        # Commit a clean baseline so HEAD resolves (changed_paths needs a baseline).
+        _git(repo, "init", "-q")
+        _git(repo, "add", "-A")
+        _git(repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "base")
 
-    def test_digest_from_related_files(self) -> None:
+    def test_digest_from_working_tree_changes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
-            self._repo(repo, related=["src/pkg/mod.py"])
+            self._repo(repo)
+            # Dirty a file in pkg -> it is the code currently being touched.
+            (repo / "src" / "pkg" / "mod.py").write_text(
+                "def existing_helper():\n    return 2\n", encoding="utf-8"
+            )
             digest = build_context_pack(repo, task_id="t1")["digest"]
             self.assertEqual([u["id"] for u in digest["affected_units"]], ["pkg"])
-            names = {c["name"] for c in digest["reuse_candidates"]}
-            self.assertIn("existing_helper", names)
+            self.assertIn("existing_helper", {c["name"] for c in digest["reuse_candidates"]})
             # advisory why-prose read from the code-wiki SOURCE, claims fence stripped + labelled
             self.assertEqual(digest["advisory_why"]["pkg"], "Why pkg exists.")
             self.assertIn("section 17", digest["advisory_note"])
 
-    def test_no_task_means_no_digest(self) -> None:
+    def test_clean_tree_empty_digest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
-            self._repo(repo, related=["src/pkg/mod.py"])
-            self.assertIsNone(build_context_pack(repo)["digest"])
-
-    def test_empty_related_files_empty_digest(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            repo = Path(directory)
-            self._repo(repo, related=[])
+            self._repo(repo)  # committed baseline, nothing dirty
             digest = build_context_pack(repo, task_id="t1")["digest"]
             self.assertEqual(digest["affected_units"], [])
             self.assertEqual(digest["reuse_candidates"], [])
+
+    def test_no_task_means_no_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            self._repo(repo)
+            (repo / "src" / "pkg" / "mod.py").write_text("x = 9\n", encoding="utf-8")
+            self.assertIsNone(build_context_pack(repo)["digest"])
 
 
 class HooksCliTests(unittest.TestCase):

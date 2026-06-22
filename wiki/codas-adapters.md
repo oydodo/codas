@@ -97,7 +97,6 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 - `TaskFact` *(class)*
 - `TaskFacts` *(class)*
 - `_optional_str` *(function)*
-- `_path_list` *(function)*
 - `extract_task_facts` *(function)*
 
 ### `src/codas/adapters/wiki.py`
