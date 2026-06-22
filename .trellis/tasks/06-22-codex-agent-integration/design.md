@@ -173,6 +173,35 @@ in `~/.codex/config.toml`) as an advisory `warn`, not a hard fail — parallel t
 4. `codas hooks --install --agent all` on this repo → `.codex/hooks.json` written (gitignored).
 5. Verify a Codex session in this repo picks up AGENTS.md + the per-turn injection.
 
+## 8. Implementation — COMPLETE (2026-06-22)
+
+Shipped on `feat/codex-agent-integration` (4 impl commits). 579 tests green, `codas check`
+0, inventory byte-identical, `agents --verify` + `wiki --verify` clean.
+
+- **D1** (`67de779`) — `integrations/hook_settings.py`: neutral JSON-hooks core (marker merge,
+  load/write, status readers, session+turn installers) + neutral command builders, all over
+  `(repo, settings_rel)`. claude.py reduced to the Claude binding. Pure move, 569 green.
+- **D4** (`22603aa`) — `claude_hook.py`→`agent_hook.py` (`run_agent_hook`); CLI `agent-hook`
+  subcommand + deprecated `claude-hook` alias; `UserPromptSubmit` added to `_INJECTING_EVENTS`.
+- **B3 + D2/D3/D5/D6/D7** (`55b573a`) — `integrations/codex.py` (writes `.codex/hooks.json`;
+  UserPromptSubmit + PostToolUse; no shim), `integrations/registry.py` (`AgentIntegration` +
+  `AGENTS` + `select_agents`), generalized `install_agent_injection(agents=…)` with state-merge,
+  CLI `--agent {claude|codex|all}` default claude, doctor parameterised probes + opt-in codex
+  diagnostics, `.codex/hooks.json` in both ignore sites. `tests/test_codex.py` (10).
+- **Dogfood** (`8c1e020`) — `hooks --install --agent all` on this repo: Claude runner flipped to
+  agent-hook, `.codex/hooks.json` generated (gitignored), `.gitignore` updated. (Reinstall had
+  to re-pass `--command "PYTHONPATH=src python3 -m codas check ."` — the default `codas check .`
+  assumes codas on PATH and regressed the source-checkout git hook; fixed.)
+
+**Resolved review items:** B1/B2 → UserPromptSubmit primary, Stop/SubagentStop omitted (not
+test-gated-in — simply excluded until proven). B3 → byte-identical proven. B4 → alias kept.
+B5/Q5 → SessionStart preflight stdout reaches Codex (confirmed by docs + independent WebFetch).
+
+**Remaining (empirical, non-blocking):** confirm against a real Codex CLI session that the
+`additionalContext` envelope from `agent-hook` is actually ingested, and whether `Stop`/
+`SubagentStop` could be added back. Target repo for the next (Swift) task:
+`/Users/oydodo/Documents/repo/swift/ciri`.
+
 ## 6b. codex review — APPROVE-WITH-CHANGES (folded 2026-06-22)
 
 Reviewer: codex-rescue. Independent WebFetch of the Codex hooks doc corroborated Q5.
