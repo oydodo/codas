@@ -1,0 +1,67 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONPATH=src python3 -m codas preflight  # codas-managed-hook"
+          },
+          {
+            "type": "command",
+            "command": "PYTHONPATH=src python3 -m codas status --record-baseline > /dev/null 2>&1  # codas-managed-hook"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONPATH=src python3 -m codas claude-hook Stop  # codas-managed-hook"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONPATH=src python3 -m codas claude-hook SubagentStop  # codas-managed-hook"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONPATH=src python3 -m codas claude-hook PostToolUse  # codas-managed-hook"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*codex.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONPATH=src python3 -m codas claude-hook PostToolUse  # codas-managed-hook"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONPATH=src python3 -m codas claude-hook PostToolUse  # codas-managed-hook"
+          }
+        ]
+      }
+    ]
+  }
+}

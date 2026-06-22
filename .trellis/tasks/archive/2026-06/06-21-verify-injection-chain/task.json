@@ -1,0 +1,31 @@
+{
+  "id": "verify-injection-chain",
+  "name": "verify-injection-chain",
+  "title": "Verify agent-injection chain end-to-end (dogfood)",
+  "description": "Dogfood the injection MVP on this repo: prove agents block live, preflight digest populates from relatedFiles, hooks --install wires git+SessionStart+install-state, the SessionStart command injects preflight, BLOCKER#1 keeps install-state out of the hash, and check 0 + byte-identical survive install.",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "oydodo",
+  "assignee": "oydodo",
+  "createdAt": "2026-06-21",
+  "completedAt": "2026-06-21",
+  "branch": null,
+  "base_branch": "feat/agent-injection-mvp",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "src/codas/app/agents_block.py",
+    "src/codas/app/preflight.py",
+    "src/codas/integrations/claude.py",
+    "src/codas/integrations/install_state.py"
+  ],
+  "notes": "",
+  "meta": {}
+}

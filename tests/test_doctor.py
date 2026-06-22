@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -123,6 +124,98 @@ class DoctorTests(unittest.TestCase):
             names2 = [d.name for d in run_doctor(repo)]
             self.assertEqual(names1, names2)
             self.assertEqual(names1[0], "git_repo")
+
+
+class GateVisibilityTests(unittest.TestCase):
+    """gaps 1/4: doctor SEES the git hooks + Claude SessionStart hook + AGENTS/CLAUDE freshness.
+    All WARN-only — visibility, not a gate (a fresh clone with no hooks must not fail doctor)."""
+
+    def _diag(self, diagnostics, name: str):
+        return next(d for d in diagnostics if d.name == name)
+
+    def test_absent_hooks_and_docs_warn_not_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _valid_repo(Path(tmp))  # .codas + .trellis, but no hooks / .claude / AGENTS
+            diagnostics = run_doctor(repo)
+            for name in ("git_hooks", "agent_hook", "turn_hooks", "agents_block", "claude_shim"):
+                self.assertEqual(self._diag(diagnostics, name).status, "warn", name)
+            self.assertFalse(doctor_has_failures(diagnostics))  # visibility, never a gate
+
+    def test_turn_hooks_reported_after_install(self) -> None:
+        from codas.app.hooks import install_agent_injection
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _valid_repo(Path(tmp))
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@t"], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True)
+            install_agent_injection(repo, command="echo preflight")
+            # Installed but no commit yet -> the hooks fire but are INERT (no baseline to diff).
+            inert = self._diag(run_doctor(repo), "turn_hooks")
+            self.assertEqual(inert.status, "warn")
+            self.assertIn("INERT", inert.detail)
+            # After a commit the baseline exists -> fully healthy.
+            subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "commit", "-q", "-m", "base"], check=True
+            )
+            healthy = self._diag(run_doctor(repo), "turn_hooks")
+            self.assertEqual(healthy.status, "ok")
+            self.assertIn("5/5", healthy.detail)
+
+    def test_turn_hooks_malformed_and_partial(self) -> None:
+        import json
+
+        from codas.app.hooks import install_agent_injection
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _valid_repo(Path(tmp))
+            (repo / ".claude").mkdir(parents=True, exist_ok=True)
+            (repo / ".claude" / "settings.json").write_text("{not json")
+            malformed = self._diag(run_doctor(repo), "turn_hooks")
+            self.assertEqual(malformed.status, "warn")
+            self.assertIn("malformed", malformed.detail)
+
+            # Partial install: drop one group (Stop) after a clean install + commit.
+            (repo / ".claude" / "settings.json").unlink()
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@t"], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True)
+            install_agent_injection(repo, command="echo preflight")
+            subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+            subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "b"], check=True)
+            settings_path = repo / ".claude" / "settings.json"
+            settings = json.loads(settings_path.read_text())
+            del settings["hooks"]["Stop"]  # 4/5 remain installed
+            settings_path.write_text(json.dumps(settings))
+            partial = self._diag(run_doctor(repo), "turn_hooks")
+            self.assertEqual(partial.status, "warn")
+            self.assertIn("4/5", partial.detail)
+
+    def test_installed_hooks_and_docs_report_ok(self) -> None:
+        from codas.app.agent_docs import write_agent_docs
+        from codas.app.hooks import install_agent_injection, install_git_hooks
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _valid_repo(Path(tmp))
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            install_git_hooks(repo, command="echo check")
+            write_agent_docs(repo)
+            install_agent_injection(repo, command="echo preflight")
+            diagnostics = run_doctor(repo)
+            for name in ("git_hooks", "agent_hook", "agents_block", "claude_shim"):
+                self.assertEqual(self._diag(diagnostics, name).status, "ok", name)
+            # SessionStart trust cannot be probed -> the OK detail advises approving it
+            self.assertIn("workspace-trust", self._diag(diagnostics, "agent_hook").detail)
+
+    def test_status_helpers_on_bare_dir(self) -> None:
+        from codas.integrations.claude import session_hook_status
+        from codas.integrations.enforcement import git_hook_status
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.assertEqual(session_hook_status(repo), "absent")
+            self.assertEqual(set(git_hook_status(repo).values()), {"absent"})
 
 
 if __name__ == "__main__":  # pragma: no cover

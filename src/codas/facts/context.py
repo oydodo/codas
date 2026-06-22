@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from codas.adapters.git import extract_changed_paths
+from codas.adapters.git import extract_changed_paths, head_commit, ref_resolves
 from codas.adapters.html import extract_html_claims, governed_html_files
 from codas.adapters.markdown import DocClaim, extract_doc_claims
 from codas.adapters.callgraph import CallFact, CallFacts, extract_call_facts_from_parsed
@@ -184,6 +184,38 @@ class ScanContext:
             self._cache["changed_paths"] = extract_changed_paths(self.repo)
         return self._cache["changed_paths"]
 
+    def changed_since(self, ref: str) -> tuple[str, ...]:
+        """Working-tree paths differing from ``ref`` — everything changed SINCE a
+        baseline sha, COMMITTED or not (git diff ``ref`` ∪ untracked; not cached, keyed
+        by an arbitrary ref).
+
+        The §11-clean seam for ``codas status --since``: a worker (codex/tmux, many
+        Claude subagents) often COMMITS before returning, leaving the tree clean against
+        ``HEAD`` — so ``changed_paths()`` (HEAD-based) is blind to exactly the changes
+        per-turn injection exists to catch. Diffing the session baseline instead surfaces
+        them. ``()`` when ``ref`` does not resolve (treated as "no baseline").
+        """
+        return extract_changed_paths(self.repo, base=ref)
+
+    def git_baseline(self) -> str | None:
+        """The current ``HEAD`` sha, or ``None`` when there is no git baseline (cached).
+
+        Lets ``codas status`` DISTINGUISH a genuinely clean tree from a repo it cannot
+        diff (no git / no commits / mid-rebase) — so an installed per-turn hook reports
+        "inert: no git baseline" instead of masquerading as "all clear".
+        """
+        if "git_baseline" not in self._cache:
+            self._cache["git_baseline"] = head_commit(self.repo)
+        return self._cache["git_baseline"]
+
+    def ref_resolves(self, ref: str) -> bool:
+        """Whether ``ref`` resolves to a commit (cached per ref) — lets ``codas status``
+        distinguish a stale/orphaned ``--since`` baseline from a clean tree."""
+        key = f"ref_resolves:{ref}"
+        if key not in self._cache:
+            self._cache[key] = ref_resolves(self.repo, ref)
+        return self._cache[key]
+
     def generated_claims(self) -> GeneratedClaims:
         """atlas:claims parsed from committed generated wiki pages (cached).
 
@@ -285,3 +317,15 @@ def build_scan_context(repo: Path, config: CodasConfig) -> ScanContext:
     roots = workspace_roots(config.raw)
     files = tuple(discover_files(repo, roots, derived_output_prefixes(config.raw)))
     return ScanContext(repo=repo, config=config, roots=roots, files=files)
+
+
+def repo_git_baseline(repo: Path) -> str | None:
+    """The current ``HEAD`` sha (or ``None``) WITHOUT a full tree scan — the cheap facts
+    seam for recording the session baseline ``codas status --since`` diffs against.
+
+    Mirrors :meth:`ScanContext.git_baseline` for callers (the SessionStart baseline
+    recorder) that need only the sha, not a whole ``ScanContext``. Keeps ``codas-app``
+    off a direct ``codas-adapters`` import (§11): the facts layer is the one place that
+    may reach the git adapter.
+    """
+    return head_commit(repo)

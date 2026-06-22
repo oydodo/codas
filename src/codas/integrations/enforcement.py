@@ -5,6 +5,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from .install_state import hook_state, merge_install_state
+
 # Hook bodies carry this marker so the installer recognises (and may refresh) its own
 # hooks and refuses to trample a foreign hook the user already wrote.
 HOOK_MARKER = "# codas-managed-hook"
@@ -26,23 +28,31 @@ def render_hook(hook_name: str, command: str = DEFAULT_CHECK_COMMAND) -> str:
 
     Deterministic — byte-identical across calls for the same args, so a re-install of
     an unchanged hook is a no-op write.
+
+    The command runs as the script's LAST line (no ``exec``): the hook then exits with the
+    command's status, blocking the git op on a non-zero ``codas check``. ``exec`` is avoided
+    deliberately — ``exec VAR=val cmd`` is invalid in sh (exec cannot take an env-var prefix),
+    so a source-checkout command like ``PYTHONPATH=src python3 -m codas check .`` would fail
+    with 'exec: PYTHONPATH=src: not found'; a plain line lets sh parse the assignment.
     """
     return (
         "#!/bin/sh\n"
         f"{HOOK_MARKER} ({hook_name})\n"
         "# Installed by `codas hooks --install`. Blocks the operation when\n"
         "# `codas check` reports error findings. Remove this file to disable.\n"
-        f"exec {command}\n"
+        f"{command}\n"
     )
 
 
 def render_workflow() -> str:
     """Render the committed GitHub Action CI gate (`.github/workflows/codas.yml`).
 
-    Runs the bootstrap test gate + ``codas check`` on push / pull_request so a bad
-    change fails CI. Uses the repo's ``PYTHONPATH=src`` form (Codas is not yet a
-    published package); a packaged install would shorten this to ``codas check .``.
-    Deterministic, no timestamp.
+    Runs the bootstrap test gate + ``codas check`` + the freshness ``--verify``s on
+    push / pull_request so a bad change OR a stale generated doc (the AGENTS.md governance
+    block, the wiki book) fails CI. The ``--verify`` steps are the BINDING staleness gate
+    (``codas doctor`` only WARNS on staleness; CI is what fails). Uses the repo's
+    ``PYTHONPATH=src`` form (Codas is not yet a published package); a packaged install would
+    shorten these to ``codas <cmd>``. Deterministic, no timestamp.
     """
     return (
         "name: codas\n"
@@ -63,6 +73,10 @@ def render_workflow() -> str:
         "        run: PYTHONPATH=src python -m unittest discover -s tests\n"
         "      - name: Codas check\n"
         "        run: PYTHONPATH=src python -m codas check .\n"
+        "      - name: Codas agents verify\n"
+        "        run: PYTHONPATH=src python -m codas agents --verify .\n"
+        "      - name: Codas wiki verify\n"
+        "        run: PYTHONPATH=src python -m codas wiki --verify .\n"
     )
 
 
@@ -97,7 +111,55 @@ def install_hooks(
         path.write_text(body)
         path.chmod(0o755)
         installed.append(name)
-    return InstallResult(str(hooks_dir), tuple(installed), tuple(skipped))
+    result = InstallResult(str(hooks_dir), tuple(installed), tuple(skipped))
+    _write_git_hook_state(repo, hooks_dir, installed, command)
+    return result
+
+
+def _write_git_hook_state(
+    repo: Path, hooks_dir: Path, installed: list[str], command: str
+) -> None:
+    """Emit the ``git_hooks`` slice of ``.codas/.install-state.json`` (must-hold #6: the schema
+    must not carry state no installer writes). Guarded to a Codas repo (a ``.codas`` dir) so a
+    bare repo getting only git hooks is never surprised with a Codas marker file. Per hook:
+    ``installed`` (ours, current) vs ``foreign`` (a user hook preserved untouched)."""
+    if not (repo / ".codas").is_dir():
+        return
+    git_hooks = {}
+    for name in HOOK_NAMES:
+        is_ours = name in installed
+        git_hooks[name.replace("-", "_")] = hook_state(
+            "installed" if is_ours else "foreign",
+            expected_command=command,
+            installed_command=command if is_ours else None,
+            settings_path=str(hooks_dir / name),
+            marker_id=HOOK_MARKER,
+        )
+    merge_install_state(repo, {"git_hooks": git_hooks})
+
+
+def git_hook_status(repo: Path) -> dict[str, str]:
+    """Live state of each git hook: ``{name: installed | foreign | absent}`` (ground truth).
+
+    Reads the ACTUAL hook files (honoring ``core.hooksPath`` via ``_hooks_dir``), so a reader like
+    ``codas doctor`` sees reality — not just what an installer once recorded in
+    ``.install-state.json`` (which can be stale if a user removed a hook post-install). A non-git
+    repo or no usable hooks dir → every hook ``absent``. Pure read-only; reuses the same marker
+    check the installer uses so detection cannot fork from installation.
+    """
+    hooks_dir = _hooks_dir(repo)
+    if hooks_dir is None:
+        return {name: "absent" for name in HOOK_NAMES}
+    status: dict[str, str] = {}
+    for name in HOOK_NAMES:
+        path = hooks_dir / name
+        if not path.exists():
+            status[name] = "absent"
+        elif _is_codas_hook(path.read_text(errors="ignore")):
+            status[name] = "installed"
+        else:
+            status[name] = "foreign"
+    return status
 
 
 def _is_codas_hook(text: str) -> bool:

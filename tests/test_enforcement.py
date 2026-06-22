@@ -36,6 +36,9 @@ class RenderTests(unittest.TestCase):
     def test_render_workflow_is_deterministic(self) -> None:
         self.assertEqual(render_workflow(), render_workflow())
         self.assertIn("codas check", render_workflow())
+        # The freshness verifies are the binding staleness gate (doctor only warns).
+        self.assertIn("codas agents --verify", render_workflow())
+        self.assertIn("codas wiki --verify", render_workflow())
 
     def test_committed_workflow_matches_render(self) -> None:
         # The committed CI gate must equal render_workflow() byte-for-byte, so editing
@@ -99,7 +102,10 @@ class InstallHooksTests(unittest.TestCase):
             _git_init(repo)
             install_git_hooks(repo, command="PYTHONPATH=src python3 -m codas check .")
             body = (repo / ".git" / "hooks" / "pre-commit").read_text()
-            self.assertIn("exec PYTHONPATH=src python3 -m codas check .\n", body)
+            # No `exec` — `exec VAR=val cmd` is invalid in sh; the command runs as the last
+            # line and the hook exits with its status (env-prefixed commands must work).
+            self.assertIn("\nPYTHONPATH=src python3 -m codas check .\n", body)
+            self.assertNotIn("exec ", body)
 
     def test_marker_substring_in_foreign_hook_not_clobbered(self) -> None:
         # The marker on a non-line-2 comment must NOT mark the hook as Codas-owned.

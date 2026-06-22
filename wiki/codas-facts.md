@@ -28,18 +28,22 @@ The `facts` package is the **adapter boundary made concrete** — the one seam w
   - `_parsed` *(function)*
   - `calls` *(function)*
   - `changed_paths` *(function)*
+  - `changed_since` *(function)*
   - `code_anchor_claims` *(function)*
   - `doc_claims` *(function)*
   - `fact_delta` *(function)*
   - `generated_claims` *(function)*
+  - `git_baseline` *(function)*
   - `head_snapshot` *(function)*
   - `html_claims` *(function)*
   - `imports` *(function)*
+  - `ref_resolves` *(function)*
   - `semantic_corpus_claims` *(function)*
   - `symbols` *(function)*
   - `wiki_claims` *(function)*
   - `working_snapshot` *(function)*
 - `build_scan_context` *(function)*
+- `repo_git_baseline` *(function)*
 
 ### `src/codas/facts/delta.py`
 

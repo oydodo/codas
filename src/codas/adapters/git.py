@@ -4,25 +4,32 @@ import subprocess
 from pathlib import Path
 
 
-def extract_changed_paths(repo: Path) -> tuple[str, ...]:
-    """Working-tree paths that differ from HEAD (tracked diff ∪ untracked).
+def extract_changed_paths(repo: Path, base: str = "HEAD") -> tuple[str, ...]:
+    """Working-tree paths that differ from ``base`` (tracked diff ∪ untracked).
 
     Repo-relative posix, sorted and de-duplicated. The diff substrate for the
-    ``fact_coupling`` policy: it answers "which files changed since the last commit",
-    the companion to the fact delta — a coupling fires when a watched fact-delta is
-    nonempty but a required companion path is absent from this changed-path set.
+    ``fact_coupling`` policy (``base="HEAD"``): it answers "which files changed since
+    the last commit", the companion to the fact delta — a coupling fires when a watched
+    fact-delta is nonempty but a required companion path is absent from this changed-path
+    set.
 
-    Returns ``()`` when git is unavailable, the path is not a repository, or ``HEAD``
+    ``base`` is the diff baseline. Defaulting to ``HEAD`` gives the working-tree diff;
+    passing an earlier ref (a session BASELINE sha) gives everything changed SINCE that
+    ref — committed AND uncommitted — which is how ``codas status --since`` sees changes
+    a worker already committed before returning (the working tree may be clean against
+    ``HEAD`` yet dirty against the baseline).
+
+    Returns ``()`` when git is unavailable, the path is not a repository, or ``base``
     does not resolve (a repo with no commits has no baseline, so there is no drift to
     compute). Deterministic given the current tree state — ordering is imposed by
     ``sorted`` here, not by git.
 
     Intentionally **not** part of ``codas inventory``: it reflects dirty working-tree
     state and would break the byte-identical inventory invariant. It is surfaced only
-    as a policy-time fact via ``ScanContext.changed_paths()``.
+    as a policy-time fact via ``ScanContext.changed_paths()`` / ``changed_since()``.
     """
     tracked = _git_lines(
-        repo, ["diff", "-z", "--name-only", "--no-renames", "HEAD"]
+        repo, ["diff", "-z", "--name-only", "--no-renames", base]
     )
     untracked = _git_lines(
         repo, ["ls-files", "-z", "--others", "--exclude-standard"]
@@ -31,6 +38,31 @@ def extract_changed_paths(repo: Path) -> tuple[str, ...]:
         return ()
     paths = {path.replace("\\", "/") for path in tracked + untracked if path}
     return tuple(sorted(paths))
+
+
+def head_commit(repo: Path) -> str | None:
+    """The resolved ``HEAD`` commit sha, or ``None`` when ``repo`` is not a git
+    repository or ``HEAD`` does not resolve (no commits yet).
+
+    Used to (a) DISTINGUISH "clean tree" from "no git baseline" in ``codas status``
+    (an installed hook that cannot diff is INERT, not silently OK), and (b) record the
+    session BASELINE sha that ``--since`` diffs against. Read-only; never serialized
+    into the byte-identical inventory.
+    """
+    lines = _git_lines(repo, ["rev-parse", "HEAD"])
+    return lines[0].strip() if lines else None
+
+
+def ref_resolves(repo: Path, ref: str) -> bool:
+    """True if ``ref`` resolves to a commit. Distinguishes a STALE/orphaned ``--since``
+    baseline (after a rebase/squash/amend, or a garbage ref) from a genuinely clean tree:
+    both make ``extract_changed_paths(base=ref)`` return ``()``, but only the former should
+    be surfaced as a degraded ``codas status`` (the committed-worker changes silently vanish).
+    """
+    return (
+        _git_lines(repo, ["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"])
+        is not None
+    )
 
 
 def list_python_paths_at_head(repo: Path) -> tuple[tuple[str, str], ...] | None:
