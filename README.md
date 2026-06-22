@@ -8,6 +8,30 @@ The formal Codas design lives in `docs/codas-design.html`.
 The implementation plan lives in `docs/codas-implementation-plan.html`.
 The Structure Map schema lives in `docs/codas-structure-map-schema.html`.
 
+## Install
+
+Codas is a CLI you install once and use across repositories — the governance
+state lives per-repo in `.codas/`. Requires Python 3.9+.
+
+```bash
+pipx install codas        # isolated, recommended; or: pip install codas
+```
+
+Then, in a repository you want Codas to govern:
+
+```bash
+codas init                # scaffold a minimal .codas/ skeleton
+codas hooks --install     # install the git gate + agent-injection hooks
+codas check .             # run the policy gate
+```
+
+A terminal-state `npx codas` (an npm wrapper over a prebuilt binary, for the
+Node-centric agent-coding ecosystem) is planned; today pip/pipx is the install path.
+
+> The `PYTHONPATH=src python3 -m codas …` form used elsewhere in this README is for a
+> **source checkout** (developing Codas itself / dogfooding this repo), where Codas is
+> not on `PATH`. An installed `codas` needs no `PYTHONPATH`.
+
 ## Dogfooding
 
 This repository is the first Codas-governed workspace: `codas check .` runs the

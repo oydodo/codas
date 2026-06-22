@@ -2,7 +2,7 @@
 name = "codas"
 version = "0.1.0"
 description = "Code Atlas System for coding-agent-maintained repositories."
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "oydodo" }]
