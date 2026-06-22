@@ -20,34 +20,30 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 
 ## Modules & symbols
 
+### `src/codas/integrations/agent_hook.py`
+
+- `_repo_from_stdin` *(function)*
+- `run_agent_hook` *(function)*
+
 ### `src/codas/integrations/claude.py`
 
-- `ClaudeHookResult` *(class)*
-- `TurnHookSpec` *(class)*
-- `_group` *(function)*
-- `_is_ours` *(function)*
-- `_load_settings` *(function)*
-- `_marked` *(function)*
-- `_merge_codas_groups` *(function)*
-- `_write_settings` *(function)*
-- `baseline_record_command` *(function)*
 - `claude_hook_status` *(function)*
 - `claude_shim_pages` *(function)*
 - `install_claude_session_hook` *(function)*
 - `install_claude_turn_hooks` *(function)*
 - `render_claude_shim` *(function)*
-- `resolve_agent_command` *(function)*
-- `resolve_codas_command` *(function)*
-- `resolve_hook_runner` *(function)*
 - `session_hook_status` *(function)*
 - `turn_hook_specs` *(function)*
 - `verify_claude_shim` *(function)*
 - `write_claude_shim` *(function)*
 
-### `src/codas/integrations/claude_hook.py`
+### `src/codas/integrations/codex.py`
 
-- `_repo_from_stdin` *(function)*
-- `run_claude_hook` *(function)*
+- `codex_hook_status` *(function)*
+- `codex_session_status` *(function)*
+- `codex_turn_specs` *(function)*
+- `install_codex_session_hook` *(function)*
+- `install_codex_turn_hooks` *(function)*
 
 ### `src/codas/integrations/enforcement.py`
 
@@ -61,11 +57,35 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 - `render_hook` *(function)*
 - `render_workflow` *(function)*
 
+### `src/codas/integrations/hook_settings.py`
+
+- `HookResult` *(class)*
+- `TurnHookSpec` *(class)*
+- `_group` *(function)*
+- `_is_ours` *(function)*
+- `_load_settings` *(function)*
+- `_marked` *(function)*
+- `_merge_codas_groups` *(function)*
+- `_write_settings` *(function)*
+- `baseline_record_command` *(function)*
+- `group_status` *(function)*
+- `install_session_group` *(function)*
+- `install_turn_groups` *(function)*
+- `resolve_codas_command` *(function)*
+- `resolve_hook_runner` *(function)*
+- `resolve_preflight_command` *(function)*
+- `session_group_status` *(function)*
+
 ### `src/codas/integrations/install_state.py`
 
 - `hook_state` *(function)*
 - `merge_install_state` *(function)*
 - `read_install_state` *(function)*
+
+### `src/codas/integrations/registry.py`
+
+- `AgentIntegration` *(class)*
+- `select_agents` *(function)*
 
 ## Dependencies
 
@@ -73,11 +93,21 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 graph LR
   n0["src/codas/app/agents_block.py"]
   n1["src/codas/app/status.py"]
-  n2["src/codas/integrations/claude.py"]
-  n3["src/codas/integrations/claude_hook.py"]
-  n4["src/codas/integrations/enforcement.py"]
-  n5["src/codas/integrations/install_state.py"]
-  n2 --> n0
+  n2["src/codas/integrations/__init__.py"]
+  n3["src/codas/integrations/agent_hook.py"]
+  n4["src/codas/integrations/claude.py"]
+  n5["src/codas/integrations/codex.py"]
+  n6["src/codas/integrations/enforcement.py"]
+  n7["src/codas/integrations/hook_settings.py"]
+  n8["src/codas/integrations/install_state.py"]
+  n9["src/codas/integrations/registry.py"]
   n3 --> n1
-  n4 --> n5
+  n4 --> n0
+  n4 --> n7
+  n5 --> n7
+  n6 --> n8
+  n9 --> n2
+  n9 --> n4
+  n9 --> n5
+  n9 --> n7
 ```

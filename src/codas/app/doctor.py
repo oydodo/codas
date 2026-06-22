@@ -8,14 +8,10 @@ from typing import Callable
 from codas.app.agents_block import verify_agents_block
 from codas.config.loader import load_codas_config, load_policies, load_waivers
 from codas.facts.context import repo_git_baseline
-from codas.integrations.claude import (
-    claude_hook_status,
-    session_hook_status,
-    turn_hook_specs,
-    verify_claude_shim,
-)
+from codas.integrations.claude import verify_claude_shim
 from codas.integrations.enforcement import git_hook_status
 from codas.integrations.install_state import read_install_state
+from codas.integrations.registry import CLAUDE, CODEX, AgentIntegration
 from codas.structure.document_loader import load_document_manifest
 from codas.structure.loader import load_structure_map
 from codas.structure.program_loader import load_program_plan
@@ -88,10 +84,18 @@ def run_doctor(repo: Path) -> list[Diagnostic]:
     # hook are installed and whether the AGENTS block / CLAUDE shim are fresh. WARN-only.
     state = read_install_state(repo)
     results.append(_git_hooks(repo, state))
-    results.append(_agent_hook(repo, state))
-    results.append(_turn_hooks(repo))
+    # Claude is always probed (the baseline agent + a fresh-clone visibility check). Codex is
+    # probed only when opted-in (its install-state slice or .codex/hooks.json exists), so a
+    # claude-only repo never sees codex noise.
+    results.append(
+        _agent_session_diag(
+            repo, state, CLAUDE, "agent_hook", "approve workspace-trust in Claude Code", ""
+        )
+    )
+    results.append(_turn_diag(repo, CLAUDE, "turn_hooks", ""))
     results.append(_agents_block(repo))
     results.append(_claude_shim(repo))
+    results.extend(_codex_diags(repo, state))
 
     results.append(_legacy_prototype(repo))
     return results
@@ -191,57 +195,85 @@ def _git_hooks(repo: Path, state: dict) -> Diagnostic:
     return Diagnostic("git_hooks", "warn", "; ".join(notes))
 
 
-def _session_state(state: dict) -> dict:
-    return (((state.get("agent_hooks") or {}).get("claude") or {}).get("session_start") or {})
+def _session_slice(state: dict, agent: str) -> dict:
+    return (((state.get("agent_hooks") or {}).get(agent) or {}).get("session_start") or {})
 
 
-def _agent_hook(repo: Path, state: dict) -> Diagnostic:
-    """The Claude SessionStart injection hook. WARN when absent. Surfaces workspace-trust: it
-    cannot be live-probed, so an installed hook always advises approving trust (hole 4)."""
-    status = session_hook_status(repo)
+def _agent_session_diag(
+    repo: Path,
+    state: dict,
+    integ: AgentIntegration,
+    diag_name: str,
+    trust_note: str,
+    install_suffix: str,
+) -> Diagnostic:
+    """An agent's SessionStart injection hook. WARN when absent. Surfaces trust: it cannot be
+    live-probed, so an installed hook always advises approving trust (hole 4). Parameterised over
+    the registry so claude + codex share one probe (codex review N4: no copied logic)."""
+    label = integ.name.capitalize()
+    status = integ.session_status(repo)
+    slice_ = _session_slice(state, integ.name)
     if status == "installed":
-        if _session_state(state).get("trusted") is True:
-            return Diagnostic("agent_hook", "ok", "Claude SessionStart hook installed + trusted")
+        if slice_.get("trusted") is True:
+            return Diagnostic(diag_name, "ok", f"{label} SessionStart hook installed + trusted")
         return Diagnostic(
-            "agent_hook",
-            "ok",
-            "Claude SessionStart hook installed (approve workspace-trust in Claude Code)",
+            diag_name, "ok", f"{label} SessionStart hook installed ({trust_note})"
         )
     if status == "malformed":
-        return Diagnostic("agent_hook", "warn", ".claude/settings.json is malformed")
-    detail = "Claude SessionStart hook not installed — run `codas hooks --install`"
-    if _session_state(state).get("status") == "installed":
+        return Diagnostic(diag_name, "warn", f"{integ.settings_rel} is malformed")
+    detail = f"{label} SessionStart hook not installed — run `codas hooks --install{install_suffix}`"
+    if slice_.get("status") == "installed":
         detail = (
-            "Claude SessionStart hook absent (recorded installed but removed) — "
-            "run `codas hooks --install`"
+            f"{label} SessionStart hook absent (recorded installed but removed) — "
+            f"run `codas hooks --install{install_suffix}`"
         )
-    return Diagnostic("agent_hook", "warn", detail)
+    return Diagnostic(diag_name, "warn", detail)
 
 
-def _turn_hooks(repo: Path) -> Diagnostic:
-    """The per-turn injection hooks (gap 3): Stop / SubagentStop / PostToolUse×3. WARN-only
-    (visibility, like the other hooks). Reports how many groups are live-installed, and — S9 —
-    whether the check is INERT because there is no git baseline to diff (the hooks fire but
-    surface nothing). ``ok`` only when fully installed AND functional."""
-    specs = turn_hook_specs()
-    statuses = {
-        spec.key: claude_hook_status(repo, spec.event, spec.matcher) for spec in specs
-    }
+def _turn_diag(repo: Path, integ: AgentIntegration, diag_name: str, install_suffix: str) -> Diagnostic:
+    """An agent's per-turn injection hooks (gap 3). WARN-only (visibility). Reports how many
+    groups are live-installed and — S9 — whether the check is INERT because there is no git
+    baseline to diff. ``ok`` only when fully installed AND functional. Parameterised over the
+    registry so claude (5 groups) + codex (2 groups) share one probe."""
+    specs = integ.turn_specs()
+    statuses = {spec.key: integ.hook_status(repo, spec.event, spec.matcher) for spec in specs}
     if any(status == "malformed" for status in statuses.values()):
-        return Diagnostic("turn_hooks", "warn", ".claude/settings.json is malformed")
+        return Diagnostic(diag_name, "warn", f"{integ.settings_rel} is malformed")
     installed = sorted(key for key, status in statuses.items() if status == "installed")
     if not installed:
         return Diagnostic(
-            "turn_hooks",
+            diag_name,
             "warn",
-            "per-turn injection hooks not installed — run `codas hooks --install`",
+            f"per-turn injection hooks not installed — run `codas hooks --install{install_suffix}`",
         )
     detail = f"{len(installed)}/{len(specs)} per-turn injection hooks installed"
     inert = repo_git_baseline(repo) is None
     if inert:
         detail += " — INERT: no git baseline to diff (commit something)"
     healthy = len(installed) == len(specs) and not inert
-    return Diagnostic("turn_hooks", "ok" if healthy else "warn", detail)
+    return Diagnostic(diag_name, "ok" if healthy else "warn", detail)
+
+
+def _codex_diags(repo: Path, state: dict) -> list[Diagnostic]:
+    """Codex diagnostics — emitted ONLY when Codex is opted-in (its install-state slice exists
+    OR ``.codex/hooks.json`` is on disk), so a claude-only repo sees no codex noise. Codex reads
+    AGENTS.md natively → no shim diagnostic. The trust note names the Codex repo-trust caveat."""
+    opted_in = bool((state.get("agent_hooks") or {}).get("codex")) or (
+        repo / CODEX.settings_rel
+    ).is_file()
+    if not opted_in:
+        return []
+    return [
+        _agent_session_diag(
+            repo,
+            state,
+            CODEX,
+            "codex_hook",
+            "approve repo-trust: set trust_level=trusted for this project in ~/.codex/config.toml",
+            " --agent codex",
+        ),
+        _turn_diag(repo, CODEX, "codex_turn_hooks", " --agent codex"),
+    ]
 
 
 def _freshness(repo: Path, name: str, filename: str, verify, fix: str) -> Diagnostic:

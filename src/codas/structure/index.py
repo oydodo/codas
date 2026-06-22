@@ -21,11 +21,15 @@ _IGNORE_DIRS = {".git", "__pycache__"}
 # not a subtree, so the filename check in _walk_files is what keeps it out of the hash here.
 # `.codas/.status-seen.json` is the per-turn-injection scratch (session baseline sha +
 # already-injected finding fingerprints) — same machine-local, gitignored, out-of-hash rule.
+# `.codex/hooks.json` is the Codex agent's per-machine hook install (the .codex analogue of
+# .claude/settings.json, which lives outside the scanned roots) — same machine-local,
+# gitignored, out-of-hash rule, so a Codex install never moves the inventory.
 _IGNORE_PATHS = {
     ".codas/receipts",
     ".codas/cache",
     ".codas/.install-state.json",
     ".codas/.status-seen.json",
+    ".codex/hooks.json",
 }
 
 # Default reserved prefix for Codas-RENDERED committed output — scanned NEVER as input.

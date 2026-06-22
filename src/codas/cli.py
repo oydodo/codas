@@ -199,19 +199,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Record current HEAD as the session baseline (for --since-baseline) and exit.",
     )
 
-    claude_hook = subparsers.add_parser(
-        "claude-hook",
-        help=(
-            "Internal: emit the Claude per-turn additionalContext envelope for a hook event "
-            "(reads the hook input on stdin). Invoked by the installed Stop/PostToolUse hooks."
-        ),
-    )
-    claude_hook.add_argument(
-        "event",
-        nargs="?",
-        default="Stop",
-        help="The firing hook event (Stop | SubagentStop | PostToolUse).",
-    )
+    # The per-turn envelope entrypoint. ``agent-hook`` is the neutral name (Claude + Codex);
+    # ``claude-hook`` is a DEPRECATED one-release alias so hooks already baked into an existing
+    # .claude/settings.json keep working until their next reinstall (codex review B4).
+    for _name, _deprecated in (("agent-hook", False), ("claude-hook", True)):
+        _hook = subparsers.add_parser(
+            _name,
+            help=(
+                "DEPRECATED alias for agent-hook. " if _deprecated else ""
+            )
+            + (
+                "Internal: emit the per-turn additionalContext envelope for a hook event "
+                "(reads the hook input on stdin). Invoked by the installed per-turn hooks."
+            ),
+        )
+        _hook.add_argument(
+            "event",
+            nargs="?",
+            default="Stop",
+            help="The firing hook event (Stop | SubagentStop | PostToolUse | UserPromptSubmit).",
+        )
 
     doctor = subparsers.add_parser("doctor", help="Diagnose Codas installation.")
     doctor.add_argument("repo", nargs="?", default=".")
@@ -247,8 +254,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--agent-command",
         default=None,
         help=(
-            "Command the Claude SessionStart injection hook runs (default: an installed "
+            "Command the SessionStart injection hook runs (default: an installed "
             "'codas preflight' on PATH, else the portable source-checkout form)."
+        ),
+    )
+    hooks.add_argument(
+        "--agent",
+        default="claude",
+        choices=("claude", "codex", "all"),
+        help=(
+            "Which agent's injection hooks to install: 'claude' (.claude/settings.json, "
+            "default), 'codex' (.codex/hooks.json), or 'all'. Codex/all are explicit opt-in "
+            "so a non-Codex repo never gets a .codex/ file written."
         ),
     )
 
@@ -276,12 +293,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    # claude-hook reads the repo from the hook input on stdin (not args.repo) and must never
-    # crash a turn — dispatch it BEFORE the repo resolution below, which it has no arg for.
-    if args.command == "claude-hook":
-        from .app.hooks import emit_claude_turn_hook
+    # agent-hook (and its deprecated claude-hook alias) reads the repo from the hook input on
+    # stdin (not args.repo) and must never crash a turn — dispatch it BEFORE the repo resolution
+    # below, which it has no arg for.
+    if args.command in ("agent-hook", "claude-hook"):
+        from .app.hooks import emit_agent_turn_hook
 
-        return emit_claude_turn_hook(args.event)
+        return emit_agent_turn_hook(args.event)
 
     repo = Path(args.repo).expanduser().resolve()
 
@@ -432,23 +450,36 @@ def main(argv: list[str] | None = None) -> int:
         if not result.installed and not result.skipped:
             print("no hooks installed")
 
-        # Claude Code SessionStart injection hook (the norm-injection seam, gaps 2/3).
-        agent = install_agent_injection(repo, command=args.agent_command, force=args.force)
-        claude = agent.claude
-        ran = claude.installed_command or claude.expected_command
-        print(f"claude session hook: {claude.status} -> {claude.settings_path} ({ran})")
-        turn = agent.turn_hooks
-        live = sum(1 for r in turn.values() if r.status in ("installed", "refreshed"))
-        print(
-            f"claude per-turn hooks: {live}/{len(turn)} groups "
-            "(Stop, SubagentStop, PostToolUse: Agent/codex/edit)"
+        # Per-agent SessionStart + per-turn injection hooks (the norm-injection seam, gaps 2/3).
+        agent = install_agent_injection(
+            repo, command=args.agent_command, force=args.force, agents=args.agent
         )
-        if claude.status in ("installed", "refreshed"):
-            print("  approve the hooks in Claude Code when prompted (workspace trust).")
-        if agent.agents_block != "current" or agent.claude_shim != "current":
+        for install in agent.installs:
+            session = install.session
+            ran = install.session.installed_command or install.session.expected_command
             print(
-                f"  agent docs: AGENTS.md block {agent.agents_block}, CLAUDE.md shim "
-                f"{agent.claude_shim} — run `codas agents --write`."
+                f"{install.name} session hook: {session.status} -> "
+                f"{session.settings_path} ({ran})"
+            )
+            turn = install.turn_hooks
+            live = sum(1 for r in turn.values() if r.status in ("installed", "refreshed"))
+            print(f"{install.name} per-turn hooks: {live}/{len(turn)} groups")
+            if session.status in ("installed", "refreshed"):
+                print(
+                    f"  approve the hooks in {install.name} when prompted "
+                    "(workspace/repo trust)."
+                )
+        shim_relevant = any(install.has_shim for install in agent.installs)
+        docs_stale = agent.agents_block != "current" or (
+            shim_relevant and agent.claude_shim != "current"
+        )
+        if docs_stale:
+            shim_note = (
+                f", CLAUDE.md shim {agent.claude_shim}" if shim_relevant else ""
+            )
+            print(
+                f"  agent docs: AGENTS.md block {agent.agents_block}{shim_note} "
+                "— run `codas agents --write`."
             )
         return 0
 

@@ -11,3 +11,4 @@ build/
 .codas/cache/
 .codas/.install-state.json
 .codas/.status-seen.json
+.codex/hooks.json

@@ -21,7 +21,7 @@ from codas.integrations.claude import (
     install_claude_turn_hooks,
     turn_hook_specs,
 )
-from codas.integrations.claude_hook import run_claude_hook
+from codas.integrations.agent_hook import run_agent_hook
 from codas.integrations.install_state import read_install_state
 
 
@@ -152,7 +152,7 @@ class EnvelopeEntrypointTests(unittest.TestCase):
         stdin.isatty = lambda: False  # type: ignore[method-assign]
         out = io.StringIO()
         with mock.patch("sys.stdin", stdin), redirect_stdout(out):
-            rc = run_claude_hook([event])
+            rc = run_agent_hook([event])
         self.assertEqual(rc, 0)
         return out.getvalue()
 
