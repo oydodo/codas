@@ -106,6 +106,27 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Overwrite existing .codas files instead of skipping them.",
     )
+    init.add_argument(
+        "--paradigm",
+        default="none",
+        metavar="NAME",
+        help=(
+            "Seed structure.yml with an architecture paradigm's nested layer units + "
+            "dependency rules (planned + placeholder paths; map them to arm). Default 'none'. "
+            "See `codas paradigm`."
+        ),
+    )
+    init.add_argument(
+        "--list-paradigms",
+        action="store_true",
+        dest="list_paradigms",
+        help="List available paradigm presets and exit (alias of `codas paradigm`).",
+    )
+
+    paradigm = subparsers.add_parser(
+        "paradigm", help="List available architecture paradigm presets (built-in + repo-local)."
+    )
+    paradigm.add_argument("repo", nargs="?", default=".")
 
     impact = subparsers.add_parser(
         "impact",
@@ -272,6 +293,19 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _print_paradigms(repo: Path) -> None:
+    """Print available paradigm presets (built-in + repo-local), one per line."""
+    from .app.paradigm import list_presets
+
+    presets = list_presets(repo)
+    if not presets:
+        print("no paradigm presets available")
+        return
+    width = max(len(name) for name, _, _ in presets)
+    for name, description, source in presets:
+        print(f"{name.ljust(width)}  {description}  [{source}]")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -399,16 +433,41 @@ def main(argv: list[str] | None = None) -> int:
             "--emit-mermaid, --emit-html, --write or --verify."
         )
 
-    if args.command == "init":
-        from .app.init import scaffold
+    if args.command == "paradigm":
+        _print_paradigms(repo)
+        return 0
 
-        result = scaffold(repo, force=args.force)
+    if args.command == "init":
+        import sys
+
+        from .app.init import scaffold
+        from .app.paradigm import PresetError
+
+        if args.list_paradigms:
+            _print_paradigms(repo)
+            return 0
+        try:
+            result = scaffold(repo, force=args.force, paradigm=args.paradigm)
+        except PresetError as error:
+            print(f"init: {error}", file=sys.stderr)
+            return 1
         for rel in result.written:
             print(f"wrote {rel}")
         for rel in result.skipped:
             print(f"skipped {rel} (exists; use --force to overwrite)")
         if not result.written and not result.skipped:
             print("nothing to scaffold")
+        if result.paradigm:
+            print(
+                f"seeded paradigm '{result.paradigm}' as planned units in "
+                ".codas/structure.yml (rename the example context + map paths to arm)."
+            )
+            if result.advisory:
+                print(
+                    "WARNING: this repo's ecosystem has no Python import resolver — "
+                    "dependency_direction will NOT enforce this paradigm (advisory only).",
+                    file=sys.stderr,
+                )
         return 0
 
     if args.command == "hooks":
