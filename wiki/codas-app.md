@@ -71,10 +71,16 @@ The third is byte-identical determinism. The Atlas pack, knowledge tree, generat
 ### `src/codas/app/doctor.py`
 
 - `Diagnostic` *(class)*
+- `_agent_hook` *(function)*
+- `_agents_block` *(function)*
+- `_claude_shim` *(function)*
+- `_freshness` *(function)*
+- `_git_hooks` *(function)*
 - `_git_repo` *(function)*
 - `_legacy_prototype` *(function)*
 - `_optional` *(function)*
 - `_required` *(function)*
+- `_session_state` *(function)*
 - `_trellis_context` *(function)*
 - `doctor_has_failures` *(function)*
 - `run_doctor` *(function)*
@@ -273,7 +279,11 @@ graph LR
   n4 --> n42
   n4 --> n43
   n4 --> n44
+  n5 --> n1
   n5 --> n16
+  n5 --> n22
+  n5 --> n23
+  n5 --> n24
   n5 --> n45
   n5 --> n47
   n5 --> n49

@@ -84,6 +84,27 @@ def _is_ours(group: object) -> bool:
     return False
 
 
+def session_hook_status(repo: Path) -> str:
+    """Live state of the Claude SessionStart hook: ``installed | absent | malformed`` (ground
+    truth). Loads ``.claude/settings.json`` and scans ``hooks.SessionStart`` for a Codas-marked
+    group with the same ``_is_ours`` check the installer uses. Missing file → ``absent``;
+    unparseable / non-mapping → ``malformed``. Read-only; cannot probe workspace-trust (that
+    rides in ``.install-state.json`` as ``trusted``)."""
+    settings_path = repo / ".claude" / "settings.json"
+    if not settings_path.is_file():
+        return "absent"
+    try:
+        data = json.loads(settings_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return "malformed"
+    if not isinstance(data, dict):
+        return "malformed"
+    groups = (data.get("hooks") or {}).get("SessionStart")
+    if isinstance(groups, list) and any(_is_ours(group) for group in groups):
+        return "installed"
+    return "absent"
+
+
 def resolve_agent_command(command: str | None) -> str:
     """The SessionStart command. Explicit ``command`` wins; else an installed ``codas`` on PATH
     (absolute, since PATH is unresolved in a non-interactive ``sh -c``); else the portable

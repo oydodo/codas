@@ -16,3 +16,7 @@ jobs:
         run: PYTHONPATH=src python -m unittest discover -s tests
       - name: Codas check
         run: PYTHONPATH=src python -m codas check .
+      - name: Codas agents verify
+        run: PYTHONPATH=src python -m codas agents --verify .
+      - name: Codas wiki verify
+        run: PYTHONPATH=src python -m codas wiki --verify .

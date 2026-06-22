@@ -5,7 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from codas.app.agents_block import verify_agents_block
 from codas.config.loader import load_codas_config, load_policies, load_waivers
+from codas.integrations.claude import session_hook_status, verify_claude_shim
+from codas.integrations.enforcement import git_hook_status
+from codas.integrations.install_state import read_install_state
 from codas.structure.document_loader import load_document_manifest
 from codas.structure.loader import load_structure_map
 from codas.structure.program_loader import load_program_plan
@@ -33,8 +37,13 @@ def run_doctor(repo: Path) -> list[Diagnostic]:
     Distinct from ``codas check`` (governance policies): doctor answers "is Codas set
     up correctly here?" so a broken ``.codas`` can be diagnosed before — or when —
     ``check`` cannot run. Deterministic fixed order, read-only; no LLM (§17); imports
-    loaders only, never an adapter (§11, the ``codas-app`` boundary). ``fail`` means a
-    required input is missing/unparseable; ``warn`` is a non-blocking setup note.
+    loaders + the integration STATUS probes (``codas-app`` MAY depend on
+    role-integrations; only ``codas-source``/cli may not), never an adapter (§11).
+    ``fail`` means a required input is missing/unparseable; ``warn`` is a non-blocking
+    setup note. The hook/freshness diagnostics are WARN-only: absent hooks are the normal
+    fresh-clone state (git hooks do not travel with a clone) and the binding staleness gate
+    is the CI ``codas agents --verify`` / ``wiki --verify``, not doctor — doctor SEES the
+    gate, it is not the gate, and never installs/writes (read-only).
     """
     results: list[Diagnostic] = [_git_repo(repo)]
 
@@ -68,6 +77,15 @@ def run_doctor(repo: Path) -> list[Diagnostic]:
         _optional(repo, _DOCUMENTS, "documents", lambda p: load_document_manifest(p, source=_DOCUMENTS), declared)
     )
     results.append(_trellis_context(repo, config))
+
+    # Gate + injection visibility (gaps 1/4): see whether the git hooks + Claude SessionStart
+    # hook are installed and whether the AGENTS block / CLAUDE shim are fresh. WARN-only.
+    state = read_install_state(repo)
+    results.append(_git_hooks(repo, state))
+    results.append(_agent_hook(repo, state))
+    results.append(_agents_block(repo))
+    results.append(_claude_shim(repo))
+
     results.append(_legacy_prototype(repo))
     return results
 
@@ -139,6 +157,80 @@ def _trellis_context(repo: Path, config) -> Diagnostic:
     if not tasks_root.exists():
         return Diagnostic("trellis_context", "fail", f"trellis tasks root missing: {root}/tasks")
     return Diagnostic("trellis_context", "ok", f"trellis tasks root {root}/tasks present")
+
+
+def _git_hooks(repo: Path, state: dict) -> Diagnostic:
+    """The git enforcement gate: live-probe pre-commit/pre-push. WARN (never fail) when absent —
+    git hooks do not travel with a clone, so absence is the normal fresh state; CI gates anyway."""
+    status = git_hook_status(repo)
+    recorded = state.get("git_hooks") or {}
+    absent = sorted(n for n, s in status.items() if s == "absent")
+    foreign = sorted(n for n, s in status.items() if s == "foreign")
+    installed = sorted(n for n, s in status.items() if s == "installed")
+    if not absent and not foreign:
+        return Diagnostic("git_hooks", "ok", f"{', '.join(installed)} installed")
+    notes: list[str] = []
+    if absent:
+        # Reconcile live-probe with the install-state marker: a hook recorded installed but now
+        # live-absent was removed after install (the payoff of holding both signals).
+        gone = [n for n in absent if (recorded.get(n.replace("-", "_")) or {}).get("status") == "installed"]
+        note = f"{', '.join(absent)} not installed"
+        if gone:
+            note += f" ({', '.join(sorted(gone))} recorded installed but file removed)"
+        notes.append(note)
+    if foreign:
+        notes.append(f"{', '.join(foreign)} is a non-Codas hook (pass --force to overwrite)")
+    notes.append("run `codas hooks --install`")
+    return Diagnostic("git_hooks", "warn", "; ".join(notes))
+
+
+def _session_state(state: dict) -> dict:
+    return (((state.get("agent_hooks") or {}).get("claude") or {}).get("session_start") or {})
+
+
+def _agent_hook(repo: Path, state: dict) -> Diagnostic:
+    """The Claude SessionStart injection hook. WARN when absent. Surfaces workspace-trust: it
+    cannot be live-probed, so an installed hook always advises approving trust (hole 4)."""
+    status = session_hook_status(repo)
+    if status == "installed":
+        if _session_state(state).get("trusted") is True:
+            return Diagnostic("agent_hook", "ok", "Claude SessionStart hook installed + trusted")
+        return Diagnostic(
+            "agent_hook",
+            "ok",
+            "Claude SessionStart hook installed (approve workspace-trust in Claude Code)",
+        )
+    if status == "malformed":
+        return Diagnostic("agent_hook", "warn", ".claude/settings.json is malformed")
+    detail = "Claude SessionStart hook not installed — run `codas hooks --install`"
+    if _session_state(state).get("status") == "installed":
+        detail = (
+            "Claude SessionStart hook absent (recorded installed but removed) — "
+            "run `codas hooks --install`"
+        )
+    return Diagnostic("agent_hook", "warn", detail)
+
+
+def _freshness(repo: Path, name: str, filename: str, verify, fix: str) -> Diagnostic:
+    """A rendered governance doc's freshness (WARN-only; the binding gate is CI ``--verify``).
+    Catch-all so a render/IO error reports rather than crashes the read-only diagnostic."""
+    if not (repo / filename).is_file():
+        return Diagnostic(name, "warn", f"{filename} missing — run `{fix}`")
+    try:
+        stale = verify(repo)
+    except Exception as error:  # never crash a read-only diagnostic
+        return Diagnostic(name, "warn", f"{filename} cannot be rendered: {error}")
+    if stale:
+        return Diagnostic(name, "warn", f"{filename} stale — run `{fix}`")
+    return Diagnostic(name, "ok", f"{filename} fresh")
+
+
+def _agents_block(repo: Path) -> Diagnostic:
+    return _freshness(repo, "agents_block", "AGENTS.md", verify_agents_block, "codas agents --write")
+
+
+def _claude_shim(repo: Path) -> Diagnostic:
+    return _freshness(repo, "claude_shim", "CLAUDE.md", verify_claude_shim, "codas agents --write")
 
 
 def _legacy_prototype(repo: Path) -> Diagnostic:

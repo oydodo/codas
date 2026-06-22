@@ -36,6 +36,9 @@ class RenderTests(unittest.TestCase):
     def test_render_workflow_is_deterministic(self) -> None:
         self.assertEqual(render_workflow(), render_workflow())
         self.assertIn("codas check", render_workflow())
+        # The freshness verifies are the binding staleness gate (doctor only warns).
+        self.assertIn("codas agents --verify", render_workflow())
+        self.assertIn("codas wiki --verify", render_workflow())
 
     def test_committed_workflow_matches_render(self) -> None:
         # The committed CI gate must equal render_workflow() byte-for-byte, so editing

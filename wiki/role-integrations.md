@@ -28,6 +28,7 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 - `install_claude_session_hook` *(function)*
 - `render_claude_shim` *(function)*
 - `resolve_agent_command` *(function)*
+- `session_hook_status` *(function)*
 - `verify_claude_shim` *(function)*
 - `write_claude_shim` *(function)*
 
@@ -38,6 +39,7 @@ Two boundaries matter. First, *never trample a user's own hook*: `_is_codas_hook
 - `_is_codas_hook` *(function)*
 - `_worktree_root` *(function)*
 - `_write_git_hook_state` *(function)*
+- `git_hook_status` *(function)*
 - `install_hooks` *(function)*
 - `render_hook` *(function)*
 - `render_workflow` *(function)*
