@@ -217,7 +217,11 @@ class GeneratedClaim:
 @dataclass(frozen=True)
 class GeneratedPage:
     source: str
-    source_inventory_hash: str  # "" if absent
+    # Vestigial backward-compat: the renderer no longer emits a source_inventory_hash
+    # (page freshness is the `codas wiki --verify` byte-compare). Still parsed tolerantly
+    # ("" if absent) so an old committed page that still carries the line loads cleanly
+    # and rewrites away on the next `codas wiki --write`. No policy reads this field.
+    source_inventory_hash: str  # "" if absent (always "" for newly rendered pages)
     claims: tuple[GeneratedClaim, ...]
     has_block: bool
 

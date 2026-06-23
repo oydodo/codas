@@ -3,7 +3,7 @@
   "name": "drop-hash-diff-verify",
   "title": "drop-hash + unified diff verification — retire whole-inventory hash, verify derived artifacts by re-render+byte-compare",
   "description": "generated_wiki_drift: hash-pin -> re-render+byte-compare; keep determinism as run-twice test; inventory_hash audit-only",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

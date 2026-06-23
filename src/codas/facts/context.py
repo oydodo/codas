@@ -220,8 +220,8 @@ class ScanContext:
         """atlas:claims parsed from committed generated wiki pages (cached).
 
         A policy-time fact consumed by ``generated_wiki_drift``; deliberately not
-        serialized into ``inventory`` (the generated pages are excluded from the
-        source_inventory_hash, and their claims never re-enter the hashed inventory).
+        serialized into ``inventory`` (the generated pages are excluded from the scanned
+        inventory, so their claims never re-enter the hashed facts).
         """
         if "generated_claims" not in self._cache:
             wiki_root = (self.config.raw.get("wiki") or {}).get("path", ".codas/wiki")

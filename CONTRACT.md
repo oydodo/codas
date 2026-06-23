@@ -31,11 +31,11 @@ claim/role existence check, so a doc that links it never feeds the hash the book
 
 ## Rules for generated pages
 
-1. A generated page **must** embed a nonempty fenced `atlas:claims` block containing a
-   `source_inventory_hash` line and at least one claim. An ungrounded generated page is
-   a `generated_wiki_drift` **error**.
+1. A generated page **must** embed a nonempty fenced `atlas:claims` block containing at
+   least one claim. An ungrounded generated page is a `generated_wiki_drift` **error**.
+   The page carries **no** `source_inventory_hash`: freshness is verified by re-render +
+   byte-compare (`codas wiki --verify`), not an embedded hash.
 2. The `atlas:claims` grammar is line-oriented `key: subject -> value`:
-   - `source_inventory_hash: sha256:<hex>` (exactly one; the freshness anchor)
    - `unit: <structure-unit-id> -> <path>`
    - `roadmap: <work-item-id> -> <status>`
 3. **Every claim must be true against repository facts.** `generated_wiki_drift` verifies
@@ -160,7 +160,7 @@ so the `stale_*` policies never double-count):
 | markdown path/link refs | governance `.md` | `stale_claim` |
 | HTML path/link refs | authoritative/supporting `.html` | `stale_html_claim` |
 | wiki structural refs (`canonical_source` / `concept_page` / `evidence` / `sync_target`) | `.codas/wiki/**` pages | `stale_wiki_claim` |
-| generated `atlas:claims` (`unit` / `roadmap` / `source_inventory_hash`) | `.codas/wiki/generated/**` | `generated_wiki_drift` |
+| generated `atlas:claims` (`unit` / `roadmap`) | `.codas/wiki/generated/**` | `generated_wiki_drift` (claims); `codas wiki --verify` (freshness, byte-compare) |
 | code-wiki structural claims (`defines` / `calls` / `contains`) | `.codas/wiki/code/**` | `code_anchor` (warning-only, open-world) |
 | the rendered book | `wiki/` | `codas wiki --verify` (not a `codas check` policy) |
 

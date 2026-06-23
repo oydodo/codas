@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -160,12 +159,14 @@ def project_atlas_pack(
 
 
 def build_atlas_pack(repo: Path) -> dict[str, Any]:
-    """Build the Atlas grounding pack for ``repo`` (projection + source hash).
+    """Build the Atlas grounding pack for ``repo`` (projection + audit receipt).
 
     Builds the inventory once with the generated wiki dir excluded, projects it, and
-    pins a `source_inventory_hash` over that same excluded inventory — so the hash a
-    generated page later embeds is stable against editing the generated pages and moves
-    only when the underlying source facts move.
+    pins a `source_inventory_hash` over that same excluded inventory as an audit/provenance
+    receipt on this emit-only artifact (the pack goes to stdout, never committed). The
+    exclusion keeps the hash stable against editing the generated pages; it moves only
+    when the underlying source facts move. (Committed generated pages carry no embedded
+    hash — their freshness is the `codas wiki --verify` byte-compare.)
     """
     inventory = run_inventory(repo, exclude_under=(_GENERATED_DIR,))
     pack = project_atlas_pack(inventory, _config_product_roots(repo))
@@ -368,8 +369,8 @@ def build_atlas_tree(repo: Path) -> dict[str, Any]:
     """Build the neutral knowledge tree for ``repo`` (projection + source hash).
 
     Mirrors ``build_atlas_pack``: builds the inventory once with the generated wiki dir
-    excluded, projects it, and pins the same ``source_inventory_hash`` freshness anchor —
-    so the tree shares the pack's anchor and moves only when the source facts move.
+    excluded, projects it, and pins the same ``source_inventory_hash`` audit receipt — so
+    the emit-only tree shares the pack's receipt and moves only when the source facts move.
     """
     inventory = run_inventory(repo, exclude_under=(_GENERATED_DIR,))
     tree = project_atlas_tree(inventory, _config_product_roots(repo))
@@ -382,16 +383,18 @@ def build_atlas_tree(repo: Path) -> dict[str, Any]:
 _GENERATED_PAGE = "governance.md"
 
 
-def render_generated_overview(
-    inventory: dict[str, Any], source_inventory_hash: str
-) -> str:
+def render_generated_overview(inventory: dict[str, Any]) -> str:
     """Render the committed Atlas governance page from inventory facts (pure, no LLM).
 
     The readable "governance map" rendering of the live facts: the intended structure
     (units) and plan progress (roadmap), plus a fenced ``atlas:claims`` block carrying
-    the ``source_inventory_hash`` and the machine-checkable claims the D3d
-    ``generated_wiki_drift`` policy verifies. Deterministic: tables and claim lines
-    sort on `id`, no timestamp.
+    the machine-checkable claims the D3d ``generated_wiki_drift`` policy verifies.
+    Deterministic: tables and claim lines sort on `id`, no timestamp.
+
+    No embedded ``source_inventory_hash``: page freshness is verified by re-render +
+    byte-compare (``codas wiki --verify`` → ``verify_generated_sections``), so the
+    rendered claim lines — which already move with the same facts a hash would pin — are
+    the freshness signal. A separate hash anchor was redundant.
 
     Dogfood-clean by construction (see adapters/wiki.py + markdown.py): the headings
     (`## Structure Units` / `## Roadmap`) are not claim-creating wiki sections, the
@@ -442,7 +445,7 @@ def render_generated_overview(
             )
         )
 
-    lines += ["", "```atlas:claims", f"source_inventory_hash: {source_inventory_hash}"]
+    lines += ["", "```atlas:claims"]
     for unit in units:
         lines.append(f"unit: {_claim_token(unit['id'])} -> {_claim_token(unit['path'])}")
     for item in work_items:
@@ -457,28 +460,15 @@ def _generated_pages(repo: Path) -> dict[Path, str]:
     """The deterministic ``{path: rendered content}`` for every committed generated
     page — the single render source shared by ``--write`` and ``--verify``.
 
-    Builds the generated-excluded inventory (so the embedded ``source_inventory_hash``
-    is stable across writes — the page never feeds its own hash input). The hash pins
-    ONLY the exact fields this page renders (each unit's id/path/kind/owner + each
-    work-item's id/phase/status), so the page's bytes move exactly when its rendered
-    content moves — never on an unrelated source edit (e.g. a unit's volatile
-    ``observed.artifact_count`` changing when a file is added under it). Otherwise the
-    committed page would restale on every commit and ``--verify`` would be perpetually
-    red. (A narrower, more honest freshness anchor than the §4 whole-inventory hash; the
-    pack keeps the whole-inventory hash, the page pins its own rendered source.)
+    Builds the generated-excluded inventory so the page never feeds its own render input
+    (a generated page under ``_GENERATED_DIR`` would otherwise re-enter the facts it
+    renders). Freshness rides in the bytes: the page carries no embedded hash, so a stale
+    page is caught by ``verify_generated_sections`` re-rendering and byte-comparing — the
+    rendered claim lines move exactly when their source facts move.
     """
     inventory = run_inventory(repo, exclude_under=(_GENERATED_DIR,))
-    units = inventory.get("units") or []
-    work_items = (inventory.get("program") or {}).get("work_items") or []
-    rendered_source = {
-        "units": sorted([u["id"], u["path"], u["kind"], u["owner"]] for u in units),
-        "roadmap": sorted([w["id"], w["phase"], w["status"]] for w in work_items),
-    }
-    source_hash = inventory_hash(
-        json.dumps(rendered_source, sort_keys=True, separators=(",", ":"), default=str)
-    )
     page = repo / _GENERATED_DIR / _GENERATED_PAGE
-    return {page: render_generated_overview(inventory, source_hash)}
+    return {page: render_generated_overview(inventory)}
 
 
 def write_generated_sections(repo: Path) -> list[Path]:
@@ -501,10 +491,12 @@ def verify_generated_sections(repo: Path) -> list[Path]:
     """Generated pages whose on-disk bytes differ from a fresh render (stale or
     hand-edited); empty == all up to date.
 
-    The freshness check rides in the bytes: a stale ``source_inventory_hash`` or any
-    hand-edit surfaces as a mismatch, so no separate hash bookkeeping is needed. This is
-    the home for the source-hash freshness deliberately kept out of the always-on
-    ``check`` gate (the committed page's hash churns on every unrelated source change).
+    The freshness check rides in the bytes: a stale rendered claim/table or any hand-edit
+    surfaces as a byte mismatch, so the page carries no embedded freshness hash. This is
+    the freshness authority deliberately kept out of the always-on ``check`` gate — the
+    gate cannot re-render without a second full inventory scan (ScanContext exposes facts,
+    not a built inventory), so freshness is this ``--verify`` / CI byte-compare while the
+    gate keeps the cheap fact-consistency claim checks.
     """
     expected = _generated_pages(repo)
     stale: list[Path] = []
