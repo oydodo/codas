@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codas 架构与概念全图 — 整体审阅</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#151f33; --panel2:#1d2942; --ink:#e7edf6; --muted:#93a3b8;
+    --line:#2b3a55; --accent:#6366f1; --green:#22c55e; --amber:#f59e0b; --red:#ef4444;
+    --cyan:#22d3ee; --violet:#a78bfa; --slate:#64748b; --pink:#f472b6;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:14.5px}
+  .layout{display:grid;grid-template-columns:230px 1fr;max-width:1280px;margin:0 auto}
+  nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:22px 14px;border-right:1px solid var(--line);font-size:13px}
+  nav h4{margin:0 0 8px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  nav a{display:block;color:#b9c4d6;text-decoration:none;padding:4px 8px;border-radius:6px;margin:1px 0}
+  nav a:hover{background:var(--panel2);color:#fff}
+  main{padding:28px 30px 90px;min-width:0}
+  h1{font-size:28px;margin:0 0 4px;letter-spacing:-.5px}
+  h2{font-size:20px;margin:42px 0 6px;padding-top:16px;border-top:1px solid var(--line);scroll-margin-top:12px}
+  .sub{color:var(--muted);margin:0 0 6px}
+  code,.mono{font-family:var(--mono);font-size:.85em}
+  .pathtag{font-family:var(--mono);font-size:.78em;background:#0b1220;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#cbd5e1;white-space:nowrap}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  .lg{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+  .swatch{width:24px;height:14px;border-radius:4px;display:inline-block}
+  .s-codas{background:#1e3a8a;border:1px solid #3b82f6}
+  .s-ext{background:#3b2f12;border:1px dashed #f59e0b}
+  .s-config{background:#0f3d2e;border:1px solid #22c55e}
+  .s-doc{background:#3b1f4d;border:1px solid #a78bfa}
+  .s-prop{background:#151f33;border:1px dashed #93a3b8}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  .cap{color:var(--muted);font-size:12.5px;margin:8px 2px 0}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .col{flex:1;min-width:200px}
+  .box{border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--panel2)}
+  .box .t{font-weight:600;font-size:13.5px;margin-bottom:2px}
+  .box .d{font-size:12px;color:var(--muted)}
+  .b-codas{border-color:#3b82f6;background:#1e3a8a1f}
+  .b-ext{border-color:#f59e0b;border-style:dashed;background:#78350f17}
+  .b-config{border-color:#22c55e;background:#14532d1c}
+  .b-doc{border-color:#a78bfa;background:#4c1d951c}
+  .b-prop{border-color:#93a3b8;border-style:dashed;background:#1d2942}
+  .down{text-align:center;color:var(--slate);font-size:17px;margin:3px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  table{border-collapse:collapse;width:100%;margin:8px 0;font-size:12.7px}
+  th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--muted);font-weight:600}
+  .tag{font-size:10.5px;padding:1px 7px;border-radius:20px;font-weight:600;white-space:nowrap}
+  .t-gate{background:#3b1414;color:#fca5a5}
+  .t-adv{background:#3b3206;color:#fde68a}
+  .t-plan{background:#1f2937;color:#9ca3af}
+  .t-exist{background:#14532d;color:#86efac}
+  .t-prop{background:#3b3206;color:#fde68a}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:6px;margin:3px 4px 0 0;border:1px solid var(--line);background:#0b1220;color:#cbd5e1}
+  .note{font-size:12.5px;color:var(--muted);border-left:3px solid var(--accent);padding:6px 0 6px 13px;margin:12px 0}
+  .masthead{background:linear-gradient(120deg,#1e293b,#0f172a);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:14px 0}
+  .loop{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:center;margin-top:8px}
+  .loop .step{border:1px solid var(--line);border-radius:8px;padding:8px;text-align:center;font-size:12px;background:var(--panel2)}
+  .loop .ar{text-align:center;color:var(--slate)}
+  .phase{display:flex;gap:6px;flex-wrap:wrap}
+  .ph{border:1px solid #22c55e;background:#14532d22;border-radius:8px;padding:6px 10px;font-size:12px;color:#bbf7d0}
+  .ph.cur{border-color:#f59e0b;background:#78350f22;color:#fde68a}
+  .verifybar{position:sticky;bottom:0;background:#020617f2;border-top:1px solid var(--line);padding:10px 16px;font-size:12.5px;color:var(--muted);backdrop-filter:blur(4px)}
+  .small{font-size:12px;color:var(--muted)}
+  .kicker{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--slate);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <h4>目录</h4>
+  <a href="#mission">0 · 是什么 / 核心循环</a>
+  <a href="#map">1 · 系统总图</a>
+  <a href="#inputs">2 · 输入:authored 配置(closed)</a>
+  <a href="#facts">3 · 代码事实(open-world)</a>
+  <a href="#atlas">4 · Atlas / inventory</a>
+  <a href="#policies">5 · 策略引擎(25 条)</a>
+  <a href="#structure">6 · 结构图 & 归属</a>
+  <a href="#claims">7 · claim / 锚点层</a>
+  <a href="#wiki">8 · Wiki 双层</a>
+  <a href="#inject">9 · agent 注入</a>
+  <a href="#enforce">10 · 强制 & 运维</a>
+  <a href="#query">11 · agent 查询面</a>
+  <a href="#roles">12 · 角色</a>
+  <a href="#phases">13 · 阶段 P0–P8</a>
+  <a href="#twotier">14 · 双层正确性</a>
+  <a href="#future">15 · 未来方向(提案)</a>
+</nav>
+<main>
+
+  <h1>Codas 架构与概念全图</h1>
+  <p class="sub">Code Atlas System · 给 AI-agent 维护的仓库的<b>确定性治理层</b>。供整体审阅:每块标"现状/提案",有错就指。</p>
+  <div class="legend">
+    <span class="lg"><span class="swatch s-codas"></span>Codas 自有(确定/in-core)</span>
+    <span class="lg"><span class="swatch s-config"></span>authored 配置(closed-world)</span>
+    <span class="lg"><span class="swatch s-doc"></span>文档/claim(层3)</span>
+    <span class="lg"><span class="swatch s-ext"></span>外部/CodeGraph(advisory)</span>
+    <span class="lg"><span class="swatch s-prop"></span>提案(未来,虚线)</span>
+  </div>
+
+  <!-- 0 -->
+  <h2 id="mission">0 · Codas 是什么 / 核心循环</h2>
+  <div class="masthead">
+    <p style="margin:0 0 4px"><b>一句话</b>:Codas 把仓库的"<b>事实</b>(代码实际是什么)"和"<b>规则+声称</b>(该是什么、文档说是什么)"自动比对,在提交时<b>拦住</b>违规,并把治理规范<b>注入</b>给 AI agent,让 agent 不重复造轮子、不漏同步改、不让文档说谎。</p>
+    <div class="loop">
+      <div class="step">agent 改代码</div><div class="ar">→</div>
+      <div class="step">gate 对照<br>事实 vs 规则/claim</div><div class="ar">→</div>
+      <div class="step">拦 / 放</div>
+    </div>
+    <div class="loop" style="margin-top:6px">
+      <div class="step">Atlas/wiki/注入<br>持续给 agent 定向</div><div class="ar">↺</div>
+      <div class="step">preflight 给<br>reuse+影响面</div><div class="ar">↺</div>
+      <div class="step">per-turn 提示<br>changed-file 发现</div>
+    </div>
+  </div>
+
+  <!-- 1 -->
+  <h2 id="map">1 · 系统总图</h2>
+  <div class="card">
+    <p class="kicker">INPUTS</p>
+    <div class="grid3">
+      <div class="box b-config"><div class="t">authored 配置(closed-world)</div><div class="d">structure / program / documents / claims / waivers / policies / config .yml</div></div>
+      <div class="box b-doc"><div class="t">文档 + wiki 页(带 claim/锚点)</div><div class="d">docs/ · .codas/wiki/code/** · PRD</div></div>
+      <div class="box b-codas"><div class="t">代码(被治理)</div><div class="d">src/** 等 git 跟踪文件</div></div>
+    </div>
+    <div class="down">↓</div>
+    <p class="kicker">ENGINE(codas 核心)</p>
+    <div class="grid2">
+      <div class="box b-codas"><div class="t">scanner → ScanContext</div><div class="d">发现文件 → 单次解析 → 内存事实 symbols/imports/calls(open-world)</div></div>
+      <div class="box b-codas"><div class="t">policy engine(25 条)→ gate</div><div class="d">事实 vs 规则/claim;error 拦提交</div></div>
+    </div>
+    <div class="down">↓</div>
+    <p class="kicker">OUTPUTS</p>
+    <div class="grid4">
+      <div class="box b-codas"><div class="t">Atlas / inventory</div><div class="d">确定 JSON + hash</div></div>
+      <div class="box b-doc"><div class="t">wiki(机器+人书)</div><div class="d">渲染</div></div>
+      <div class="box b-codas"><div class="t">agent 注入</div><div class="d">AGENTS.md/hook/preflight</div></div>
+      <div class="box b-codas"><div class="t">查询面</div><div class="d">query/impact/schema</div></div>
+    </div>
+    <div class="down">↓</div>
+    <p class="kicker">CONSUMERS</p>
+    <div class="grid4">
+      <div class="box"><div class="t">git(hooks)</div><div class="d">commit/push 拦截</div></div>
+      <div class="box"><div class="t">AI agent</div><div class="d">注入+查询</div></div>
+      <div class="box"><div class="t">人</div><div class="d">读 wiki 书</div></div>
+      <div class="box"><div class="t">CI</div><div class="d">check + --verify</div></div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <h2 id="inputs">2 · 输入:authored 配置(closed-world)<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <p class="small">声明式、按定义即全集。不在里面 = 真的没有。都在 <span class="pathtag">.codas/</span> 下。</p>
+  <div class="card grid2">
+    <div class="box b-config"><div class="t">structure.yml — 结构图</div><div class="d">单元(unit)= path+owner+kind+canonical_placement;治理的骨架</div></div>
+    <div class="box b-config"><div class="t">program.yml — 程序计划</div><div class="d">P0–P8 路线图,work_items + 依赖</div></div>
+    <div class="box b-config"><div class="t">documents.yml — 文档角色清单</div><div class="d">必备文档角色 + 权威级别</div></div>
+    <div class="box b-config"><div class="t">claims.yml — 关系/治理 claim(authored)</div><div class="d">canonical/variant/migration(治意图重复)+ fact_coupling 耦合。closed enforcement:未声明=拦。⚠️"claim"是重载词,见 §7</div></div>
+    <div class="box b-config"><div class="t">waivers.yml — 豁免</div><div class="d">每条须 reason+owner+scope+expiry</div></div>
+    <div class="box b-config"><div class="t">policies.yml / config.yml</div><div class="d">启用的策略 + 扫描根/产品根等旋钮</div></div>
+  </div>
+
+  <!-- 3 -->
+  <h2 id="facts">3 · 代码事实层(open-world)<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card">
+    <p class="small">层2 拆 <b>gate-grade(确定·语言内·拦)</b> 和 <b>advisory(多语言+跨语言·提示·不拦)</b>。三个 adapter 槽:</p>
+    <table>
+      <tr><th>adapter 槽</th><th>填谁</th><th>tier</th><th>用途</th></tr>
+      <tr><td>parse(层1)</td><td>ast(Python)/ tree-sitter(每语言)</td><td>—</td><td>源码→语法树</td></tr>
+      <tr><td>symbols / imports</td><td>tree-sitter / ast(语言内,确定)</td><td><span class="tag t-gate">gate</span></td><td>ownership / dup / dependency-direction 拦</td></tr>
+      <tr><td>call-graph(语言内)</td><td>ast(Python)· tree-sitter resolver(某语言要 call-gating 才搓,少见)</td><td><span class="tag t-gate">gate</span></td><td>fact_coupling on calls(少)</td></tr>
+      <tr><td><b>call-graph(多语言+跨语言)</b></td><td><b>CodeGraph adapter</b>(可插拔)</td><td><span class="tag t-adv">advisory</span></td><td>impact / reuse / 跨语言理解 / code_anchor 多语言</td></tr>
+    </table>
+    <p class="cap"><b>ScanContext</b> = 事实提供 seam(单次扫描,policy 与 inventory 共用)。<b>跨语言 = 必须支持(advisory),但猜的边不进 gate</b>(防假拦);gate 只烧语言内确定事实。</p>
+    <div class="note"><b>open-world 不变量</b>:静态读能证"存在",不能证"不存在"(动态/反射看不见)→ 事实是<b>下界</b>,absence≠denial。gate 只能基于"确定存在"拦。</div>
+    <p class="cap"><b>源头切分(消歧关键)</b>:<b>代码 → 事实(facts)</b>(symbols/imports/calls,<u>不叫 claim</u>);<b>文档/配置 → claim</b>。<b>代码从不产 claim。</b>"从代码发现的 claim"其实是从文档扫出的 doc claim。</p>
+  </div>
+
+  <!-- 4 -->
+  <h2 id="atlas">4 · Atlas / inventory(范围 + hash)<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card">
+    <p class="small">事实+结构+claim+任务的<b>确定 JSON 投影</b>。<b>被 hash 的就是这份。</b></p>
+
+    <p class="kicker">IN — 三组(都进 inventory + 进 hash)</p>
+    <div class="grid3">
+      <div class="box b-config"><div class="t">A. authored 配置(closed)</div><div class="d">units / unowned / conflicts ← structure.yml · program.work_items · documents.roles</div></div>
+      <div class="box b-doc"><div class="t">B. claims(断言)</div><div class="d">doc_claims · html_claims · wiki_claims(verified 锚点)</div></div>
+      <div class="box b-codas"><div class="t">C. 事实(open)+ 任务</div><div class="d">symbols · imports · calls(代码,ast)· tasks(Trellis)</div></div>
+    </div>
+
+    <p class="kicker" style="margin-top:12px">OUT — 不在 inventory(也不在 hash)</p>
+    <div class="grid4">
+      <div class="box b-prop"><div class="t">prose</div><div class="d">.codas/wiki/code/*.md 散文 · LLM 离线写</div></div>
+      <div class="box b-prop"><div class="t">渲染的书 wiki/</div><div class="d">派生输出 · scanner 排除</div></div>
+      <div class="box b-prop"><div class="t">机器 scratch</div><div class="d">.install-state / .status-seen</div></div>
+      <div class="box b-prop"><div class="t">working-tree delta</div><div class="d">changed_paths/snapshots · 不序列化</div></div>
+    </div>
+
+    <p class="kicker" style="margin-top:12px">三个 hash</p>
+    <table>
+      <tr><th>hash</th><th>算什么</th><th>范围</th></tr>
+      <tr><td><code>inventory_hash</code>(主)</td><td>sha256(<b>整份</b> inventory JSON,sort_keys)</td><td>A+B+C 整块 ← <b>过宽</b></td></tr>
+      <tr><td>generated 页 <code>source_hash</code></td><td>只 units+roadmap 子集</td><td>已 scoped(<b>先例</b>)</td></tr>
+      <tr><td><code>policy_version</code></td><td>policies 配置</td><td>独立</td></tr>
+    </table>
+
+    <div class="note" style="border-color:#f59e0b">⚠️ <b>主 hash 盖 A+B+C 整块</b> → 改一行代码(C)→ 连 A 的 structure 文档、B 的 doc_claims 都判"可能过期"(churn)。<b>prose / 书 / scratch / delta 在范围外</b> → prose 变靠 <b>diff</b> 抓,不靠 hash(hash 只是 facts/inventory 的指纹,漏 prose+渲染器)。<span class="tag t-prop">提案</span>:退整份 hash → 统一 <b>diff(re-render + byte-compare)</b>,留渲染确定性测试。</div>
+
+    <p class="cap">消费者:<code>codas inventory</code> · <code>query</code> · provenance(hash→receipt)· wiki/book 渲染 · preflight。<b>gate 不读它</b>(用内存事实)。fact 格式 = 扁平记录,如 <code>{module,name,kind,line}</code>。</p>
+  </div>
+
+  <!-- 5 -->
+  <h2 id="policies">5 · 策略引擎(25 条)<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <p class="small"><span class="tag t-gate">gated</span> 拦提交(error) · <span class="tag t-adv">advisory</span> 仅警告 · <span class="tag t-plan">planned</span> 声明未实现</p>
+  <div class="card">
+    <table>
+      <tr><th>策略</th><th>类型</th><th>抓什么</th></tr>
+      <tr><td>structure_drift</td><td><span class="tag t-gate">gated</span></td><td>仓库变更必须与结构图对齐或显式更新</td></tr>
+      <tr><td>missing_structure_owner</td><td><span class="tag t-gate">gated</span></td><td>改的文件必须映射到有 owner 的单元</td></tr>
+      <tr><td>dependency_direction</td><td><span class="tag t-gate">gated</span></td><td>不得 import owner 声明的 must-not-depend-on</td></tr>
+      <tr><td>duplicate_implementation</td><td><span class="tag t-gate">gated</span></td><td>同名顶层符号跨模块需声明 canonical/variant/migration</td></tr>
+      <tr><td>fact_coupling</td><td><span class="tag t-gate">gated</span></td><td>被盯符号/import/call 变,配套路径须同 diff 改</td></tr>
+      <tr><td>deprecated_path_used</td><td><span class="tag t-gate">gated</span></td><td>新文件不得加在废弃/移除路径下</td></tr>
+      <tr><td>generated_wiki_drift</td><td><span class="tag t-gate">gated</span></td><td>committed 生成页须匹配事实 + 新鲜 source hash</td></tr>
+      <tr><td>document_set</td><td><span class="tag t-gate">gated</span></td><td>必备文档角色须齐、存在、不越权</td></tr>
+      <tr><td>config_sources</td><td><span class="tag t-gate">gated</span></td><td>声明的权威/支撑源须在盘上</td></tr>
+      <tr><td>dogfooding_protocol</td><td><span class="tag t-gate">gated</span></td><td>仓库须满足自己声明的 dogfooding 协议</td></tr>
+      <tr><td>trellis_context</td><td><span class="tag t-gate">gated</span></td><td>Trellis workflow context 须存在且良构</td></tr>
+      <tr><td>waivers</td><td><span class="tag t-gate">gated</span></td><td>每条豁免须 reason/owner/scope/expiry</td></tr>
+      <tr><td>policy_registry</td><td><span class="tag t-gate">gated</span></td><td>声明的策略与实现 1:1</td></tr>
+      <tr><td>structure_map / program_plan</td><td><span class="tag t-gate">gated</span></td><td>schema 须能加载</td></tr>
+      <tr><td>code_anchor</td><td><span class="tag t-adv">advisory</span></td><td>code-wiki 页的 defines/calls/contains 锚点须解析</td></tr>
+      <tr><td>duplicate_symbol</td><td><span class="tag t-adv">advisory</span></td><td>公共顶层名跨模块重复(检测信号)</td></tr>
+      <tr><td>stale_claim / stale_html_claim / stale_wiki_claim</td><td><span class="tag t-adv">advisory</span></td><td>文档里路径/claim 引用须指向存在的路径</td></tr>
+      <tr><td>stale_preflight</td><td><span class="tag t-plan">planned</span></td><td>agent 编辑前须声明概念+读权威源</td></tr>
+      <tr><td>duplicate_concept / missing_canonical_owner / orphan_artifact / constraint_conflict</td><td><span class="tag t-plan">planned</span></td><td>语义重复 / 新概念须先声明 owner / 新文件须有归属 / 冲突须解</td></tr>
+    </table>
+  </div>
+
+  <!-- 6 -->
+  <h2 id="structure">6 · 结构图 & 归属<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card">
+    <p class="small">每个被治理路径 → 一个单元(unit)→ 一个 owner + canonical placement。</p>
+    <div class="grid3">
+      <div class="box b-config"><div class="t">unit</div><div class="d">id · path · kind · owner · status · canonical_placement · must_not_depend_on</div></div>
+      <div class="box b-config"><div class="t">gate 能查</div><div class="d">改文件是否被某单元拥有(missing_owner)· 是否对齐(structure_drift)</div></div>
+      <div class="box b-doc"><div class="t">gate 查不了(ungateable)</div><div class="d">放错子系统(owned 但错)· 语义重复 · 错抽象层</div></div>
+    </div>
+    <p class="cap"><b>ungateable failure classes</b> = gate 沉默区 → 靠"注入 ownership/placement map + reuse 候选"防御(=层3 注入,问题1 的解法之一)。</p>
+  </div>
+
+  <!-- 7 -->
+  <h2 id="claims">7 · claim / 锚点层(代码↔文档桥)<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card">
+    <p class="small"><b>"claim" = 一个属:关于代码的、可被事实核对的断言。</b>全都拿<b>同一套事实</b>去核。下面是三个<b>种</b>(别裸叫 claim,带限定词):</p>
+    <table>
+      <tr><th>种</th><th>哪</th><th>谁产</th><th>断言什么</th><th>enforcement</th></tr>
+      <tr><td><b>关系/治理 claim</b></td><td>claims.yml(§2)</td><td>authored 主动写</td><td>关系/意图(重复有意 · 须连改)</td><td><span class="tag t-gate">closed · 拦</span></td></tr>
+      <tr><td><b>doc claim</b></td><td>markdown 文档</td><td>extracted 扫出</td><td>文档引用了某路径/符号</td><td><span class="tag t-adv">核对没说谎</span></td></tr>
+      <tr><td><b>锚点 claim</b></td><td>.codas/wiki/code/**</td><td>authored 写在页里</td><td>散文绑符号 · A calls B</td><td><span class="tag t-adv">open warning</span></td></tr>
+    </table>
+    <p class="small" style="margin-top:10px">Codas 读不了散文意思(无 LLM,§17)→ 只能核对带"锚点/引用"的断言。锚点解析不上 = 定位到代码↔文档差异。下面是实现这些的 policy:</p>
+    <table>
+      <tr><th>机制(policy)</th><th>方向</th><th>语法/来源</th><th>类型</th></tr>
+      <tr><td>code_anchor</td><td>doc → 代码事实</td><td><code>defines: / calls: / contains:</code> 在 <span class="pathtag">.codas/wiki/code/**</span></td><td><span class="tag t-adv">advisory</span></td></tr>
+      <tr><td>stale_claim</td><td>doc → 路径</td><td>markdown 链接/code-span 路径</td><td><span class="tag t-adv">advisory</span></td></tr>
+      <tr><td>fact_coupling</td><td>代码变 → doc 须同改</td><td><span class="pathtag">.codas/claims.yml</span> 手写耦合</td><td><span class="tag t-gate">gated</span></td></tr>
+    </table>
+    <div class="note">问题3(决策没回写 PRD)的<b>引擎就在这层</b>。缺口:PRD/决策文档还没接锚点(<span class="tag t-prop">提案</span>:扩锚点范围 + 从锚点派生耦合 + RepairTarget)。</div>
+    <div class="note" style="border-color:#f59e0b"><b>"claim 重载"的根治(不是改名,是合并)</b>:claims.yml 的 <code>fact_coupling</code>(治理 claim)和文档<b>锚点</b>是<b>同一件事两种写法</b>。<span class="tag t-prop">提案</span>:写<b>一条锚点</b>,Codas 既核"文档没说谎"(doc 侧)又派生"连改强制"(治理侧)→ <b>一个 source 两个作用</b>。合了之后"两种 claim"的混淆从根上消失。</div>
+  </div>
+
+  <!-- 8 -->
+  <h2 id="wiki">8 · Wiki 双层<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card">
+    <div class="grid2">
+      <div class="box b-doc"><div class="t">机器/源层 <span class="pathtag">.codas/wiki/</span></div><div class="d">verified claim + advisory why-prose;agent + check 面向</div></div>
+      <div class="box b-doc"><div class="t">人书 <span class="pathtag">wiki/</span>(repo 根)</div><div class="d">渲染的章节书,GitHub 可浏览;hash 排除;--verify 字节比</div></div>
+    </div>
+    <p class="small" style="margin-top:10px">4 种验证契约:</p>
+    <div class="grid4">
+      <div class="box"><div class="t">FEED</div><div class="d">stdout 投影,临时</div></div>
+      <div class="box"><div class="t">GENERATED</div><div class="d">committed 确定,hash 排除,--verify</div></div>
+      <div class="box"><div class="t">WIKI-PAGES</div><div class="d">prose 出 hash + verified claim 块</div></div>
+      <div class="box"><div class="t">CACHE</div><div class="d">gitignore 草稿</div></div>
+    </div>
+  </div>
+
+  <!-- 9 -->
+  <h2 id="inject">9 · agent 注入系统<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card">
+    <div class="grid3">
+      <div class="box b-codas"><div class="t">AGENTS.md block</div><div class="d">policy 目录+ownership map+lookup 协议,确定渲染 + <code>agents --verify</code></div></div>
+      <div class="box b-codas"><div class="t">CLAUDE.md shim</div><div class="d">@AGENTS.md(Claude 原生读 CLAUDE.md);Codex 原生读 AGENTS.md 无需 shim</div></div>
+      <div class="box b-codas"><div class="t">SessionStart hook</div><div class="d">注入 preflight digest + 记 baseline</div></div>
+      <div class="box b-codas"><div class="t">preflight digest</div><div class="d">reuse 候选 + 影响单元 + advisory why(从 git changed)</div></div>
+      <div class="box b-codas"><div class="t">per-turn 注入</div><div class="d">Stop/PostToolUse/UserPromptSubmit → changed-file 上的 missing_owner/dup/deprecated 提示</div></div>
+      <div class="box b-codas"><div class="t">integrations</div><div class="d">claude(settings.json)· codex(.codex/hooks.json)· registry</div></div>
+    </div>
+    <p class="cap">注入解决 ungateable(问题1/2):gate 沉默处,把 reuse/影响面/规范推给 agent。<b>wiki 不注入</b> —— agent 用查询面查。</p>
+  </div>
+
+  <!-- 10 -->
+  <h2 id="enforce">10 · 强制 & 运维<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card grid4">
+    <div class="box b-codas"><div class="t">git hooks</div><div class="d">pre-commit/pre-push → <code>codas check</code>(<span class="tag t-prop">提案</span>:补 post-merge/post-rewrite)</div></div>
+    <div class="box b-codas"><div class="t">CI workflow</div><div class="d">渲染的 .github 工作流:check + agents/wiki --verify</div></div>
+    <div class="box b-codas"><div class="t">doctor</div><div class="d">诊断:hooks 装没装、文档新鲜否(live 探针,WARN-only)</div></div>
+    <div class="box b-codas"><div class="t">install-state</div><div class="d">machine-local 标记(gitignore),doctor↔installer 契约</div></div>
+  </div>
+
+  <!-- 11 -->
+  <h2 id="query">11 · agent 查询面(P7)<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card grid4">
+    <div class="box b-codas"><div class="t">codas query &lt;kind&gt;</div><div class="d">预切片事实(--select 过滤)</div></div>
+    <div class="box b-codas"><div class="t">codas impact &lt;符号|路径&gt;</div><div class="d">反向可达(谁受影响)</div></div>
+    <div class="box b-codas"><div class="t">codas schema</div><div class="d">可查事实/字段形状</div></div>
+    <div class="box b-codas"><div class="t">--json 到处有</div><div class="d">check/inventory/preflight</div></div>
+  </div>
+  <p class="cap">CLI-first/MCP-optional:agent shell out + jq 即可;这些子命令让 jq 可选。</p>
+
+  <!-- 12 -->
+  <h2 id="roles">12 · 角色(治理责任)<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card">
+    <div class="phase">
+      <span class="pill">Codas Core</span>
+      <span class="pill">Policy Maintainer</span>
+      <span class="pill">Structure Steward</span>
+      <span class="pill">Document Steward</span>
+      <span class="pill">Task Steward</span>
+      <span class="pill">Orientation Curator</span>
+      <span class="pill">Structure Architect</span>
+    </div>
+    <p class="cap">每个被治理单元映射到一个 owner 角色(structure.yml)。role-contracts(src/codas/roles)+ role-integrations(平台映射)。</p>
+  </div>
+
+  <!-- 13 -->
+  <h2 id="phases">13 · 程序阶段 P0–P8<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card">
+    <div class="phase">
+      <span class="ph">P0 CLI 核+self-check</span>
+      <span class="ph">P1 inventory/结构图/文档治理</span>
+      <span class="ph">P2 策略引擎+structure-drift</span>
+      <span class="ph">P3 适配器抽取</span>
+      <span class="ph">P4 preflight/receipts</span>
+      <span class="ph">P5 wiki 调和</span>
+      <span class="ph">P6 强制+集成</span>
+      <span class="ph cur">P7 agent 查询面(核心完)</span>
+      <span class="ph cur">P8 可读 wiki 书(核心完)</span>
+    </div>
+    <p class="cap">P0–P6 完成;P7/P8 核心交付(标 planned 但实质做完)。最近:Codex 集成上线、Swift 设计归档。</p>
+  </div>
+
+  <!-- 14 -->
+  <h2 id="twotier">14 · 双层正确性模型(核心理念)<span class="tag t-exist" style="margin-left:8px">现状</span></h2>
+  <div class="card grid2">
+    <div class="box b-codas"><div class="t">(a) 硬不变量 → GATE 保证</div><div class="d">missing_owner · structure_drift · deprecated_path · duplicate_implementation · dependency_direction · byte-identical。check+verify+inventory 兜。</div></div>
+    <div class="box b-doc"><div class="t">(b) ungateable → 注入防御</div><div class="d">放错单元(owned 但错)· 语义 reuse miss · 错抽象层。gate 沉默 → 注入 ownership/reuse/影响面是唯一防线 = 对正确性 load-bearing。</div></div>
+  </div>
+
+  <!-- 15 -->
+  <h2 id="future">15 · 未来方向(提案,5 顾问裁决)<span class="tag t-prop" style="margin-left:8px">提案</span></h2>
+  <div class="card">
+    <div class="grid2">
+      <div class="box b-prop"><div class="t">① 问题3 锚点(最值钱,零 CodeGraph)</div><div class="d">决策/PRD 文档接锚点 + 从锚点派生耦合 + RepairTarget(精确指出哪行过期+改成啥)。层3 + Python 层2,机制+数据现成。</div></div>
+      <div class="box b-ext"><div class="t">② CodeGraph advisory adapter(migrate-lite)</div><div class="d">外部多语言事实,喂现有 calls 族 + code_anchor。off-gate/off-hash/可选/缺则降级。拓宽到多语言。</div></div>
+      <div class="box b-prop"><div class="t">③ inventory hash 细化</div><div class="d">整份 hash → 每 committed 物 scoped hash(structure/code/book 各一)。不退役,只收窄。</div></div>
+      <div class="box b-prop"><div class="t">④ merge-hook 补洞</div><div class="d">post-merge/post-rewrite(今天就有的洞,独立于 CodeGraph)。</div></div>
+    </div>
+    <div class="note"><b>被否</b>:大改(全走 CodeGraph + diff-gate + 退役 inventory)—— 回归确定/防绕过/离线,且 diff-gate 在 merge/rebase 漏判。CodeGraph 永远到不了层3。</div>
+  </div>
+
+</main>
+</div>
+<div class="verifybar">
+  <b>整体审阅</b>:绿色"现状"块 = 我对代码的理解(§2–§14 大多是)。哪块与实际不符,直接指 §编号 + 错点,我修(或回去查证)。黄色"提案"块 = 方向,可推翻。
+</div>
+</body>
+</html>

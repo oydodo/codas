@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codas 概念地图 — 验证我的理解</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --ink:#e2e8f0; --muted:#94a3b8;
+    --line:#334155; --accent:#6366f1; --green:#22c55e; --amber:#f59e0b; --red:#ef4444;
+    --cyan:#06b6d4; --violet:#a78bfa; --slate:#64748b;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 24px 80px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.5px}
+  h2{font-size:21px;margin:48px 0 4px;padding-top:18px;border-top:1px solid var(--line)}
+  .sub{color:var(--muted);margin:0 0 8px}
+  .lead{color:var(--muted);max-width:760px}
+  code,.mono{font-family:var(--mono);font-size:.86em}
+  .pathtag{font-family:var(--mono);font-size:.8em;background:#0b1220;border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;color:#cbd5e1}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:18px 0 8px;padding:14px 16px;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px}
+  .lg{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+  .swatch{width:26px;height:16px;border-radius:4px;display:inline-block}
+  .s-codas{background:#1e3a8a;border:1px solid #3b82f6}
+  .s-ext{background:#3b2f12;border:1px dashed #f59e0b}
+  .s-config{background:#0f3d2e;border:1px solid #22c55e}
+  .s-doc{background:#3b1f4d;border:1px solid #a78bfa}
+  .s-prop{background:#1e293b;border:1px dashed #94a3b8}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0}
+  .cap{color:var(--muted);font-size:13px;margin:8px 2px 0}
+  .grid{display:grid;gap:12px}
+  /* layer stack */
+  .stack{display:flex;flex-direction:column;gap:10px;margin:8px 0}
+  .layer{border-radius:10px;padding:14px 16px;border:1px solid var(--line);position:relative}
+  .layer .lnum{position:absolute;top:10px;right:14px;font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .layer h3{margin:0 0 6px;font-size:16px}
+  .layer p{margin:2px 0;font-size:14px;color:#cbd5e1}
+  .l3{background:linear-gradient(180deg,#2a1840,#231533);border-color:#7c3aed}
+  .l2{background:linear-gradient(180deg,#10243a,#0e1d30);border-color:#0ea5e9}
+  .l1{background:linear-gradient(180deg,#14233b,#101b2e);border-color:#475569}
+  .chip{display:inline-block;font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:6px;margin:3px 4px 0 0;border:1px solid}
+  .chip-codas{background:#1e3a8a33;border-color:#3b82f6;color:#bfdbfe}
+  .chip-ext{background:#78350f33;border-color:#f59e0b;color:#fde68a;border-style:dashed}
+  .chip-config{background:#14532d33;border-color:#22c55e;color:#bbf7d0}
+  .chip-doc{background:#4c1d9533;border-color:#a78bfa;color:#ddd6fe}
+  .arrowup{text-align:center;color:var(--muted);font-size:13px;margin:-2px 0}
+  /* two-col coverage */
+  .cov{display:grid;grid-template-columns:90px 1fr 1fr;gap:10px;align-items:stretch}
+  .cov .h{font-weight:600;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center}
+  .cell{border-radius:9px;padding:10px 12px;font-size:13px;border:1px solid var(--line);background:var(--panel2)}
+  .cell.codas{border-color:#3b82f6;background:#1e3a8a22}
+  .cell.ext{border-color:#f59e0b;border-style:dashed;background:#78350f1f}
+  .cell.none{color:var(--muted);background:#0b1220}
+  .rowlabel{display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;color:#cbd5e1;
+    background:#0b1220;border:1px solid var(--line);border-radius:9px;padding:8px}
+  /* flow */
+  .flow{display:flex;flex-direction:column;gap:0;margin:6px 0}
+  .node{border:1px solid var(--line);border-radius:9px;padding:10px 14px;background:var(--panel2)}
+  .node .t{font-weight:600;font-size:14px}
+  .node .d{font-size:12.5px;color:var(--muted)}
+  .down{align-self:center;color:var(--slate);font-size:18px;line-height:1.1}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .branchlabel{font-size:12px;color:var(--muted);text-align:center;margin:4px 0}
+  .gatebox{border-color:#22c55e;background:#14532d22}
+  .invbox{border-color:#a78bfa;background:#4c1d9522}
+  /* consumers */
+  .consumers{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px}
+  .cons{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;background:var(--panel2)}
+  .cons b{font-family:var(--mono);font-size:12px}
+  /* anchor mech */
+  .anchorflow{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
+  .arrowright{color:var(--slate);font-size:22px;text-align:center}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--muted);font-weight:600}
+  .tag{font-size:11px;padding:1px 7px;border-radius:20px;font-weight:600}
+  .t-exist{background:#14532d;color:#86efac}
+  .t-prop{background:#3b3206;color:#fde68a}
+  .t-warn{background:#3b1414;color:#fca5a5}
+  .ok{color:var(--green)} .no{color:var(--red)} .mid{color:var(--amber)}
+  .note{font-size:13px;color:var(--muted);border-left:3px solid var(--accent);padding:6px 0 6px 14px;margin:12px 0}
+  .verifybar{position:sticky;bottom:0;background:#020617ee;border-top:1px solid var(--line);
+    padding:10px 16px;margin-top:30px;font-size:13px;color:var(--muted);backdrop-filter:blur(4px)}
+  .ow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .owcard{border-radius:10px;padding:14px;border:1px solid var(--line)}
+  .owcard.open{background:#10243a;border-color:#0ea5e9}
+  .owcard.closed{background:#0f3d2e;border-color:#22c55e}
+  .owcard h4{margin:0 0 6px}
+  .small{font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Codas 概念地图</h1>
+  <p class="sub">目的:把我(助手)对 Codas 的理解全部画出来,让你逐块核对 —— 哪里错了直接指。</p>
+  <p class="lead">每个元素都标注了<b>现状(已读源码验证)</b>还是<b>提案(讨论中的未来)</b>。如果"现状"块有错,说明我对代码的理解错了,这是最该先抓的。</p>
+
+  <div class="legend">
+    <span class="lg"><span class="swatch s-codas"></span>Codas 自有(确定 / in-core)</span>
+    <span class="lg"><span class="swatch s-ext"></span>CodeGraph / 外部(助手 / 非确定)</span>
+    <span class="lg"><span class="swatch s-config"></span>配置(closed-world)</span>
+    <span class="lg"><span class="swatch s-doc"></span>文档 / claim(层3)</span>
+    <span class="lg"><span class="swatch s-prop"></span>提案(未来,虚线)</span>
+  </div>
+
+  <!-- ========== §1 ========== -->
+  <h2>§1 · 三层栈(越上越高级,每层踩在下层之上)</h2>
+  <p class="small">复杂度/抽象度向上递增。层1 解析 → 层2 抽事实 → 层3 治理。</p>
+  <div class="card">
+    <div class="stack">
+      <div class="layer l3">
+        <span class="lnum">层 3 · 治理 / 最高</span>
+        <h3>治理:wiki · claim/锚点 · gate(拦提交)</h3>
+        <p>消费层2 的事实。Codas 的<b>独家产品</b>。CodeGraph 没有这一层。</p>
+        <div>
+          <span class="chip chip-codas">codas check(gate)</span>
+          <span class="chip chip-codas">policies/*</span>
+          <span class="chip chip-doc">code_anchor</span>
+          <span class="chip chip-doc">stale_claim</span>
+          <span class="chip chip-doc">fact_coupling</span>
+          <span class="chip chip-codas">wiki 书(渲染)</span>
+        </div>
+      </div>
+      <div class="arrowup">▲ 踩在事实上</div>
+      <div class="layer l2">
+        <span class="lnum">层 2 · 事实抽取(拆两 tier)</span>
+        <h3>树 → 事实:symbols · imports · calls</h3>
+        <p><b>gate-grade(确定 · 语言内 · 拦)</b>:tree-sitter 抽 symbols/imports(每语言,简单)+ ast 抽 Python calls。</p>
+        <p><b>advisory(多语言+跨语言 · 提示 · 不拦)</b>:CodeGraph = <b>call-graph adapter</b>(可插拔)。call-graph 难点 + 跨语言猜的边都在这。</p>
+        <div>
+          <span class="chip chip-codas">tree-sitter / ast → gate</span>
+          <span class="chip chip-ext">CodeGraph adapter → advisory</span>
+        </div>
+      </div>
+      <div class="arrowup">▲ 踩在语法树上</div>
+      <div class="layer l1">
+        <span class="lnum">层 1 · 解析</span>
+        <h3>源码 → 语法树</h3>
+        <p><code>ast</code> 和 <code>tree-sitter</code> <b>同级</b> —— 都是解析器。</p>
+        <div>
+          <span class="chip chip-codas">ast(Python stdlib)</span>
+          <span class="chip chip-ext">tree-sitter(多语言)</span>
+        </div>
+      </div>
+    </div>
+    <p class="cap">注:CodeGraph 内部其实自己跑了层1(tree-sitter)+层2(call-graph);它的"招牌"是层2 的多语言调用图。它<b>到不了层3</b>。<b>跨语言=必须支持(advisory),但猜的边不进 gate(防假拦)。</b>gate 只烧语言内确定事实(symbols/imports + Python calls)。</p>
+  </div>
+
+  <!-- ========== §2 ========== -->
+  <h2>§2 · 谁覆盖哪层(决策关键)</h2>
+  <div class="card">
+    <div class="cov">
+      <div class="h"></div><div class="h">Codas(Python)</div><div class="h">CodeGraph(多语言)</div>
+
+      <div class="rowlabel">层3<br>治理</div>
+      <div class="cell codas"><b>✅ 产品</b><br>gate · 锚点 · wiki · 文档↔代码耦合</div>
+      <div class="cell none">❌ 没有<br>无文档模型 · 不拦提交</div>
+
+      <div class="rowlabel">层2<br>事实</div>
+      <div class="cell codas">symbols/imports: tree-sitter(每语言)<br>Python calls: ast<br>确定 · 语言内 · <b>进 gate</b></div>
+      <div class="cell ext">多语言+跨语言 call-graph<br>= <b>call-graph adapter</b>(可插拔)<br>非确定 · advisory · <b>不进 gate</b></div>
+
+      <div class="rowlabel">层1<br>解析</div>
+      <div class="cell codas">ast</div>
+      <div class="cell ext">tree-sitter</div>
+    </div>
+    <p class="cap">结论:接 CodeGraph = <b>借它底两层(多语言事实)</b>,Codas 继续在上面盖<b>层3(治理)</b>。层3 永远是 Codas 自己。</p>
+  </div>
+
+  <!-- ========== §3 ========== -->
+  <h2>§3 · 数据流(现状,已验证)</h2>
+  <p class="small">关键事实:<b>gate(拦提交)用内存事实,不读 inventory JSON 文件</b>。inventory 文件喂渲染/查询/hash。</p>
+  <div class="card">
+    <div class="flow">
+      <div class="node"><div class="t">源码文件(git 跟踪)</div><div class="d">scanner: discover_files / filter_to_roots(扩展名无关,.py/.swift 都进)</div></div>
+      <div class="down">↓</div>
+      <div class="node" style="border-color:#3b82f6;background:#1e3a8a22">
+        <div class="t">ScanContext —— 事实提供者 seam</div>
+        <div class="d"><code>ctx.symbols() · ctx.imports() · ctx.calls()</code>(内存,缓存,单次解析)</div>
+      </div>
+      <div class="down">↓ 两条独立读路</div>
+      <div class="split">
+        <div class="node gatebox">
+          <div class="t">① 内存事实 → policies / gate</div>
+          <div class="d"><code>codas check</code> 直接读 <code>ctx.*</code> 跑 policy。<b>不碰 JSON 文件。</b>拦/放提交。</div>
+        </div>
+        <div class="node invbox">
+          <div class="t">② 序列化 → inventory(JSON 台账)</div>
+          <div class="d"><code>build_inventory</code> 把事实+结构+claim+任务投影成确定 JSON。</div>
+        </div>
+      </div>
+      <div class="down">②↓ 谁消费 inventory</div>
+      <div class="consumers">
+        <div class="cons"><b>codas inventory</b><br>吐 JSON</div>
+        <div class="cons"><b>codas query</b><br>agent 查询切片</div>
+        <div class="cons"><b>provenance</b><br>inventory_hash → receipt</div>
+        <div class="cons"><b>app/book.py</b><br>渲染 wiki 书</div>
+        <div class="cons"><b>app/wiki.py</b><br>pack/tree/feed/html + source_hash</div>
+        <div class="cons"><b>preflight</b><br>digest 复用 ctx+hash</div>
+      </div>
+    </div>
+    <p class="cap">所以 gate 和 inventory 是分开的;inventory 的主消费者是<b>渲染(书/wiki)</b>。codex 证实:整份 hash 过宽,应改"分块各盖各的章"。</p>
+  </div>
+
+  <!-- ========== §4 ========== -->
+  <h2>§4 · inventory 产出什么(现状,已验证)</h2>
+  <div class="card">
+    <table>
+      <tr><th>块</th><th>内容</th><th>层</th></tr>
+      <tr><td><code>units · unowned · conflicts</code></td><td>结构图:单元 id/path/owner/status/存在性</td><td>结构</td></tr>
+      <tr><td><code>program</code></td><td>路线图 work_items</td><td>规划</td></tr>
+      <tr><td><code>documents</code></td><td>文档角色清单</td><td>规划</td></tr>
+      <tr><td><code>doc_claims · html_claims · wiki_claims</code></td><td>文档里指向代码的引用 + 是否解析</td><td><span style="color:#c4b5fd">claim(层3)</span></td></tr>
+      <tr><td><code>tasks</code></td><td>Trellis 任务事实</td><td>规划</td></tr>
+      <tr><td><code>symbols</code></td><td>顶层 class/func 定义</td><td><span style="color:#7dd3fc">事实(层2)</span></td></tr>
+      <tr><td><code>imports</code></td><td>import 边</td><td><span style="color:#7dd3fc">事实(层2)</span></td></tr>
+      <tr><td><code>calls</code></td><td><b>调用图!</b>caller→callee + resolution 标</td><td><span style="color:#7dd3fc">事实(层2)</span></td></tr>
+    </table>
+    <p class="cap">callgraph 的<b>事实早就在产了</b>(<code>calls</code> 块,Python via callgraph.py)。</p>
+  </div>
+
+  <!-- ========== §5 ========== -->
+  <h2>§5 · Codas 怎么定位"代码 vs 文档"差异 —— 靠锚点</h2>
+  <p class="small">Codas <b>读不了散文意思</b>(无 LLM,§17)。它靠"锚点" = 文档里一句机器可核对、指向具体代码事实的引用。</p>
+  <div class="card">
+    <div class="anchorflow">
+      <div class="node" style="border-color:#a78bfa;background:#4c1d9522">
+        <div class="t">文档里的锚点</div>
+        <div class="d mono">defines: 扣款 -&gt; pay.py::Charge::run</div>
+      </div>
+      <div class="arrowright">→</div>
+      <div class="node" style="border-color:#3b82f6;background:#1e3a8a22">
+        <div class="t">对照当前事实(层2)</div>
+        <div class="d"><code>pay.py::Charge::run</code> 还存在吗?</div>
+      </div>
+    </div>
+    <div style="text-align:center;color:var(--slate);margin:10px 0">↓ 代码改名 run → execute</div>
+    <div class="node" style="border-color:#ef4444;background:#3b141422">
+      <div class="t no">锚点解析不上 = 定位到差异</div>
+      <div class="d">"PRD 第42行锚点指向 <code>Charge::run</code>,代码里没了。" + 配合 diff 猜出 run→execute → 递 RepairTarget 给 AI。</div>
+    </div>
+    <table style="margin-top:14px">
+      <tr><th>机制</th><th>干啥</th><th>读哪</th><th>严重度</th><th>状态</th></tr>
+      <tr><td><code>code_anchor</code></td><td>检测 defines/calls/contains 锚点解析不上</td><td><span class="pathtag">.codas/wiki/code/**</span></td><td>WARNING(open-world)</td><td><span class="tag t-exist">现状</span></td></tr>
+      <tr><td><code>stale_claim</code></td><td>文档路径/符号引用是否还存在</td><td>markdown 文档</td><td>WARNING</td><td><span class="tag t-exist">现状</span></td></tr>
+      <tr><td><code>fact_coupling</code></td><td>盯的代码变了 → 配套路径必须同提交改,否则拦</td><td><span class="pathtag">.codas/claims.yml</span>(手写)</td><td>ERROR(gate)</td><td><span class="tag t-exist">现状</span></td></tr>
+    </table>
+    <p class="note" style="border-color:#22d3ee"><b>源头切分(消歧)</b>:<b>代码 → 事实(facts)</b>,<u>不叫 claim</u>;<b>文档/配置 → claim</b>。代码从不产 claim。"claim" 是一个属(可被事实核对的断言),三个种:① <b>关系/治理 claim</b>(claims.yml,authored,closed,拦)② <b>doc claim</b>(从文档扫出,核对没说谎)③ <b>锚点 claim</b>(.codas/wiki/code,open warning)。别裸叫 claim。</p>
+    <p class="note"><b>关键限制</b>:只有<b>带锚点</b>的散文能被检测;没锚点的纯散文 Codas 看不见。所以锚点要埋。</p>
+    <p class="note" style="border-color:#f59e0b"><b>根治"claim 重载"= 合并不是改名</b>:claims.yml 的 <code>fact_coupling</code>(治理 claim)和文档<b>锚点</b>是同一件事两种写法 → 提案:写一条锚点,既核"文档没说谎"又派生"连改强制"(=问题3)。合了"两种 claim"混淆从根消失。</p>
+  </div>
+
+  <!-- ========== §6 ========== -->
+  <h2>§6 · open-world vs closed-world(为什么锚点是下界)</h2>
+  <div class="card">
+    <div class="ow">
+      <div class="owcard open">
+        <h4 style="color:#7dd3fc">代码事实 = open-world</h4>
+        <p class="small">静态读能证"存在",<b>不能证"不存在"</b>(动态/反射/跨语言调用看不见)。<br>→ 事实是<b>下界</b>:"至少这么多真,可能还有没看见的"。<br>→ 没观察到 ≠ 不存在。gate 只能基于"确定存在"拦,不能基于"缺失"拦。</p>
+      </div>
+      <div class="owcard closed">
+        <h4 style="color:#86efac">配置 = closed-world</h4>
+        <p class="small">structure.yml / claims.yml = <b>声明,按定义就是全集</b>。<br>→ 不在 structure.yml 里 = 真的没归属(没说的就是假的)。</p>
+      </div>
+    </div>
+    <p class="cap">这条决定:gate(拦提交)只信确定的 in-core 事实;CodeGraph/多语言事实是 open-world+非确定 → 只配 advisory(提示),不进 gate。</p>
+  </div>
+
+  <!-- ========== §7 ========== -->
+  <h2>§7 · 三个要解的问题 → 谁解</h2>
+  <div class="card">
+    <table>
+      <tr><th>问题</th><th>机制(层)</th><th>CodeGraph 帮多少</th></tr>
+      <tr><td><b>① reuse miss</b><br>新建实体没复用已有,重复造轮子</td><td>preflight 注入 reuse 候选 + <code>duplicate_implementation</code> 拦(层3)</td><td><span class="mid">中</span> — 给多语言符号(名/签名撞),"同概念不同名"抓不到</td></tr>
+      <tr><td><b>② 无全局观</b><br>局部改,不知别处要同步改</td><td><code>impact</code> + <code>fact_coupling</code>(层3,踩层2 calls)</td><td><span class="ok">高</span> — 它的调用图直接就是这个</td></tr>
+      <tr><td><b>③ 决策没回写 PRD</b><br>(你最在意)</td><td>锚点 + fact_coupling(层3)<span class="tag t-prop">需补</span></td><td><span class="no">零</span> — 结构上碰不到文档</td></tr>
+    </table>
+    <p class="note"><b>问题3 的引擎永远是 Codas 层3 的锚点,CodeGraph 帮不上。</b>codex 发现:连接"决策↔文档"的数据(tasks + doc_claims)<b>已在 inventory 里,只是没人连</b>。</p>
+  </div>
+
+  <!-- ========== §8 ========== -->
+  <h2>§8 · 综合裁决(5 个顾问一致)</h2>
+  <div class="card">
+    <table>
+      <tr><th>选项</th><th>裁决</th><th>原因</th></tr>
+      <tr><td><b>大改</b><br>挖地基,全走 CodeGraph + diff-gate + 退役 inventory</td><td><span class="no">✗ 否</span></td><td>回归核心属性(确定/防绕过/离线);diff-gate 在 merge/rebase 漏判;换来的多语言 advisory 就能给</td></tr>
+      <tr><td><b>migrate-lite</b><br>CodeGraph 当 advisory 助手(off-gate/off-hash/可选)</td><td><span class="ok">✓ 是</span></td><td>低风险、可逆;喂现有 calls 族 + code_anchor calls-claim,拓宽到多语言</td></tr>
+      <tr><td><b>问题3 锚点</b><br>决策↔文档锚点 + RepairTarget</td><td><span class="ok">✓ 最值钱</span></td><td>最高产品价值,<b>零 CodeGraph</b>,机制+数据现成(层3 + Python 层2)</td></tr>
+      <tr><td><b>inventory hash</b></td><td><span class="mid">细化</span></td><td>整份 hash 过宽 → 分块 scoped hash;不退役,只收窄</td></tr>
+    </table>
+    <p class="cap">推荐第一步:<b>问题3 锚点(决策↔文档)</b> —— 最对症、最便宜、不碰地基。CodeGraph advisory 排其后。</p>
+  </div>
+
+  <div class="verifybar">
+    <b>请你核对:</b>每个标"现状"的块如果有错,说明我读代码读错了 —— 优先指出。标"提案"的是未来方向,可改。指哪块、错在哪,我改。
+  </div>
+
+</div>
+</body>
+</html>
