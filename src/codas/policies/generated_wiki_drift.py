@@ -23,18 +23,18 @@ def check_generated_wiki_drift(ctx: ScanContext) -> list[Finding]:
     Two checks:
 
     - **structural** (architecture doc §3 link ③): a generated page must carry a
-      nonempty ``atlas:claims`` block with a ``source_inventory_hash`` and at least one
-      claim — else error (an ungrounded generated page).
+      nonempty ``atlas:claims`` block with at least one claim — else error (an ungrounded
+      generated page).
     - **fact-consistency** (link ④): each ``unit: <id> -> <path>`` must match a Structure
       Map unit, each ``roadmap: <id> -> <status>`` must match a Program Plan work item.
       A mismatch or unknown subject is an error.
 
-    Freshness (the embedded ``source_inventory_hash`` vs the current source hash) is NOT
-    checked here: a committed page's hash goes stale on every unrelated ``src`` change,
-    and the dogfood gate counts warnings — so freshness is the opt-in ``codas wiki
-    --verify`` (D3c) / CI concern, not the always-on gate. The claim checks above catch
-    the *meaningful* staleness (a unit/roadmap that no longer matches the facts) as an
-    error, which forces a regenerate when the facts actually move.
+    Freshness is NOT checked here: the always-on gate cannot re-render to byte-compare
+    without a second full inventory scan (ScanContext exposes facts, not a built
+    inventory), so freshness is the opt-in ``codas wiki --verify`` (D3c) / CI byte-compare
+    (``verify_generated_sections``: re-render + byte-compare; the page carries no embedded
+    hash). The claim checks above catch the *meaningful* staleness (a unit/roadmap that no
+    longer matches the facts) as an error, which forces a regenerate when facts move.
 
     Consumes facts via the ScanContext seam (no adapter import, §11). Severity error.
     Deterministic (total-key sort). On loader failure the corresponding claim kind is
@@ -50,14 +50,14 @@ def check_generated_wiki_drift(ctx: ScanContext) -> list[Finding]:
     findings: list[Finding] = []
 
     for page in pages:
-        if not (page.has_block and page.source_inventory_hash and page.claims):
+        if not (page.has_block and page.claims):
             findings.append(
                 Finding(
                     severity="error",
                     check_id="generated-wiki-drift",
                     message=(
-                        "Generated page must embed a nonempty atlas:claims block with a "
-                        "source_inventory_hash"
+                        "Generated page must embed a nonempty atlas:claims block with at "
+                        "least one claim"
                     ),
                     evidence=[Evidence(path=page.source)],
                     recommendation="Regenerate the page with `codas wiki --write`.",

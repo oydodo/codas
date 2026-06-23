@@ -38,8 +38,18 @@ work_items:
     status: completed
 """
 
+# New-format pages carry NO source_inventory_hash. CORRECT keeps a hash line to prove an
+# OLD committed page (pre-drop-hash) still parses tolerantly and fact-checks clean — the
+# field is vestigial, ignored by the gate, rewritten away on the next `codas wiki --write`.
 CORRECT = (
     "source_inventory_hash: sha256:test\n"
+    "unit: u-a -> src/a\n"
+    "unit: u-b -> src/b\n"
+    "roadmap: program:P0:x -> completed\n"
+)
+
+# The format the renderer now emits (no embedded hash).
+CORRECT_NO_HASH = (
     "unit: u-a -> src/a\n"
     "unit: u-b -> src/b\n"
     "roadmap: program:P0:x -> completed\n"
@@ -122,25 +132,33 @@ class ExtractGeneratedClaimsTests(unittest.TestCase):
 
 class CheckGeneratedWikiDriftTests(unittest.TestCase):
     def test_correct_page_is_clean(self) -> None:
+        # Old page WITH a (now-vestigial) hash line still fact-checks clean (backward-compat).
         with tempfile.TemporaryDirectory() as directory:
             self.assertEqual(check_generated_wiki_drift(_ctx(directory, _page(CORRECT))), [])
 
+    def test_no_hash_page_is_clean(self) -> None:
+        # The new format: a page with claims but NO source_inventory_hash is valid — the
+        # hash is no longer required by the structural predicate.
+        with tempfile.TemporaryDirectory() as directory:
+            findings = check_generated_wiki_drift(_ctx(directory, _page(CORRECT_NO_HASH)))
+            self.assertEqual(findings, [])
+
     def test_bogus_unit_path(self) -> None:
-        body = "source_inventory_hash: sha256:t\nunit: u-a -> WRONG\n"
+        body = "unit: u-a -> WRONG\n"
         with tempfile.TemporaryDirectory() as directory:
             findings = check_generated_wiki_drift(_ctx(directory, _page(body)))
             self.assertEqual(_ids(findings), ["generated-wiki-drift"])
             self.assertIn("u-a", findings[0].message)
 
     def test_unknown_unit(self) -> None:
-        body = "source_inventory_hash: sha256:t\nunit: u-z -> src/z\n"
+        body = "unit: u-z -> src/z\n"
         with tempfile.TemporaryDirectory() as directory:
             findings = check_generated_wiki_drift(_ctx(directory, _page(body)))
             self.assertEqual(len(findings), 1)
             self.assertIn("unknown", findings[0].message)
 
     def test_roadmap_status_mismatch(self) -> None:
-        body = "source_inventory_hash: sha256:t\nroadmap: program:P0:x -> planned\n"
+        body = "roadmap: program:P0:x -> planned\n"
         with tempfile.TemporaryDirectory() as directory:
             findings = check_generated_wiki_drift(_ctx(directory, _page(body)))
             self.assertEqual(len(findings), 1)
@@ -152,16 +170,17 @@ class CheckGeneratedWikiDriftTests(unittest.TestCase):
             self.assertEqual(len(findings), 1)
             self.assertIn("atlas:claims", findings[0].message)
 
-    def test_missing_hash_is_error(self) -> None:
-        body = "unit: u-a -> src/a\n"  # claims but no source_inventory_hash
+    def test_empty_block_is_error(self) -> None:
+        # A claims block with NO claims (and no hash) is still an ungrounded page → error.
         with tempfile.TemporaryDirectory() as directory:
-            findings = check_generated_wiki_drift(_ctx(directory, _page(body)))
+            findings = check_generated_wiki_drift(_ctx(directory, _page("")))
             self.assertEqual(len(findings), 1)
+            self.assertIn("atlas:claims", findings[0].message)
 
     def test_loader_failure_skips_kind(self) -> None:
         # No structure.yml -> _unit_paths is None -> a bogus unit claim is SKIPPED, not
         # flagged (no cascade); the roadmap claim is still verified.
-        body = "source_inventory_hash: sha256:t\nunit: u-z -> bad\nroadmap: program:P0:x -> completed\n"
+        body = "unit: u-z -> bad\nroadmap: program:P0:x -> completed\n"
         with tempfile.TemporaryDirectory() as directory:
             findings = check_generated_wiki_drift(
                 _ctx(directory, _page(body), structure=False)

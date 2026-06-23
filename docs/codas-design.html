@@ -1124,9 +1124,9 @@ required resolution:
         <strong>Atlas wiki 架构（决策记录）：</strong>
         分工是 <em>“Codas grounds it（facts），an LLM renders it（host agent），Codas verifies it（policies）。”</em>
         Wiki spine 是确定性、agent-driven 的，<strong>不内嵌 LLM、也不依赖 MCP</strong>。
-        生成页中的 <code>atlas:claims</code> 块携带 <code>unit:</code> / <code>roadmap:</code> claims 及一个 <code>source_inventory_hash</code>；
+        生成页中的 <code>atlas:claims</code> 块携带 <code>unit:</code> / <code>roadmap:</code> claims（不内嵌 hash）；
         <code>generated_wiki_drift</code> 对照 Structure Map / Program Plan facts 验证它们（被 facts 反驳即 error），
-        <code>codas wiki --verify</code> 另行校验 source-hash 新鲜度。
+        <code>codas wiki --verify</code> 以重渲染 + 字节比对校验新鲜度（页面不带 hash）。
         完整设计见决策记录 <code>.trellis/tasks/06-19-wiki-architecture/{prd,design}.md</code>。
       </div>
     </section>

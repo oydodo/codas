@@ -50,7 +50,6 @@ VERIFIED GOVERNANCE FACTS (prefer over inferred structure). Rendered determinist
 | `program:P8:readable-wiki-book` | P8 | planned |
 
 ```atlas:claims
-source_inventory_hash: sha256:b563133da3c937beb8667a85455aee5e8c5e754beefe7a055b2e74268eccaa5a
 unit: agents-guide -> AGENTS.md
 unit: atlas-wiki -> .codas/wiki
 unit: claim-set -> .codas/claims.yml

@@ -10,11 +10,18 @@ def digest(text: str) -> str:
 
 
 def inventory_hash(inventory_json: str) -> str:
-    """Provenance hash pinning the inventory facts a run observed.
+    """Provenance/audit receipt pinning the inventory facts a run observed.
 
     Hashes the canonical inventory artifact (the byte-identical
     ``render_inventory_json`` output) so the hash is robust to internal refactors —
     same facts produce the same hash.
+
+    This is an AUDIT/PROVENANCE stamp, NOT a committed-artifact freshness mechanism. It
+    is recomputed each emit on the on-demand ``--emit-pack`` / ``--emit-tree`` artifacts
+    (never committed, never stale). Committed derived artifacts (the generated governance
+    page + the ``wiki/`` book) verify freshness by re-render + byte-compare via
+    ``codas wiki --verify``, not by this hash. Determinism is verified by the run-twice
+    test, not by pinning this hash into a committed page.
     """
     return digest(inventory_json)
 

@@ -67,7 +67,7 @@ policies:
 
   generated_wiki_drift:
     severity: error
-    description: A committed generated Atlas page (.codas/wiki/generated/**) must embed a nonempty atlas:claims block with a source_inventory_hash, and each unit/roadmap claim must match the Structure Map / Program Plan facts; a claim the facts contradict is an error. Source-hash freshness is verified by codas wiki --verify, not the check gate.
+    description: A committed generated Atlas page (.codas/wiki/generated/**) must embed a nonempty atlas:claims block with at least one claim, and each unit/roadmap claim must match the Structure Map / Program Plan facts; a claim the facts contradict is an error. Freshness is verified by codas wiki --verify (re-render + byte-compare; the page carries no embedded hash), not the check gate.
 
   missing_canonical_owner:
     severity: error

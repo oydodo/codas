@@ -74,6 +74,20 @@ class VerifyGeneratedSectionsTests(unittest.TestCase):
             stale = verify_generated_sections(repo)  # never written
             self.assertEqual(len(stale), 1)
 
+    def test_source_fact_change_is_stale(self) -> None:
+        # The drop-hash thesis: freshness rides in the rendered bytes, NO embedded hash.
+        # Changing a real source fact (a unit's path) re-renders a different claim/table
+        # line, so the committed page's bytes no longer match a fresh render — caught by
+        # the byte-compare alone, exactly as a stale source_inventory_hash once was.
+        with tempfile.TemporaryDirectory() as directory:
+            repo = _mini_repo(directory)
+            [page] = write_generated_sections(repo)
+            self.assertEqual(verify_generated_sections(repo), [])
+            (repo / ".codas" / "structure.yml").write_text(
+                STRUCTURE.replace("path: src/a", "path: src/moved")
+            )
+            self.assertEqual(verify_generated_sections(repo), [page])
+
 
 class WikiVerifyCliTests(unittest.TestCase):
     def test_verify_clean_real_repo(self) -> None:

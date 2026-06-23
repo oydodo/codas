@@ -624,7 +624,7 @@ scripts/
             <td>Wiki</td>
             <td>Ground an agent-driven governance map: emit a deterministic grounding pack, render/verify committed generated sections, and reconcile authored wiki claims with repo facts. Exposes <code>codas wiki --emit-pack/--write/--verify</code>.</td>
             <td>inventory, concept index, wiki files, structure/program facts</td>
-            <td>grounding pack, committed generated pages (with <code>atlas:claims</code> + <code>source_inventory_hash</code>), stale/drift wiki findings</td>
+            <td>grounding pack (with <code>source_inventory_hash</code> audit receipt), committed generated pages (with <code>atlas:claims</code>; freshness by <code>--verify</code> byte-compare), stale/drift wiki findings</td>
             <td>P5</td>
           </tr>
           <tr>
@@ -745,20 +745,24 @@ scripts/
   "resolution": ["Add the fragment id or update the config claim."]
 }</code></pre>
 
-      <h3>Source Inventory Hash</h3>
+      <h3>Source Inventory Hash (audit receipt)</h3>
       <pre><code>{
   "source_inventory_hash": "sha256:...",
   "computed_over": "inventory EXCLUDING .codas/wiki/generated/",
-  "embedded_in": ".codas/wiki/generated/*.md (atlas:claims block)",
-  "verified_by": ["generated_wiki_drift policy", "codas wiki --verify"]
+  "emitted_on": "codas wiki --emit-pack / --emit-tree (stdout; never committed)",
+  "role": "audit/provenance receipt, NOT a committed-page freshness mechanism"
 }</code></pre>
       <p>
-        A <code>source_inventory_hash</code> pins a generated wiki page to the inventory it was rendered from. It is
-        computed over the inventory <strong>excluding <code>.codas/wiki/generated/</code></strong> to avoid a
-        self-reference loop (the inventory ingests <code>.codas/wiki/</code>). The committed page narrows the hash
-        further to only the fields it renders, so unrelated edits do not restale it. The
-        <code>generated_wiki_drift</code> policy checks that each committed page carries a nonempty
-        <code>atlas:claims</code> block with this hash; <code>codas wiki --verify</code> verifies its freshness.
+        A <code>source_inventory_hash</code> is an <strong>audit/provenance receipt</strong> stamped on the
+        on-demand <code>--emit-pack</code> / <code>--emit-tree</code> artifacts (recomputed each emit, never
+        committed, never stale). It is computed over the inventory <strong>excluding
+        <code>.codas/wiki/generated/</code></strong> to avoid a self-reference loop (the inventory ingests
+        <code>.codas/wiki/</code>). Committed generated pages carry <strong>no</strong> embedded hash: their
+        rendered claim/table lines move exactly when their source facts move, so freshness is verified by
+        re-render + byte-compare (<code>codas wiki --verify</code> → <code>verify_generated_sections</code>), not
+        an embedded hash. The always-on <code>generated_wiki_drift</code> policy checks that each committed page
+        carries a nonempty <code>atlas:claims</code> block (≥1 claim) and that the claims match facts; it does not
+        check freshness, because the gate cannot re-render without a second inventory scan.
       </p>
 
       <p>
@@ -873,7 +877,7 @@ scripts/
           <tr>
             <td>P5</td>
             <td>Wiki reconciliation (deterministic wiki spine)</td>
-            <td>Wiki adapter + claim parser (<code>codas.adapters.wiki</code>); <code>stale_wiki_claim</code> policy; deterministic call-graph facts (<code>codas.adapters.callgraph</code>, stdlib <code>ast</code>, first-party, resolution-tagged &mdash; pyan rejected for cross-process nondeterminism); <code>spec_drift</code> policy <em>(v1, now retired)</em> (materiality-as-claim: coarse <code>must_update_if_changed</code> stays advisory, vouched <code>.codas/claims.yml</code> <code>drift_couplings</code> gate diff-based co-change via <code>codas.adapters.git</code> <code>changed_paths</code>) &mdash; <em>superseded in spec-drift v2 by the <code>fact_coupling</code> gate over the fact-delta (the DRIFT half of the Drift/Staleness 2×2); <code>drift_couplings</code> removed; see <code>06-20-fact-coupling-gate</code></em>; atlas grounding pack (<code>codas wiki --emit-pack</code>); committed generated governance page (<code>codas wiki --write</code> &rarr; <code>.codas/wiki/generated/governance.md</code>, carrying an <code>atlas:claims</code> block + <code>source_inventory_hash</code>); <code>codas wiki --verify</code>; <code>generated_wiki_drift</code> policy; <code>CONTRACT.md</code> authoring contract.</td>
+            <td>Wiki adapter + claim parser (<code>codas.adapters.wiki</code>); <code>stale_wiki_claim</code> policy; deterministic call-graph facts (<code>codas.adapters.callgraph</code>, stdlib <code>ast</code>, first-party, resolution-tagged &mdash; pyan rejected for cross-process nondeterminism); <code>spec_drift</code> policy <em>(v1, now retired)</em> (materiality-as-claim: coarse <code>must_update_if_changed</code> stays advisory, vouched <code>.codas/claims.yml</code> <code>drift_couplings</code> gate diff-based co-change via <code>codas.adapters.git</code> <code>changed_paths</code>) &mdash; <em>superseded in spec-drift v2 by the <code>fact_coupling</code> gate over the fact-delta (the DRIFT half of the Drift/Staleness 2×2); <code>drift_couplings</code> removed; see <code>06-20-fact-coupling-gate</code></em>; atlas grounding pack (<code>codas wiki --emit-pack</code>); committed generated governance page (<code>codas wiki --write</code> &rarr; <code>.codas/wiki/generated/governance.md</code>, carrying an <code>atlas:claims</code> block; freshness by <code>codas wiki --verify</code> byte-compare, no embedded hash); <code>codas wiki --verify</code>; <code>generated_wiki_drift</code> policy; <code>CONTRACT.md</code> authoring contract.</td>
             <td>Wiki claims and committed generated pages are verified against repo facts; the correctness core stays deterministic and LLM-free. (Status in <code>.codas/program.yml</code>.)</td>
           </tr>
           <tr>
@@ -1092,8 +1096,9 @@ scripts/
     modules/
     risks/
     generated/            # committed, deterministic generated pages
-      governance.md       #   carries an atlas:claims block + source_inventory_hash;
-                          #   rendered by `codas wiki --write`, verified by generated_wiki_drift</code></pre>
+      governance.md       #   carries an atlas:claims block (no embedded hash);
+                          #   rendered by `codas wiki --write`, claims verified by generated_wiki_drift,
+                          #   freshness by `codas wiki --verify` byte-compare</code></pre>
       <p>
         Generated inventory and reports may be either committed or ignored per repo policy. Receipts are usually local
         or CI artifacts. <code>documents.yml</code> is the authored Document Role Manifest claim surface;
