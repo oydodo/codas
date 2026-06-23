@@ -43,3 +43,12 @@ language-internal facts.
   Claude-native adversarial reviewer.
 - Effort ~1-2 days per language.
 - Key files: `adapters/`, `facts/languages.py`, `facts/context.py` (merge seam).
+
+## Review notes (codex direction-soundness pass, 2026-06-23)
+
+- Scope SOUND (calls correctly deferred — tree-sitter symbols/imports are gate-grade; calls
+  are not). MANDATORY acceptance test: an absent/empty tree-sitter extra produces a ZERO diff
+  against the current baseline — byte-identical for Python-only repos. Silent trap: inserting
+  an empty list / empty key into the fact dict when the extra is absent would perturb the
+  inventory hash and break byte-identical without an obvious failure. The early-return must
+  produce the EXACT prior bytes, asserted by test.

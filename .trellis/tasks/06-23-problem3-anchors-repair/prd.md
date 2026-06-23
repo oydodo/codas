@@ -64,3 +64,13 @@ the need is real, but it does not scale by hand.
 - Effort ~3-5 days. Key files: `policies/code_anchor.py` (anchor scope),
   `policies/fact_coupling.py` (co-change gate + claims.yml load), `app/preflight.py` /
   injection (RepairTarget delivery).
+
+## Review notes (codex direction-soundness pass, 2026-06-23)
+
+- Scope SOUND. Critical trap: letting open-world anchor DETECTION become a blocking gate
+  predicate. The design MUST add an explicit enforcement note that detection (`code_anchor`)
+  stays advisory and ONLY `ast`-resolvable co-changes may gate. A future "resolved anchor"
+  check keyed on open-world / call-graph data is FORBIDDEN — it would false-block correct
+  commits on any cross-language/cross-module anchor reference.
+- RepairTarget must stay repair METADATA only (never a gate input). Archived PRDs stay
+  excluded from the anchor scan.

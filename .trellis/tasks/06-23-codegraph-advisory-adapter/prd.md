@@ -45,3 +45,11 @@ missed hint). So it never enters the gate and never enters the inventory hash.
 - Low risk (off-gate/off-hash) — DESIGN review optional but recommended for the accessor seam.
 - Effort ~2-3 days + install CodeGraph in the dev env. Key file: `facts/context.py`.
 - Do NOT make CodeGraph gate-grade — that was rejected (advisory only).
+
+## Review notes (codex direction-soundness pass, 2026-06-23)
+
+- Scope SOUND; matches the architecture decision that cross-language/heuristic edges are
+  advisory-only (`docs/codas-architecture-decisions.md:31-34,71-72`). Only risk: a FUTURE
+  contributor treats the advisory call-graph as input to a new `fact_coupling`-style gated
+  check. Mitigation: formalize an "advisory facts MUST NOT gate" rule in governance (policy
+  registry / CONTRACT) as part of this task, so the invariant is enforced, not just intended.
