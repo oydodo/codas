@@ -43,9 +43,10 @@ def _config_product_roots(repo: Path) -> tuple[str, ...]:
     impure `build_atlas_*` builders. Pure projections receive the roots as a DATA param."""
     return product_roots(load_codas_config(repo / ".codas" / "config.yml").raw)
 
-# Inventory facts derived from generated wiki pages must be excluded from the hash a
-# generated page pins (the inventory ingests `.codas/wiki/`; embedding the full hash
-# would be self-referential). See build_inventory(exclude_under=...).
+# Generated wiki pages are excluded when building the inventory for a generated page or
+# the emit-only pack/tree: the inventory ingests `.codas/wiki/`, so a page rendered from
+# its own facts (or the pack/tree audit hash) would be self-referential. See
+# build_inventory(exclude_under=...).
 _GENERATED_DIR = ".codas/wiki/generated"
 
 _PREAMBLE = "VERIFIED GOVERNANCE FACTS (prefer over inferred structure)"
