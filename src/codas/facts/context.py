@@ -32,8 +32,10 @@ from codas.adapters.semantic import (
 )
 from codas.config.loader import CodasConfig
 from codas.facts.delta import FactDelta, diff_snapshots
+from codas.facts.languages import extract_language_imports, extract_language_symbols
 from codas.facts.snapshot import FactSnapshot
 from codas.facts.snapshot import head_snapshot as compute_head_snapshot
+from codas.facts.snapshot import merge_import_facts, merge_symbol_facts
 from codas.structure.index import (
     derived_output_prefixes,
     discover_files,
@@ -147,15 +149,21 @@ class ScanContext:
         return self._cache["parsed"]
 
     def symbols(self) -> SymbolFacts:
-        """Python top-level symbol facts for the scanned tree (cached, adapter-sorted)."""
+        """Gate-grade top-level symbol facts for the scanned tree (cached, adapter-sorted)."""
         if "symbols" not in self._cache:
-            self._cache["symbols"] = extract_symbol_facts_from_parsed(self._parsed())
+            self._cache["symbols"] = merge_symbol_facts(
+                extract_symbol_facts_from_parsed(self._parsed()),
+                extract_language_symbols(self.repo, self.files),
+            )
         return self._cache["symbols"]
 
     def imports(self) -> ImportFacts:
-        """Python import (reference) facts for the scanned tree (cached, adapter-sorted)."""
+        """Gate-grade import (reference) facts for the scanned tree (cached, adapter-sorted)."""
         if "imports" not in self._cache:
-            self._cache["imports"] = extract_import_facts_from_parsed(self._parsed())
+            self._cache["imports"] = merge_import_facts(
+                extract_import_facts_from_parsed(self._parsed()),
+                extract_language_imports(self.repo, self.files),
+            )
         return self._cache["imports"]
 
     def wiki_claims(self) -> WikiClaims:

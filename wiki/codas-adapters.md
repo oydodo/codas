@@ -40,6 +40,7 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 - `_git_lines` *(function)*
 - `extract_changed_paths` *(function)*
 - `head_commit` *(function)*
+- `list_paths_at_head` *(function)*
 - `list_python_paths_at_head` *(function)*
 - `read_blob_at_head` *(function)*
 - `ref_resolves` *(function)*
@@ -94,6 +95,26 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 - `_parse_claim` *(function)*
 - `extract_semantic_claims` *(function)*
 
+### `src/codas/adapters/swift.py`
+
+- `_class_decl_kind` *(function)*
+- `_import_target` *(function)*
+- `_line` *(function)*
+- `_symbol_for_node` *(function)*
+- `_text` *(function)*
+- `extract_swift_imports` *(function)*
+- `extract_swift_symbols` *(function)*
+
+### `src/codas/adapters/swift_parse.py`
+
+- `ParsedSwiftModule` *(class)*
+- `ParsedSwiftModules` *(class)*
+- `_emit_unavailable_notice` *(function)*
+- `_swift_parser` *(function)*
+- `_to_bytes` *(function)*
+- `parse_swift_modules` *(function)*
+- `parse_swift_sources` *(function)*
+
 ### `src/codas/adapters/trellis.py`
 
 - `TaskFact` *(class)*
@@ -125,19 +146,23 @@ graph LR
   n3["src/codas/adapters/markdown.py"]
   n4["src/codas/adapters/python.py"]
   n5["src/codas/adapters/python_parse.py"]
-  n6["src/codas/adapters/trellis.py"]
-  n7["src/codas/adapters/wiki.py"]
-  n8["src/codas/config/loader.py"]
-  n9["src/codas/structure/index.py"]
+  n6["src/codas/adapters/swift.py"]
+  n7["src/codas/adapters/swift_parse.py"]
+  n8["src/codas/adapters/trellis.py"]
+  n9["src/codas/adapters/wiki.py"]
+  n10["src/codas/config/loader.py"]
+  n11["src/codas/structure/index.py"]
   n0 --> n3
-  n0 --> n6
+  n0 --> n8
   n1 --> n4
   n1 --> n5
   n2 --> n3
-  n2 --> n9
-  n3 --> n9
+  n2 --> n11
+  n3 --> n11
   n4 --> n5
-  n6 --> n8
-  n7 --> n3
-  n7 --> n9
+  n6 --> n4
+  n6 --> n7
+  n8 --> n10
+  n9 --> n3
+  n9 --> n11
 ```

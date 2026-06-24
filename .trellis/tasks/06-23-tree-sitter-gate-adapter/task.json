@@ -3,7 +3,7 @@
   "name": "tree-sitter-gate-adapter",
   "title": "tree-sitter gate adapter — per-language symbols/imports deterministic, feeds gate",
   "description": "optional codas[lang] extra; in-core tree-sitter symbols+imports (calls deferred to advisory); additive merge early-return on empty; reuse archived swift-extraction design",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

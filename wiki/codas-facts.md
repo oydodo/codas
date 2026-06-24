@@ -13,7 +13,7 @@ The `facts` package is the **adapter boundary made concrete** — the one seam w
 `ScanContext` is built once per run by `build_scan_context`, which resolves the workspace roots and scans the tree a single time. Every accessor (`symbols()`, `imports()`, `calls()`, `doc_claims()`, `html_claims()`, …) memoizes its adapter call, so a working-tree scan and an `ast.parse` pass each happen exactly once even when many policies ask — and each repeated read returns the *identical, adapter-sorted* result, which is what keeps the run deterministic and the inventory byte-identical.
 
 ### Snapshots, deltas, and the open-world line
-`FactSnapshot` (`snapshot.py`) bundles the three code-fact streams (symbols / imports / calls) at one point in time; crucially it is a *pure function of file-set + content*, deriving package membership from the file set rather than the live filesystem, so the **same builder works for the working tree and for a git ref** — `head_snapshot` reads `.py` blobs at `HEAD` and returns `None` (never a partial snapshot) on any failure, so a missing file can't masquerade as removed facts. `diff_snapshots` (`delta.py`) then produces a `FactDelta` of *identity keys* (dropping line numbers) so a def shifting down three lines is not spurious drift — this is the substrate spec-drift couplings fire on. Snapshots and deltas are deliberately *policy-time* facts: like `changed_paths`, they reflect mutable/ref state and are never serialized into the hashed inventory.
+`FactSnapshot` (`snapshot.py`) bundles the three code-fact streams (symbols / imports / calls) at one point in time; crucially it is a *pure function of file-set + content*, deriving package membership from the file set rather than the live filesystem, so the **same builder works for the working tree and for a git ref** — `head_snapshot` reads registered source blobs (`.py` plus gate-grade language extensions such as `.swift`) at `HEAD` and returns `None` (never a partial snapshot) on any failure, so a missing file can't masquerade as removed facts. `diff_snapshots` (`delta.py`) then produces a `FactDelta` of *identity keys* (dropping line numbers) so a def shifting down three lines is not spurious drift — this is the substrate spec-drift couplings fire on. Snapshots and deltas are deliberately *policy-time* facts: like `changed_paths`, they reflect mutable/ref state and are never serialized into the hashed inventory.
 
 `openworld.py` encodes the package's defining invariant: static code facts are an **open-world sound lower bound** — a positive reading ("A calls B") is 100% reliable, but absence is *unknown*, not denial (Rice's theorem). It carries no per-fact inventory marker; instead `world_of` and `open_world_gaps` expose a static registry (`WORLD_BY_FAMILY`) telling consumers — `codas impact`, the W3 calibrator — to read missing edges as UNCONFIRMED, never CONTRADICTED, while genuinely closed-world config families (units/tasks) remain the only place absence is evidence.
 
@@ -54,6 +54,14 @@ The `facts` package is the **adapter boundary made concrete** — the one seam w
 - `_symbol_key` *(function)*
 - `diff_snapshots` *(function)*
 
+### `src/codas/facts/languages.py`
+
+- `LanguageExtractor` *(class)*
+- `extract_language_imports` *(function)*
+- `extract_language_imports_from_sources` *(function)*
+- `extract_language_symbols` *(function)*
+- `extract_language_symbols_from_sources` *(function)*
+
 ### `src/codas/facts/openworld.py`
 
 - `open_world_gaps` *(function)*
@@ -63,6 +71,10 @@ The `facts` package is the **adapter boundary made concrete** — the one seam w
 
 - `FactSnapshot` *(class)*
 - `head_snapshot` *(function)*
+- `merge_call_facts` *(function)*
+- `merge_fact_snapshots` *(function)*
+- `merge_import_facts` *(function)*
+- `merge_symbol_facts` *(function)*
 - `snapshot_from_parsed` *(function)*
 
 ## Dependencies
@@ -76,30 +88,38 @@ graph LR
   n4["src/codas/adapters/python.py"]
   n5["src/codas/adapters/python_parse.py"]
   n6["src/codas/adapters/semantic.py"]
-  n7["src/codas/adapters/wiki.py"]
-  n8["src/codas/config/loader.py"]
-  n9["src/codas/facts/context.py"]
-  n10["src/codas/facts/delta.py"]
-  n11["src/codas/facts/snapshot.py"]
-  n12["src/codas/structure/index.py"]
-  n9 --> n0
-  n9 --> n1
-  n9 --> n2
-  n9 --> n3
-  n9 --> n4
-  n9 --> n5
-  n9 --> n6
-  n9 --> n7
-  n9 --> n8
-  n9 --> n10
-  n9 --> n11
-  n9 --> n12
-  n10 --> n0
-  n10 --> n4
-  n10 --> n11
+  n7["src/codas/adapters/swift.py"]
+  n8["src/codas/adapters/swift_parse.py"]
+  n9["src/codas/adapters/wiki.py"]
+  n10["src/codas/config/loader.py"]
+  n11["src/codas/facts/context.py"]
+  n12["src/codas/facts/delta.py"]
+  n13["src/codas/facts/languages.py"]
+  n14["src/codas/facts/snapshot.py"]
+  n15["src/codas/structure/index.py"]
   n11 --> n0
   n11 --> n1
+  n11 --> n2
+  n11 --> n3
   n11 --> n4
   n11 --> n5
+  n11 --> n6
+  n11 --> n9
+  n11 --> n10
   n11 --> n12
+  n11 --> n13
+  n11 --> n14
+  n11 --> n15
+  n12 --> n0
+  n12 --> n4
+  n12 --> n14
+  n13 --> n4
+  n13 --> n7
+  n13 --> n8
+  n14 --> n0
+  n14 --> n1
+  n14 --> n4
+  n14 --> n5
+  n14 --> n13
+  n14 --> n15
 ```

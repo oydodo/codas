@@ -65,12 +65,14 @@ def ref_resolves(repo: Path, ref: str) -> bool:
     )
 
 
-def list_python_paths_at_head(repo: Path) -> tuple[tuple[str, str], ...] | None:
-    """``.py`` blobs at ``HEAD`` as ``(repo-rel path, blob sha)``, sorted by path.
+def list_paths_at_head(
+    repo: Path, extensions: tuple[str, ...]
+) -> tuple[tuple[str, str], ...] | None:
+    """Source blobs at ``HEAD`` as ``(repo-rel path, blob sha)``, sorted by path.
 
     Lists the committed tree (``git ls-tree -r -z HEAD``), keeping only ``blob``
-    entries ending in ``.py`` — submodules (``commit`` entries) and trees are
-    dropped; a ``.py`` symlink (still a blob) is the one parity edge (git stores the
+    entries ending in one of ``extensions`` — submodules (``commit`` entries) and trees are
+    dropped; a source symlink (still a blob) is the one parity edge (git stores the
     link text, a working-tree read would follow it) and is negligible for real
     source. Returns the blob SHA per path (the future fact-cache key, so this read
     path is cache-ready). ``None`` when ``HEAD`` does not resolve (no commits) or the
@@ -84,13 +86,18 @@ def list_python_paths_at_head(repo: Path) -> tuple[tuple[str, str], ...] | None:
     entries: list[tuple[str, str]] = []
     for chunk in chunks:
         meta, _, path = chunk.partition("\t")
-        if not path or not path.endswith(".py"):
+        if not path or not path.endswith(extensions):
             continue
         parts = meta.split()  # "<mode> <type> <sha>"
         if len(parts) != 3 or parts[1] != "blob":
             continue
         entries.append((path.replace("\\", "/"), parts[2]))
     return tuple(sorted(entries))
+
+
+def list_python_paths_at_head(repo: Path) -> tuple[tuple[str, str], ...] | None:
+    """Back-compat wrapper returning only committed Python blobs."""
+    return list_paths_at_head(repo, (".py",))
 
 
 def read_blob_at_head(repo: Path, blob_sha: str) -> str | None:

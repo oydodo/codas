@@ -8,6 +8,9 @@ license = { text = "MIT" }
 authors = [{ name = "oydodo" }]
 dependencies = ["pyyaml>=6.0"]
 
+[project.optional-dependencies]
+swift = ["tree-sitter>=0.24", "tree-sitter-swift~=0.7"]
+
 [project.scripts]
 codas = "codas.__main__:main"
 
