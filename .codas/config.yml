@@ -43,7 +43,6 @@ anchors:
     - docs/codas-design.html
     - docs/codas-implementation-plan.html
     - .trellis/tasks/*/prd.md
-    - .trellis/tasks/*/design.md
 
 workflow:
   adapter: trellis
