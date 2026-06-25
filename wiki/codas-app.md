@@ -100,10 +100,15 @@ The third is byte-identical determinism. The Atlas pack, knowledge tree, generat
 
 ### `src/codas/app/impact.py`
 
+- `_GraphEdge` *(class)*
 - `_Node` *(class)*
+- `_affected_row` *(function)*
 - `_all_nodes` *(function)*
+- `_call_edges` *(function)*
 - `_callee_node` *(function)*
 - `_caller_node` *(function)*
+- `_codegraph_edges` *(function)*
+- `_compute_impact_edges` *(function)*
 - `_fqn` *(function)*
 - `_looks_like_path` *(function)*
 - `_norm_path` *(function)*
@@ -149,6 +154,7 @@ The third is byte-identical determinism. The Atlas pack, knowledge tree, generat
 ### `src/codas/app/preflight.py`
 
 - `_build_digest` *(function)*
+- `_codegraph_reuse_hints` *(function)*
 - `_repair_targets` *(function)*
 - `_repair_value` *(function)*
 - `build_context_pack` *(function)*

@@ -7,6 +7,10 @@ from codas.adapters.git import extract_changed_paths, head_commit, ref_resolves
 from codas.adapters.html import extract_html_claims, governed_html_files
 from codas.adapters.markdown import DocClaim, extract_doc_claims
 from codas.adapters.callgraph import CallFact, CallFacts, extract_call_facts_from_parsed
+from codas.adapters.codegraph import (
+    CodeGraphCallFacts,
+    extract_codegraph_calls,
+)
 from codas.adapters.python import (
     ImportFact,
     ImportFacts,
@@ -64,6 +68,7 @@ __all__ = [
     "SemanticClaims",
     "CallFact",
     "CallFacts",
+    "CodeGraphCallFacts",
     "FactSnapshot",
     "FactDelta",
 ]
@@ -181,6 +186,17 @@ class ScanContext:
         if "calls" not in self._cache:
             self._cache["calls"] = extract_call_facts_from_parsed(self._parsed())
         return self._cache["calls"]
+
+    def codegraph_calls(self) -> CodeGraphCallFacts:
+        """Advisory CodeGraph call edges (cached, optional, off-inventory/off-gate).
+
+        This accessor is deliberately separate from ``calls()`` and never feeds
+        snapshots, deltas, inventory, query schema or policies. Query surfaces may
+        opt in when they can label provenance explicitly.
+        """
+        if "codegraph_calls" not in self._cache:
+            self._cache["codegraph_calls"] = extract_codegraph_calls(self.repo, self.files)
+        return self._cache["codegraph_calls"]
 
     def changed_paths(self) -> tuple[str, ...]:
         """Working-tree paths differing from HEAD (cached; git diff substrate).

@@ -66,12 +66,33 @@ def print_context_pack(pack: dict) -> None:
                 f"{target['old_node']} -> {best} ({target['action']})"
             )
 
+    hints = pack.get("advisory_reuse_hints") or []
+    if hints:
+        print("CodeGraph advisory reuse hints:")
+        for hint in hints:
+            caller = _hint_fqn(hint, "caller")
+            callee = _hint_fqn(hint, "callee")
+            print(
+                f"  - {caller} -> {callee} "
+                f"({hint['callee_path']}:{hint['callee_line']}, "
+                f"provenance={hint['provenance']}, resolution={hint['resolution']})"
+            )
+
 
 def _node_value(value: object) -> str | None:
     if isinstance(value, dict):
         raw = value.get("value")
         return raw if isinstance(raw, str) else None
     return None
+
+
+def _hint_fqn(hint: dict, prefix: str) -> str:
+    parts = [str(hint.get(f"{prefix}_module") or "")]
+    cls = hint.get(f"{prefix}_class")
+    if cls:
+        parts.append(str(cls))
+    parts.append(str(hint.get(f"{prefix}_symbol") or ""))
+    return ".".join(part for part in parts if part)
 
 
 def _print_digest(digest: dict) -> None:

@@ -30,6 +30,7 @@ The `facts` package is the **adapter boundary made concrete** — the one seam w
   - `changed_paths` *(function)*
   - `changed_since` *(function)*
   - `code_anchor_claims` *(function)*
+  - `codegraph_calls` *(function)*
   - `doc_claims` *(function)*
   - `fact_delta` *(function)*
   - `generated_claims` *(function)*
@@ -83,44 +84,46 @@ The `facts` package is the **adapter boundary made concrete** — the one seam w
 ```mermaid
 graph LR
   n0["src/codas/adapters/callgraph.py"]
-  n1["src/codas/adapters/git.py"]
-  n2["src/codas/adapters/html.py"]
-  n3["src/codas/adapters/markdown.py"]
-  n4["src/codas/adapters/python.py"]
-  n5["src/codas/adapters/python_parse.py"]
-  n6["src/codas/adapters/semantic.py"]
-  n7["src/codas/adapters/swift.py"]
-  n8["src/codas/adapters/swift_parse.py"]
-  n9["src/codas/adapters/wiki.py"]
-  n10["src/codas/config/loader.py"]
-  n11["src/codas/facts/context.py"]
-  n12["src/codas/facts/delta.py"]
-  n13["src/codas/facts/languages.py"]
-  n14["src/codas/facts/snapshot.py"]
-  n15["src/codas/structure/index.py"]
-  n11 --> n0
-  n11 --> n1
-  n11 --> n2
-  n11 --> n3
-  n11 --> n4
-  n11 --> n5
-  n11 --> n6
-  n11 --> n9
-  n11 --> n10
-  n11 --> n12
-  n11 --> n13
-  n11 --> n14
-  n11 --> n15
+  n1["src/codas/adapters/codegraph.py"]
+  n2["src/codas/adapters/git.py"]
+  n3["src/codas/adapters/html.py"]
+  n4["src/codas/adapters/markdown.py"]
+  n5["src/codas/adapters/python.py"]
+  n6["src/codas/adapters/python_parse.py"]
+  n7["src/codas/adapters/semantic.py"]
+  n8["src/codas/adapters/swift.py"]
+  n9["src/codas/adapters/swift_parse.py"]
+  n10["src/codas/adapters/wiki.py"]
+  n11["src/codas/config/loader.py"]
+  n12["src/codas/facts/context.py"]
+  n13["src/codas/facts/delta.py"]
+  n14["src/codas/facts/languages.py"]
+  n15["src/codas/facts/snapshot.py"]
+  n16["src/codas/structure/index.py"]
   n12 --> n0
+  n12 --> n1
+  n12 --> n2
+  n12 --> n3
   n12 --> n4
+  n12 --> n5
+  n12 --> n6
+  n12 --> n7
+  n12 --> n10
+  n12 --> n11
+  n12 --> n13
   n12 --> n14
-  n13 --> n4
-  n13 --> n7
-  n13 --> n8
-  n14 --> n0
-  n14 --> n1
-  n14 --> n4
+  n12 --> n15
+  n12 --> n16
+  n13 --> n0
+  n13 --> n5
+  n13 --> n15
   n14 --> n5
-  n14 --> n13
-  n14 --> n15
+  n14 --> n8
+  n14 --> n9
+  n15 --> n0
+  n15 --> n2
+  n15 --> n5
+  n15 --> n6
+  n15 --> n14
+  n15 --> n16
 ```

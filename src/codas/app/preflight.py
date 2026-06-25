@@ -139,7 +139,7 @@ def build_context_pack(repo: Path, task_id: str | None = None) -> dict:
     declared = policies_raw.get("policies", {}) or {}
     repair_targets = _repair_targets(ctx)
 
-    return {
+    pack = {
         "schema_version": 1,
         "kind": "context_pack",
         "task": task,
@@ -167,6 +167,44 @@ def build_context_pack(repo: Path, task_id: str | None = None) -> dict:
         # with compute_provenance.
         "provenance": provenance_block(render_inventory_json(inventory), policies_raw),
     }
+    advisory_reuse_hints = _codegraph_reuse_hints(ctx)
+    if advisory_reuse_hints:
+        pack["advisory_reuse_hints"] = advisory_reuse_hints
+    return pack
+
+
+def _codegraph_reuse_hints(ctx) -> list[dict[str, object]]:
+    """Optional CodeGraph orientation, advisory-only and never part of inventory/provenance."""
+    facts = ctx.codegraph_calls()
+    hints = [
+        {
+            "caller_module": edge.caller_module,
+            "caller_class": edge.caller_class,
+            "caller_symbol": edge.caller_symbol,
+            "caller_path": edge.caller_path,
+            "caller_line": edge.caller_line,
+            "callee_module": edge.callee_module,
+            "callee_class": edge.callee_class,
+            "callee_symbol": edge.callee_symbol,
+            "callee_path": edge.callee_path,
+            "callee_line": edge.callee_line,
+            "resolution": edge.resolution,
+            "provenance": edge.provenance,
+        }
+        for edge in facts.edges
+    ]
+    hints.sort(
+        key=lambda item: (
+            str(item["caller_path"]),
+            str(item["caller_class"]),
+            str(item["caller_symbol"]),
+            str(item["callee_path"]),
+            str(item["callee_class"]),
+            str(item["callee_symbol"]),
+            str(item["resolution"]),
+        )
+    )
+    return hints[:_REUSE_CAP]
 
 
 def _repair_targets(ctx) -> list[dict[str, object]]:

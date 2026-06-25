@@ -35,6 +35,23 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 - `extract_call_facts` *(function)*
 - `extract_call_facts_from_parsed` *(function)*
 
+### `src/codas/adapters/codegraph.py`
+
+- `CodeGraphCallFact` *(class)*
+- `CodeGraphCallFacts` *(class)*
+- `_command` *(function)*
+- `_edge_rows` *(function)*
+- `_endpoint` *(function)*
+- `_int` *(function)*
+- `_module_from_path` *(function)*
+- `_outside_repo` *(function)*
+- `_parse_edge` *(function)*
+- `_repo_rel` *(function)*
+- `_string` *(function)*
+- `_value` *(function)*
+- `extract_codegraph_calls` *(function)*
+- `parse_codegraph_calls` *(function)*
+
 ### `src/codas/adapters/git.py`
 
 - `_git_lines` *(function)*

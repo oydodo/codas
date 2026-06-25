@@ -1,1 +1,7 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":"AGENTS.md","reason":"Final report must account for ownership/gate expectations."}
+{"file":".trellis/workflow.md","reason":"Finish workflow and required verification context."}
+{"file":".trellis/spec/codas/workflow/index.md","reason":"Quality checklist and bootstrap gate."}
+{"file":"docs/codas-design.html","reason":"Verify advisory facts remain off-gate/off-hash and open-world caveats remain rendered."}
+{"file":"docs/codas-architecture-decisions.md","reason":"Verify implementation matches CodeGraph advisory-only decision."}
+{"file":".codas/claims.yml","reason":"Verify CodeGraph does not feed fact_coupling or duplicate-governance claims."}
+{"file":".codas/config.yml","reason":"Verify no dependency/config drift beyond optional external executable."}

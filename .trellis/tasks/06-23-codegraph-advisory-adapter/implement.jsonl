@@ -1,1 +1,8 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":"AGENTS.md","reason":"Codas governance lookup protocol and ownership map before editing."}
+{"file":".trellis/workflow.md","reason":"Trellis planning/start/finish workflow and dispatch rules."}
+{"file":".trellis/spec/codas/workflow/index.md","reason":"Codas workflow pre-development checklist and quality check."}
+{"file":".trellis/spec/codas/workflow/task-system.md","reason":"Task artifact and context requirements."}
+{"file":"docs/codas-design.html","reason":"Open-world invariant, policy/gate boundary, and dogfooding protocol."}
+{"file":"docs/codas-architecture-decisions.md","reason":"CodeGraph advisory-only architecture decision."}
+{"file":".codas/claims.yml","reason":"Fact-coupling gate source must remain deterministic-only."}
+{"file":".codas/config.yml","reason":"Inventory roots, constraint sources, and live-doc anchors."}

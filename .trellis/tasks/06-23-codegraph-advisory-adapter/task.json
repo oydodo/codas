@@ -3,7 +3,7 @@
   "name": "codegraph-advisory-adapter",
   "title": "CodeGraph advisory call-graph adapter — multi-lang+cross-lang, off-gate/off-hash",
   "description": "adapters/codegraph.py subprocess -> Fact w/ provenance=codegraph; ScanContext codegraph_*() accessors never in hash/gate; graceful-degrade; optional Node dep",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

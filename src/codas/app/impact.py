@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from codas.config.loader import load_codas_config
-from codas.facts.context import CallFacts, build_scan_context
+from codas.facts.context import CallFacts, CodeGraphCallFacts, build_scan_context
 from codas.facts.openworld import open_world_gaps
 
 # ``codas impact <symbol|path>`` — the first P7 agent-query subcommand. Pure reverse
@@ -55,22 +55,76 @@ def _callee_node(edge: Any) -> _Node:
     )
 
 
-def _reverse_graph(calls: CallFacts) -> dict[_Node, set[_Node]]:
-    """callee node -> the set of nodes that call it (the reverse of the call graph)."""
-    rev: dict[_Node, set[_Node]] = {}
-    for edge in calls.edges:
-        rev.setdefault(_callee_node(edge), set()).add(_caller_node(edge))
+@dataclass(frozen=True, order=True)
+class _GraphEdge:
+    callee: _Node
+    caller: _Node
+    source: str
+    provenance: str
+    resolution: str
+
+    def via_dict(self) -> dict[str, str]:
+        return {
+            "callee_module": self.callee.module,
+            "callee_class": self.callee.cls,
+            "callee_symbol": self.callee.symbol,
+            "callee_path": self.callee.path,
+            "source": self.source,
+            "provenance": self.provenance,
+            "resolution": self.resolution,
+        }
+
+
+def _call_edges(calls: CallFacts) -> tuple[_GraphEdge, ...]:
+    return tuple(
+        sorted(
+            (
+                _GraphEdge(
+                    callee=_callee_node(edge),
+                    caller=_caller_node(edge),
+                    source="calls",
+                    provenance="codas",
+                    resolution=edge.resolution,
+                )
+                for edge in calls.edges
+            )
+        )
+    )
+
+
+def _codegraph_edges(calls: CodeGraphCallFacts) -> tuple[_GraphEdge, ...]:
+    return tuple(
+        sorted(
+            (
+                _GraphEdge(
+                    callee=_callee_node(edge),
+                    caller=_caller_node(edge),
+                    source="codegraph",
+                    provenance=edge.provenance,
+                    resolution=edge.resolution,
+                )
+                for edge in calls.edges
+            )
+        )
+    )
+
+
+def _reverse_graph(edges: tuple[_GraphEdge, ...]) -> dict[_Node, set[_GraphEdge]]:
+    """callee node -> the edge(s) whose caller reaches it."""
+    rev: dict[_Node, set[_GraphEdge]] = {}
+    for edge in edges:
+        rev.setdefault(edge.callee, set()).add(edge)
     return rev
 
 
-def _all_nodes(calls: CallFacts) -> set[_Node]:
+def _all_nodes(edges: tuple[_GraphEdge, ...]) -> set[_Node]:
     """Every node in the graph (as a caller OR a callee). Lets a symbol that exists
     but has no first-party callers resolve as a found-but-zero-impact target, distinct
     from a target spec that matches nothing."""
     nodes: set[_Node] = set()
-    for edge in calls.edges:
-        nodes.add(_caller_node(edge))
-        nodes.add(_callee_node(edge))
+    for edge in edges:
+        nodes.add(edge.caller)
+        nodes.add(edge.callee)
     return nodes
 
 
@@ -110,9 +164,9 @@ def _symbol_matches(spec: str, node: _Node) -> bool:
 
 
 def _resolve_targets(
-    target: str, calls: CallFacts, repo: Path
+    target: str, edges: tuple[_GraphEdge, ...], repo: Path
 ) -> tuple[str, str, list[_Node]]:
-    universe = _all_nodes(calls)
+    universe = _all_nodes(edges)
     if _looks_like_path(target):
         rel = _to_repo_rel(target, repo)
         matched = sorted(node for node in universe if node.path == rel)
@@ -121,23 +175,60 @@ def _resolve_targets(
     return "symbol", target, matched
 
 
-def _reverse_reach(matched: list[_Node], rev: dict[_Node, set[_Node]]) -> dict[_Node, int]:
+def _reverse_reach(
+    matched: list[_Node], rev: dict[_Node, set[_GraphEdge]]
+) -> tuple[dict[_Node, int], dict[_Node, set[_GraphEdge]]]:
     """BFS over reverse edges from the target nodes. ``dist`` doubles as the visited
     set, so a cycle (A calls B calls A) terminates: a node already reached keeps its
     minimum distance and is not re-enqueued. Target nodes sit at distance 0."""
     dist: dict[_Node, int] = {node: 0 for node in matched}
+    via: dict[_Node, set[_GraphEdge]] = {node: set() for node in matched}
     frontier = sorted(matched)
     depth = 0
     while frontier:
         depth += 1
         nxt: list[_Node] = []
         for node in frontier:
-            for caller in sorted(rev.get(node, ())):
+            for edge in sorted(rev.get(node, ())):
+                caller = edge.caller
                 if caller not in dist:
                     dist[caller] = depth
+                    via[caller] = {edge}
                     nxt.append(caller)
+                elif dist[caller] == depth:
+                    via.setdefault(caller, set()).add(edge)
         frontier = sorted(nxt)
-    return dist
+    return dist, via
+
+
+def _affected_row(node: _Node, distance: int, via_edges: set[_GraphEdge]) -> dict[str, Any]:
+    via = [edge.via_dict() for edge in sorted(via_edges)]
+    return {
+        **node.as_dict(),
+        "distance": distance,
+        "via": via,
+        "provenance": sorted({edge["provenance"] for edge in via}),
+        "resolution": sorted({edge["resolution"] for edge in via}),
+    }
+
+
+def _compute_impact_edges(
+    edges: tuple[_GraphEdge, ...], target: str, repo: Path
+) -> dict[str, Any]:
+    kind, norm, matched = _resolve_targets(target, edges, repo)
+    rev = _reverse_graph(edges)
+    dist, via = _reverse_reach(matched, rev)
+    affected = sorted(node for node, depth in dist.items() if depth >= 1)
+    return {
+        "target": norm,
+        "target_kind": kind,
+        "matched": [node.as_dict() for node in matched],
+        "affected": [
+            _affected_row(node, dist[node], via.get(node, set())) for node in affected
+        ],
+        "affected_paths": sorted({node.path for node in affected}),
+        "open_world": {"is_lower_bound": True, "misses": list(open_world_gaps("calls"))},
+    }
 
 
 def compute_impact(calls: CallFacts, target: str, repo: Path) -> dict[str, Any]:
@@ -152,27 +243,22 @@ def compute_impact(calls: CallFacts, target: str, repo: Path) -> dict[str, Any]:
     no effect — absence may be a dynamic/reflective call the static extractor missed. A
     static constant, so it does not perturb the determinism above.
     """
-    kind, norm, matched = _resolve_targets(target, calls, repo)
-    rev = _reverse_graph(calls)
-    dist = _reverse_reach(matched, rev)
-    affected = sorted(node for node, depth in dist.items() if depth >= 1)
-    return {
-        "target": norm,
-        "target_kind": kind,
-        "matched": [node.as_dict() for node in matched],
-        "affected": [{**node.as_dict(), "distance": dist[node]} for node in affected],
-        "affected_paths": sorted({node.path for node in affected}),
-        "open_world": {"is_lower_bound": True, "misses": list(open_world_gaps("calls"))},
-    }
+    return _compute_impact_edges(_call_edges(calls), target, repo)
 
 
 def run_impact(repo: Path, target: str) -> dict[str, Any]:
     """Build the per-run ScanContext (scoped exactly like ``codas inventory``) and
-    project the impact set from its ``calls`` facts. Read-only: adds no inventory
-    facts, mutates nothing."""
+    project the impact set from deterministic ``calls`` plus advisory CodeGraph
+    facts. Read-only: adds no inventory facts, mutates nothing."""
     config = load_codas_config(repo / ".codas" / "config.yml")
     ctx = build_scan_context(repo, config)
-    return compute_impact(ctx.calls(), target, repo)
+    deterministic = ctx.calls()
+    deterministic_result = compute_impact(deterministic, target, repo)
+    advisory = ctx.codegraph_calls()
+    if not advisory.edges:
+        return deterministic_result
+    edges = (*_call_edges(deterministic), *_codegraph_edges(advisory))
+    return _compute_impact_edges(tuple(sorted(edges)), target, repo)
 
 
 def _fqn(node: dict[str, str]) -> str:
@@ -238,7 +324,12 @@ def render_impact_text(result: dict[str, Any]) -> str:
         return "\n".join(lines)
     lines.append("  affected (transitive callers):")
     for node in affected:
-        lines.append(f"    [{node['distance']}] {_fqn(node)}  {node['path']}")
+        suffix = ""
+        provenance = node.get("provenance") or []
+        if "codegraph" in provenance:
+            resolutions = ",".join(node.get("resolution") or [])
+            suffix = f"  provenance={','.join(provenance)} resolution={resolutions}"
+        lines.append(f"    [{node['distance']}] {_fqn(node)}  {node['path']}{suffix}")
     lines.append("")
     lines.append("  affected files:")
     for path in paths:
