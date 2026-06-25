@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -96,6 +98,72 @@ class CodeGraphAdapterTests(unittest.TestCase):
         self.assertEqual(facts.edges[1].resolution, "name")
         self.assertEqual(facts.edges[0].provenance, "codegraph")
         self.assertEqual(facts.skipped, ("edge[1]: caller missing-symbol",))
+
+    def test_real_codegraph_cli_reads_sqlite_index(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            index = repo / ".codegraph"
+            index.mkdir()
+            db = index / "codegraph.db"
+            with sqlite3.connect(db) as conn:
+                conn.executescript(
+                    """
+                    CREATE TABLE nodes (
+                        id TEXT PRIMARY KEY,
+                        kind TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        qualified_name TEXT NOT NULL,
+                        file_path TEXT NOT NULL,
+                        language TEXT NOT NULL,
+                        start_line INTEGER NOT NULL,
+                        end_line INTEGER NOT NULL,
+                        start_column INTEGER NOT NULL,
+                        end_column INTEGER NOT NULL,
+                        updated_at INTEGER NOT NULL
+                    );
+                    CREATE TABLE edges (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        source TEXT NOT NULL,
+                        target TEXT NOT NULL,
+                        kind TEXT NOT NULL,
+                        metadata TEXT,
+                        line INTEGER,
+                        col INTEGER,
+                        provenance TEXT
+                    );
+                    """
+                )
+                conn.execute(
+                    "INSERT INTO nodes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    ("caller", "function", "render", "render", "web/app.js", "javascript", 4, 6, 0, 0, 1),
+                )
+                conn.execute(
+                    "INSERT INTO nodes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    ("callee", "function", "load", "load", "src/service.py", "python", 8, 10, 0, 0, 1),
+                )
+                conn.execute(
+                    "INSERT INTO edges (source, target, kind, line, provenance) VALUES (?, ?, ?, ?, ?)",
+                    ("caller", "callee", "calls", 5, "heuristic"),
+                )
+
+            status = json.dumps({"initialized": True, "indexPath": index.as_posix()})
+            completed = subprocess.CompletedProcess(
+                args=["codegraph", "status"],
+                returncode=0,
+                stdout=status,
+                stderr="",
+            )
+            with mock.patch("subprocess.run", return_value=completed) as run:
+                facts = extract_codegraph_calls(repo, ("web/app.js", "src/service.py"))
+
+        run.assert_called_once()
+        self.assertEqual(len(facts.edges), 1)
+        edge = facts.edges[0]
+        self.assertEqual(edge.caller_module, "web.app")
+        self.assertEqual(edge.caller_symbol, "render")
+        self.assertEqual(edge.callee_module, "src.service")
+        self.assertEqual(edge.callee_symbol, "load")
+        self.assertEqual(edge.resolution, "heuristic")
 
 
 class CodeGraphImpactTests(unittest.TestCase):

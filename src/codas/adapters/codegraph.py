@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import sqlite3
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -42,6 +43,10 @@ def extract_codegraph_calls(
     CodeGraph is an external CLI, not a Python dependency. Missing binaries, invalid
     output and non-zero exits are advisory absence, never scan failures.
     """
+    parts = _command_parts(executable)
+    if _is_real_codegraph_cli(parts):
+        return _extract_from_codegraph_index(repo, files, parts[0], timeout)
+
     command = _command(repo, executable)
     try:
         result = subprocess.run(
@@ -119,11 +124,181 @@ def parse_codegraph_calls(payload: str, repo: Path, files: tuple[str, ...]) -> C
 
 
 def _command(repo: Path, executable: str | os.PathLike[str] | None) -> list[str]:
+    return [*_command_parts(executable), repo.as_posix()]
+
+
+def _command_parts(executable: str | os.PathLike[str] | None) -> list[str]:
     raw = str(executable or os.environ.get("CODAS_CODEGRAPH") or "codegraph")
     parts = shlex.split(raw)
     if not parts:
         parts = ["codegraph"]
-    return [*parts, repo.as_posix()]
+    return parts
+
+
+def _is_real_codegraph_cli(parts: list[str]) -> bool:
+    return len(parts) == 1 and Path(parts[0]).name == "codegraph"
+
+
+def _extract_from_codegraph_index(
+    repo: Path,
+    files: tuple[str, ...],
+    executable: str,
+    timeout: float,
+) -> CodeGraphCallFacts:
+    try:
+        result = subprocess.run(
+            [executable, "status", "--json", repo.as_posix()],
+            cwd=repo,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=timeout,
+        )
+    except FileNotFoundError:
+        return CodeGraphCallFacts(edges=(), skipped=("codegraph: executable not found",))
+    except subprocess.TimeoutExpired:
+        return CodeGraphCallFacts(edges=(), skipped=("codegraph: timeout",))
+    except OSError as error:
+        return CodeGraphCallFacts(edges=(), skipped=(f"codegraph: {error.__class__.__name__}",))
+
+    if result.returncode != 0:
+        return CodeGraphCallFacts(edges=(), skipped=(f"codegraph: exit {result.returncode}",))
+    try:
+        status = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return CodeGraphCallFacts(edges=(), skipped=("codegraph: invalid-status-json",))
+    if not isinstance(status, dict) or not status.get("initialized"):
+        return CodeGraphCallFacts(edges=(), skipped=("codegraph: not-initialized",))
+    index_path = status.get("indexPath")
+    if not isinstance(index_path, str) or not index_path:
+        return CodeGraphCallFacts(edges=(), skipped=("codegraph: missing-index-path",))
+    db_path = Path(index_path) / "codegraph.db"
+    if not db_path.exists():
+        return CodeGraphCallFacts(edges=(), skipped=("codegraph: missing-db",))
+
+    try:
+        return _read_codegraph_db(db_path, repo, files)
+    except sqlite3.Error as error:
+        return CodeGraphCallFacts(edges=(), skipped=(f"codegraph: sqlite {error.__class__.__name__}",))
+
+
+def _read_codegraph_db(db_path: Path, repo: Path, files: tuple[str, ...]) -> CodeGraphCallFacts:
+    known_files = set(files)
+    edges: list[CodeGraphCallFact] = []
+    skipped: list[str] = []
+    seen: set[tuple[str, str, str, str, str, str, str]] = set()
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT
+              s.qualified_name, s.kind, s.name, s.file_path, s.start_line,
+              t.qualified_name, t.kind, t.name, t.file_path, t.start_line,
+              e.line, e.provenance
+            FROM edges e
+            JOIN nodes s ON e.source = s.id
+            JOIN nodes t ON e.target = t.id
+            WHERE e.kind = 'calls'
+            """
+        )
+        for index, row in enumerate(rows):
+            fact, reason = _fact_from_db_row(row, index, repo, known_files)
+            if reason is not None:
+                skipped.append(reason)
+                continue
+            assert fact is not None
+            key = (
+                fact.caller_path,
+                fact.caller_class,
+                fact.caller_symbol,
+                fact.callee_path,
+                fact.callee_class,
+                fact.callee_symbol,
+                fact.resolution,
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            edges.append(fact)
+    edges.sort(
+        key=lambda edge: (
+            edge.caller_path,
+            edge.caller_class,
+            edge.caller_symbol,
+            edge.callee_path,
+            edge.callee_class,
+            edge.callee_symbol,
+            edge.resolution,
+            edge.provenance,
+        )
+    )
+    return CodeGraphCallFacts(edges=tuple(edges), skipped=tuple(sorted(skipped)))
+
+
+def _fact_from_db_row(
+    row: tuple[Any, ...], index: int, repo: Path, known_files: set[str]
+) -> tuple[CodeGraphCallFact | None, str | None]:
+    (
+        caller_qualified,
+        caller_kind,
+        caller_name,
+        caller_path,
+        caller_line,
+        callee_qualified,
+        callee_kind,
+        callee_name,
+        callee_path,
+        callee_line,
+        edge_line,
+        edge_provenance,
+    ) = row
+    if not isinstance(caller_path, str) or not isinstance(callee_path, str):
+        return None, f"edge[{index}]: missing-path"
+    caller_rel = _db_rel_path(caller_path, repo)
+    callee_rel = _db_rel_path(callee_path, repo)
+    if caller_rel is None or callee_rel is None:
+        return None, f"edge[{index}]: outside-repo"
+    if known_files and (caller_rel not in known_files or callee_rel not in known_files):
+        return None, f"edge[{index}]: outside-scan"
+    caller_symbol = caller_name if isinstance(caller_name, str) and caller_name else ""
+    callee_symbol = callee_name if isinstance(callee_name, str) and callee_name else ""
+    if not caller_symbol or not callee_symbol:
+        return None, f"edge[{index}]: missing-symbol"
+    return (
+        CodeGraphCallFact(
+            caller_module=_module_from_db(caller_qualified, caller_rel),
+            caller_class=_class_from_db(caller_qualified, caller_kind, caller_symbol),
+            caller_symbol=caller_symbol,
+            caller_path=caller_rel,
+            caller_line=_int(caller_line) or _int(edge_line),
+            callee_module=_module_from_db(callee_qualified, callee_rel),
+            callee_class=_class_from_db(callee_qualified, callee_kind, callee_symbol),
+            callee_symbol=callee_symbol,
+            callee_path=callee_rel,
+            callee_line=_int(callee_line),
+            resolution=str(edge_provenance or "codegraph"),
+        ),
+        None,
+    )
+
+
+def _module_from_db(qualified: Any, path: str) -> str:
+    return _module_from_path(path)
+
+
+def _db_rel_path(path: str, repo: Path) -> str | None:
+    if Path(path).is_absolute():
+        return _repo_rel(path, repo)
+    return path
+
+
+def _class_from_db(qualified: Any, kind: Any, symbol: str) -> str:
+    if kind != "method" or not isinstance(qualified, str):
+        return ""
+    parts = qualified.replace("::", ".").split(".")
+    if len(parts) >= 2 and parts[-1] == symbol:
+        return parts[-2]
+    return ""
 
 
 def _edge_rows(raw: Any) -> list[Any] | None:

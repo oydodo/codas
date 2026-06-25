@@ -39,13 +39,21 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 
 - `CodeGraphCallFact` *(class)*
 - `CodeGraphCallFacts` *(class)*
+- `_class_from_db` *(function)*
 - `_command` *(function)*
+- `_command_parts` *(function)*
+- `_db_rel_path` *(function)*
 - `_edge_rows` *(function)*
 - `_endpoint` *(function)*
+- `_extract_from_codegraph_index` *(function)*
+- `_fact_from_db_row` *(function)*
 - `_int` *(function)*
+- `_is_real_codegraph_cli` *(function)*
+- `_module_from_db` *(function)*
 - `_module_from_path` *(function)*
 - `_outside_repo` *(function)*
 - `_parse_edge` *(function)*
+- `_read_codegraph_db` *(function)*
 - `_repo_rel` *(function)*
 - `_string` *(function)*
 - `_value` *(function)*
