@@ -37,6 +37,7 @@ The `facts` package is the **adapter boundary made concrete** — the one seam w
   - `head_snapshot` *(function)*
   - `html_claims` *(function)*
   - `imports` *(function)*
+  - `live_doc_anchor_claims` *(function)*
   - `ref_resolves` *(function)*
   - `semantic_corpus_claims` *(function)*
   - `symbols` *(function)*

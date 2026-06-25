@@ -20,6 +20,12 @@ PyYAML-only, no schema framework, no network — consistent with Codas's serverl
 
 ## Modules & symbols
 
+### `src/codas/config/anchors.py`
+
+- `_excluded_live_doc` *(function)*
+- `live_doc_anchor_files` *(function)*
+- `unsupported_live_doc_patterns` *(function)*
+
 ### `src/codas/config/loader.py`
 
 - `CodasConfig` *(class)*

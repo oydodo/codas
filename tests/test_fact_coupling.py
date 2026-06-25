@@ -39,6 +39,14 @@ def _config(repo: Path) -> CodasConfig:
     return CodasConfig(path=repo / ".codas" / "config.yml", raw={})
 
 
+def _config_with_anchors(repo: Path) -> CodasConfig:
+    return CodasConfig(
+        path=repo / ".codas" / "config.yml",
+        raw={},
+        anchor_live_documents=("docs/design.md",),
+    )
+
+
 _COUPLING = """\
 version: 1
 kind: claim_set
@@ -141,6 +149,47 @@ class TeethTests(unittest.TestCase):
             # a check_* added OUTSIDE the coupling scope -> no match
             _write(repo / "pkg" / "other.py", "def check_elsewhere(ctx):\n    return []\n")
             self.assertEqual(_findings(repo), [])
+
+    def test_live_doc_contains_anchor_derives_public_symbol_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _scaffold(repo)
+            _write(
+                repo / "docs" / "design.md",
+                "```atlas:claims\ncontains: pkg/policies/p.py\n```\n",
+            )
+            _git(repo, "add", "-A")
+            _git(repo, "commit", "-q", "-m", "add live doc anchor")
+            _write(
+                repo / "pkg" / "policies" / "p.py",
+                "def check_existing(ctx):\n    return []\n\n\ndef new_api(ctx):\n    return []\n",
+            )
+
+            findings = check_fact_coupling(build_scan_context(repo, _config_with_anchors(repo)))
+
+            self.assertEqual(len(findings), 1)
+            self.assertEqual(findings[0].meta["origin"], "live_doc_anchor")
+            self.assertIn("docs/design.md", findings[0].message)
+
+    def test_broken_live_doc_anchor_without_delta_does_not_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _scaffold(repo)
+            _write(
+                repo / "docs" / "design.md",
+                "```atlas:claims\ndefines: gone -> pkg/policies/p.py::::missing\n```\n",
+            )
+            findings = check_fact_coupling(build_scan_context(repo, _config_with_anchors(repo)))
+            self.assertEqual(findings, [])
+
+    def test_malformed_live_doc_anchor_is_gate_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _scaffold(repo)
+            _write(repo / "docs" / "design.md", "```atlas:claims\ndefines: bad\n```\n")
+            findings = check_fact_coupling(build_scan_context(repo, _config_with_anchors(repo)))
+            self.assertEqual(len(findings), 1)
+            self.assertIn("Malformed live-doc anchor", findings[0].message)
 
 
 class MalformedTests(unittest.TestCase):

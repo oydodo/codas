@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import posixpath
+from html.parser import HTMLParser
 from dataclasses import dataclass
 from pathlib import Path
+
+from codas.config.anchors import live_doc_anchor_files, unsupported_live_doc_patterns
 
 # The W3 OFFLINE semantic corpus: host-agent-generated prose pages under
 # `.codas/cache/semantic/` (gitignored, regenerable, LOCAL — NOT discovered into the
@@ -44,9 +47,17 @@ class StructuralClaim:
 
 
 @dataclass(frozen=True)
+class MalformedClaim:
+    source: str
+    line: int
+    detail: str
+
+
+@dataclass(frozen=True)
 class SemanticClaims:
     claims: tuple[StructuralClaim, ...]
     skipped: tuple[str, ...]
+    malformed: tuple[MalformedClaim, ...] = ()
 
 
 def extract_semantic_claims(
@@ -83,34 +94,149 @@ def extract_semantic_claims(
         except OSError:
             skipped.append(source)
             continue
-        in_block = False
-        for lineno, raw in enumerate(text.splitlines(), start=1):
-            stripped = raw.strip()
-            if not in_block:
-                if stripped.startswith("```") and stripped[3:].strip() == "atlas:claims":
-                    in_block = True
-                continue
-            if stripped.startswith("```") and not stripped.strip("`"):
-                # close ONLY on a BARE fence (``` with no trailing tag), aligned with the book
-                # renderer's _strip_claims_block — a ```python/```nested line inside the block
-                # does not terminate it (it parses as a claim line -> None -> skipped).
-                in_block = False
-                continue
-            parsed = _parse_claim(stripped)
-            if parsed is None:
-                continue  # malformed -> skip, never crash
-            kind, subject, obj, concept = parsed
-            claims.append(
-                StructuralClaim(
-                    source=source,
-                    line=lineno,
-                    kind=kind,
-                    subject=subject,
-                    object=obj,
-                    concept=concept,
-                )
-            )
+        parsed_page = _parse_markdown_claims(source, text, strict=False)
+        claims.extend(parsed_page.claims)
     return SemanticClaims(claims=tuple(claims), skipped=tuple(sorted(skipped)))
+
+
+def extract_live_doc_anchor_claims(
+    repo: Path,
+    files: tuple[str, ...],
+    patterns: tuple[str, ...],
+) -> SemanticClaims:
+    claims: list[StructuralClaim] = []
+    malformed: list[MalformedClaim] = []
+    skipped: list[str] = []
+    for source in live_doc_anchor_files(files, patterns):
+        try:
+            text = (repo / source).read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            skipped.append(source)
+            continue
+        if source.endswith(".html"):
+            parsed_page = _parse_html_claims(source, text, strict=True)
+        else:
+            parsed_page = _parse_markdown_claims(source, text, strict=True)
+        claims.extend(parsed_page.claims)
+        malformed.extend(parsed_page.malformed)
+    claims.sort(key=lambda claim: (claim.source, claim.line, claim.kind, claim.subject, claim.object))
+    malformed.sort(key=lambda item: (item.source, item.line, item.detail))
+    return SemanticClaims(tuple(claims), tuple(sorted(skipped)), tuple(malformed))
+
+def _parse_markdown_claims(source: str, text: str, strict: bool) -> SemanticClaims:
+    claims: list[StructuralClaim] = []
+    malformed: list[MalformedClaim] = []
+    in_claim = False
+    claim_fence_len = 0
+    outer_fence_len = 0
+    for lineno, raw in enumerate(text.splitlines(), start=1):
+        stripped = raw.strip()
+        fence_len, info = _backtick_fence(stripped)
+        if outer_fence_len:
+            if fence_len >= outer_fence_len and not info:
+                outer_fence_len = 0
+            continue
+        if not in_claim:
+            if fence_len:
+                if info == "atlas:claims":
+                    in_claim = True
+                    claim_fence_len = fence_len
+                else:
+                    outer_fence_len = fence_len
+            continue
+        if fence_len >= claim_fence_len and not info:
+            in_claim = False
+            claim_fence_len = 0
+            continue
+        _append_claim(claims, malformed, source, lineno, stripped, strict)
+    if strict and in_claim:
+        malformed.append(MalformedClaim(source, len(text.splitlines()) or 1, "unterminated atlas:claims block"))
+    return SemanticClaims(tuple(claims), (), tuple(malformed))
+
+
+def _backtick_fence(stripped: str) -> tuple[int, str]:
+    if not stripped.startswith("```"):
+        return (0, "")
+    count = 0
+    for char in stripped:
+        if char != "`":
+            break
+        count += 1
+    if count < 3:
+        return (0, "")
+    return (count, stripped[count:].strip())
+
+
+def _parse_html_claims(source: str, text: str, strict: bool) -> SemanticClaims:
+    parser = _AtlasClaimsHtmlParser()
+    parser.feed(text)
+    parser.close()
+    claims: list[StructuralClaim] = []
+    malformed: list[MalformedClaim] = []
+    for lineno, raw in parser.claim_lines():
+        _append_claim(claims, malformed, source, lineno, raw.strip(), strict)
+    return SemanticClaims(tuple(claims), (), tuple(malformed))
+
+
+class _AtlasClaimsHtmlParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._active = False
+        self._chunks: list[tuple[int, str]] = []
+        self._blocks: list[list[tuple[int, str]]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag != "pre":
+            return
+        if any(key == "data-atlas-claims" for key, _value in attrs):
+            self._active = True
+            self._chunks = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "pre" and self._active:
+            self._blocks.append(self._chunks)
+            self._active = False
+            self._chunks = []
+
+    def handle_data(self, data: str) -> None:
+        if self._active:
+            self._chunks.append((self.getpos()[0], data))
+
+    def claim_lines(self) -> list[tuple[int, str]]:
+        out: list[tuple[int, str]] = []
+        for chunks in self._blocks:
+            for start_line, data in chunks:
+                for offset, line in enumerate(data.splitlines()):
+                    out.append((start_line + offset, line))
+        return out
+
+
+def _append_claim(
+    claims: list[StructuralClaim],
+    malformed: list[MalformedClaim],
+    source: str,
+    lineno: int,
+    line: str,
+    strict: bool,
+) -> None:
+    if not line:
+        return
+    parsed = _parse_claim(line)
+    if parsed is None:
+        if strict:
+            malformed.append(MalformedClaim(source, lineno, line))
+        return
+    kind, subject, obj, concept = parsed
+    claims.append(
+        StructuralClaim(
+            source=source,
+            line=lineno,
+            kind=kind,
+            subject=subject,
+            object=obj,
+            concept=concept,
+        )
+    )
 
 
 def _parse_claim(line: str):

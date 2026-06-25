@@ -89,10 +89,17 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 
 ### `src/codas/adapters/semantic.py`
 
+- `MalformedClaim` *(class)*
 - `SemanticClaims` *(class)*
 - `StructuralClaim` *(class)*
+- `_AtlasClaimsHtmlParser` *(class)*
+- `_append_claim` *(function)*
+- `_backtick_fence` *(function)*
 - `_norm_node` *(function)*
 - `_parse_claim` *(function)*
+- `_parse_html_claims` *(function)*
+- `_parse_markdown_claims` *(function)*
+- `extract_live_doc_anchor_claims` *(function)*
 - `extract_semantic_claims` *(function)*
 
 ### `src/codas/adapters/swift.py`
@@ -146,23 +153,26 @@ graph LR
   n3["src/codas/adapters/markdown.py"]
   n4["src/codas/adapters/python.py"]
   n5["src/codas/adapters/python_parse.py"]
-  n6["src/codas/adapters/swift.py"]
-  n7["src/codas/adapters/swift_parse.py"]
-  n8["src/codas/adapters/trellis.py"]
-  n9["src/codas/adapters/wiki.py"]
-  n10["src/codas/config/loader.py"]
-  n11["src/codas/structure/index.py"]
+  n6["src/codas/adapters/semantic.py"]
+  n7["src/codas/adapters/swift.py"]
+  n8["src/codas/adapters/swift_parse.py"]
+  n9["src/codas/adapters/trellis.py"]
+  n10["src/codas/adapters/wiki.py"]
+  n11["src/codas/config/anchors.py"]
+  n12["src/codas/config/loader.py"]
+  n13["src/codas/structure/index.py"]
   n0 --> n3
-  n0 --> n8
+  n0 --> n9
   n1 --> n4
   n1 --> n5
   n2 --> n3
-  n2 --> n11
-  n3 --> n11
+  n2 --> n13
+  n3 --> n13
   n4 --> n5
-  n6 --> n4
-  n6 --> n7
-  n8 --> n10
-  n9 --> n3
-  n9 --> n11
+  n6 --> n11
+  n7 --> n4
+  n7 --> n8
+  n9 --> n12
+  n10 --> n3
+  n10 --> n13
 ```

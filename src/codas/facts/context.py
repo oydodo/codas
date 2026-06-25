@@ -28,6 +28,7 @@ from codas.adapters.wiki import (
 from codas.adapters.semantic import (
     SemanticClaims,
     StructuralClaim,
+    extract_live_doc_anchor_claims,
     extract_semantic_claims,
 )
 from codas.config.loader import CodasConfig
@@ -258,10 +259,31 @@ class ScanContext:
         if "code_anchor_claims" not in self._cache:
             wiki_root = (self.config.raw.get("wiki") or {}).get("path", ".codas/wiki")
             root = wiki_root.rstrip("/") + "/code"
-            self._cache["code_anchor_claims"] = extract_semantic_claims(
+            code_claims = extract_semantic_claims(
                 self.repo, root, self.files
             )
+            live_claims = self.live_doc_anchor_claims()
+            claims = tuple(sorted(
+                code_claims.claims + live_claims.claims,
+                key=lambda claim: (claim.source, claim.line, claim.kind, claim.subject, claim.object),
+            ))
+            skipped = tuple(sorted(code_claims.skipped + live_claims.skipped))
+            self._cache["code_anchor_claims"] = SemanticClaims(
+                claims, skipped, live_claims.malformed
+            )
         return self._cache["code_anchor_claims"]
+
+    def live_doc_anchor_claims(self) -> SemanticClaims:
+        """Strict structural claims from configured live docs (cached).
+
+        These policy-time facts are consumed by ``fact_coupling`` for derived gates and by
+        ``code_anchor`` for advisory resolution. They are never serialized into inventory.
+        """
+        if "live_doc_anchor_claims" not in self._cache:
+            self._cache["live_doc_anchor_claims"] = extract_live_doc_anchor_claims(
+                self.repo, self.files, self.config.anchor_live_documents
+            )
+        return self._cache["live_doc_anchor_claims"]
 
     def semantic_corpus_claims(self) -> SemanticClaims:
         """Structural claims parsed from the OFFLINE semantic corpus (cached).

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from difflib import SequenceMatcher
+
 from codas.core.models import Evidence, Finding
 from codas.facts.context import ScanContext
+from codas.policies.anchor_nodes import anchor_call_key, anchor_symbol_node
 
 
 def _add_path_nodes(nodes: set[str], path: str) -> None:
@@ -79,18 +82,31 @@ def check_code_anchor(ctx: ScanContext) -> list[Finding]:
             detail = claim.subject
         if resolves:
             continue
+        repair_target = _repair_target(ctx, claim.kind, claim.subject, claim.object)
+        if repair_target:
+            repair_target = {
+                "stale_span": {
+                    "path": claim.source,
+                    "line": claim.line,
+                    "claim_kind": claim.kind,
+                    "detail": detail,
+                },
+                **repair_target,
+            }
+        meta = {"repair_target": repair_target} if repair_target else {}
         findings.append(
             Finding(
                 severity="warning",
                 check_id="code-anchor",
                 message=(
-                    f"code-wiki {claim.kind} claim does not resolve: {detail}. "
+                    f"code anchor {claim.kind} claim does not resolve: {detail}. "
                     "The node/edge is not in the current facts — the code may have moved "
-                    "(update the code-wiki page), OR it now takes a dynamic/conditional "
+                    "(update the anchor-bearing doc), OR it now takes a dynamic/conditional "
                     "form the open-world extractor misses (a lower bound; verify by hand)."
                 ),
                 evidence=[Evidence(path=claim.source, line=claim.line, detail=detail)],
-                recommendation="Update the committed code-wiki claim, or restore the node/edge.",
+                recommendation="Update the anchor claim, or restore the node/edge.",
+                meta=meta,
             )
         )
 
@@ -102,3 +118,91 @@ def check_code_anchor(ctx: ScanContext) -> list[Finding]:
         )
     )
     return findings
+
+
+def _repair_target(ctx: ScanContext, kind: str, subject: str, obj: str) -> dict[str, object] | None:
+    if kind in ("defines", "contains"):
+        old = anchor_symbol_node(subject)
+        if old is None:
+            return None
+        module, name = old
+        removed = [key for key in ctx.fact_delta().symbols_removed if key[0] == module and key[1] == name]
+        if not removed:
+            return _repair_payload(kind, subject, None, "retarget-subject-node")
+        old_kind = removed[0][2]
+        best = _best_symbol_candidate(name, old_kind, module, ctx.fact_delta().symbols_added)
+        return _repair_payload(kind, subject, best, "retarget-subject-node")
+    if kind == "calls":
+        old_call = anchor_call_key(subject, obj)
+        if old_call is None:
+            return None
+        if old_call not in ctx.fact_delta().calls_removed:
+            return _repair_payload(kind, f"{subject} -> {obj}", None, "retarget-call-edge")
+        best_call = _best_call_candidate(old_call, ctx.fact_delta().calls_added)
+        return _repair_payload(kind, f"{subject} -> {obj}", best_call, "retarget-call-edge")
+    return None
+
+
+def _repair_payload(
+    claim_kind: str,
+    old_value: str,
+    best_value: str | None,
+    action: str,
+) -> dict[str, object]:
+    return {
+        "old_node": {"kind": "call" if claim_kind == "calls" else "symbol", "value": old_value},
+        "best_match_new_node": (
+            None
+            if best_value is None
+            else {"kind": "call" if claim_kind == "calls" else "symbol", "value": best_value}
+        ),
+        "action": action,
+    }
+
+
+def _best_symbol_candidate(
+    old_name: str,
+    old_kind: str,
+    old_module: str,
+    added: tuple[tuple[str, str, str], ...],
+) -> str | None:
+    scored: list[tuple[float, str, str]] = []
+    for module, name, kind in added:
+        score = SequenceMatcher(None, old_name, name).ratio()
+        if module == old_module:
+            score += 1.0
+        if kind == old_kind:
+            score += 0.25
+        scored.append((score, module, name))
+    if not scored:
+        return None
+    score, module, name = max(scored, key=lambda item: (item[0], item[1], item[2]))
+    if score < 0.75:
+        return None
+    return f"{module}::::{name}"
+
+
+def _best_call_candidate(
+    old: tuple[str, str, str, str, str, str],
+    added: tuple[tuple[str, str, str, str, str, str], ...],
+) -> str | None:
+    scored: list[tuple[int, tuple[str, str, str, str, str, str]]] = []
+    old_caller = old[:3]
+    old_callee = old[3:]
+    for candidate in added:
+        score = 0
+        if candidate[:3] == old_caller:
+            score += 2
+        if candidate[3:] == old_callee:
+            score += 2
+        if candidate[0] == old[0] or candidate[3] == old[3]:
+            score += 1
+        if score:
+            scored.append((score, candidate))
+    if not scored:
+        return None
+    _score, candidate = max(scored, key=lambda item: (item[0], item[1]))
+    return (
+        f"{candidate[0]}::{candidate[1]}::{candidate[2]} -> "
+        f"{candidate[3]}::{candidate[4]}::{candidate[5]}"
+    )

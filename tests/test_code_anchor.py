@@ -9,16 +9,20 @@ claimed symbol/edge warns. (Folds in the former separate semantic_wiki tests —
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
-from codas.adapters.semantic import extract_semantic_claims
+from codas.adapters.semantic import extract_live_doc_anchor_claims, extract_semantic_claims
 from codas.app.check import run_check
 from codas.app.inventory import run_inventory
 from codas.config.loader import CodasConfig
 from codas.facts.context import build_scan_context
 from codas.policies.code_anchor import check_code_anchor
+from codas.reporting.console import print_findings
 
 REPO = Path(__file__).resolve().parents[1]
 CODE_ROOT = ".codas/wiki/code"  # the committed code-wiki root (config wiki.path + /code)
@@ -70,6 +74,16 @@ calls: pkg/a.py::::f -> pkg/a.py::::does_not_exist
 
 def _ctx(repo: Path):
     return build_scan_context(repo, CodasConfig(path=repo / ".codas" / "config.yml", raw={}))
+
+
+def _git(repo: Path, *args: str) -> None:
+    subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
+
+
+def _init(repo: Path) -> None:
+    _git(repo, "init", "-q")
+    _git(repo, "config", "user.email", "t@example.com")
+    _git(repo, "config", "user.name", "t")
 
 
 class CodeWikiPolicyTests(unittest.TestCase):
@@ -173,6 +187,81 @@ class ParserRobustness(unittest.TestCase):
             tracked = (CODE_ROOT + "/tracked.md",)
             claims = extract_semantic_claims(repo, CODE_ROOT, tracked).claims
             self.assertEqual([c.subject for c in claims], ["pkg/a.py"])
+
+    def test_live_doc_markdown_examples_are_inert(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            body = (
+                "````text\n"
+                "```atlas:claims\n"
+                "defines: example -> src/example.py::::f\n"
+                "```\n"
+                "````\n"
+                "```atlas:claims\n"
+                "defines: real -> src/real.py::::g\n"
+                "```\n"
+            )
+            _write(repo / "docs" / "design.md", body)
+            parsed = extract_live_doc_anchor_claims(
+                repo, ("docs/design.md",), ("docs/design.md",)
+            )
+            self.assertEqual([claim.subject for claim in parsed.claims], ["src/real.py::::g"])
+            self.assertEqual(parsed.malformed, ())
+
+    def test_live_doc_html_pre_block_is_parsed(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            _write(
+                repo / "docs" / "design.html",
+                "<pre data-atlas-claims>\ncontains: src/a.py\n</pre>\n",
+            )
+            parsed = extract_live_doc_anchor_claims(
+                repo, ("docs/design.html",), ("docs/design.html",)
+            )
+            self.assertEqual([claim.subject for claim in parsed.claims], ["src/a.py"])
+
+    def test_archived_task_doc_is_excluded_from_live_docs(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            path = ".trellis/tasks/archive/2026-06/old/prd.md"
+            _write(repo / path, "```atlas:claims\ncontains: src/a.py\n```\n")
+            parsed = extract_live_doc_anchor_claims(repo, (path,), (".trellis/tasks/**/*.md",))
+            self.assertEqual(parsed.claims, ())
+
+
+class RepairTargetTests(unittest.TestCase):
+    def test_renamed_live_doc_symbol_gets_repair_target(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            _init(repo)
+            _write(repo / "pkg" / "__init__.py", "")
+            _write(repo / "pkg" / "a.py", "def old_name():\n    pass\n")
+            _write(
+                repo / "docs" / "design.md",
+                "```atlas:claims\ndefines: public api -> pkg/a.py::::old_name\n```\n",
+            )
+            _git(repo, "add", "-A")
+            _git(repo, "commit", "-q", "-m", "base")
+            _write(repo / "pkg" / "a.py", "def new_name():\n    pass\n")
+            config = CodasConfig(
+                path=repo / ".codas" / "config.yml",
+                raw={},
+                anchor_live_documents=("docs/design.md",),
+            )
+
+            findings = check_code_anchor(build_scan_context(repo, config))
+
+            self.assertEqual(len(findings), 1)
+            target = findings[0].meta["repair_target"]
+            self.assertEqual(
+                target["best_match_new_node"]["value"],
+                "pkg/a.py::::new_name",
+            )
+            self.assertEqual(findings[0].severity, "warning")
+            out = StringIO()
+            with redirect_stdout(out):
+                print_findings(findings)
+            self.assertIn("RepairTarget: pkg/a.py::::old_name -> likely pkg/a.py::::new_name", out.getvalue())
 
 
 class HashIsolation(unittest.TestCase):

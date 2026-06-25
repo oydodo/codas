@@ -149,6 +149,8 @@ The third is byte-identical determinism. The Atlas pack, knowledge tree, generat
 ### `src/codas/app/preflight.py`
 
 - `_build_digest` *(function)*
+- `_repair_targets` *(function)*
+- `_repair_value` *(function)*
 - `build_context_pack` *(function)*
 
 ### `src/codas/app/provenance.py`
@@ -358,6 +360,7 @@ graph LR
   n11 --> n18
   n11 --> n19
   n11 --> n23
+  n11 --> n31
   n12 --> n9
   n12 --> n19
   n12 --> n21

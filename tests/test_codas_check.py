@@ -9,7 +9,8 @@ from pathlib import Path
 from unittest import mock
 
 from codas.app.check import run_check
-from codas.config.loader import load_codas_config
+from codas.config.loader import CodasConfig, load_codas_config
+from codas.policies.config_sources import check_config_sources
 
 
 class CodasCheckTests(unittest.TestCase):
@@ -22,6 +23,18 @@ class CodasCheckTests(unittest.TestCase):
         self.assertIn(".trellis/tasks/*/implement.jsonl", config.workflow_task_globs)
         self.assertIn(".trellis/tasks/*/check.jsonl", config.workflow_task_globs)
         self.assertEqual(config.dogfooding_protocol, "docs/codas-design.html#dogfooding-protocol")
+
+    def test_empty_anchor_live_document_glob_is_error(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            write(repo / ".codas" / "config.yml", "anchors:\n  live_documents:\n    - docs/missing.md\n")
+            config = CodasConfig(
+                path=repo / ".codas" / "config.yml",
+                raw={},
+                anchor_live_documents=("docs/missing.md",),
+            )
+            findings = check_config_sources(repo, config)
+            self.assertIn("anchor-live-document-missing", {finding.check_id for finding in findings})
 
     def test_codas_self_check_has_no_error_findings(self) -> None:
         repo = Path.cwd()

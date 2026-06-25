@@ -30,30 +30,44 @@ the need is real, but it does not scale by hand.
 - The co-change **GATE** resolves ONLY against in-core deterministic facts (Python `ast`).
 - A gate-claim may NEVER key on an open-world / external (e.g. CodeGraph) fact — guessed edges
   would false-block correct commits.
+- RepairTarget is repair metadata only. It may appear in JSON, console output, and preflight
+  summaries, but it must never suppress, upgrade, downgrade, or trigger a finding.
 
 ## Scope boundary
 
 - Anchor-bearing = LIVE decision/design docs only, NOT archived PRDs (archived PRDs describe
   PAST state → would false-drift against current code).
+- Syntax examples in live Markdown docs must not be parsed as active anchors. The parser must
+  distinguish real claim fences from examples or the docs for this feature can break its gate.
 - Folds the "claim overload" cleanup: `claims.yml` `fact_coupling` and doc anchors are the
   same concept two ways → converge on the anchor.
 
 ## Requirements
 
 - A config knob extends the anchor-bearing root to named live docs.
+- Configured live-doc globs are validated: a typo or empty match must not silently disable the
+  hard gate.
 - Co-change requirements are derived from anchors (the hand-written `claims.yml` seed is
   generalized, not duplicated).
 - RepairTarget data structure: stale span, old node, best-match new node (rename detection
-  over the fact-delta), action string; delivered via preflight / injection.
+  over the fact-delta), action string; delivered via `codas check` output and preflight /
+  injection.
 - Determinism: the gate side resolves against `ast` facts only.
+- Dogfood anchors may only reference facts the current deterministic extractors emit. In
+  particular, the current Python symbol extractor emits top-level classes/functions, not module
+  constants, unless this task explicitly expands that extractor with tests.
 
 ## Acceptance Criteria
 
 - [ ] A live design doc with a `defines:` anchor that points at a renamed symbol is FLAGGED at
-      commit, with a RepairTarget naming the new symbol.
+      commit, and the human `codas check` output plus JSON include a RepairTarget naming the new
+      symbol.
 - [ ] The existing `openworld.py ↔ codas-design.html` coupling is expressed as an anchor (or
       anchor-derived), not a hand-written `claims.yml` row, with no loss of coverage.
 - [ ] Archived PRDs do NOT false-drift.
+- [ ] Markdown examples of `atlas:claims` syntax inside live docs do NOT become active anchors.
+- [ ] Misspelled or empty `anchors.live_documents` entries produce a config/policy finding rather
+      than silently disabling live-doc gating.
 - [ ] Gate keys only on in-core deterministic facts (invariant test).
 - [ ] `PYTHONPATH=src python3 -m codas check .` → 0 findings; tests green; byte-identical.
 
@@ -74,3 +88,16 @@ the need is real, but it does not scale by hand.
   commits on any cross-language/cross-module anchor reference.
 - RepairTarget must stay repair METADATA only (never a gate input). Archived PRDs stay
   excluded from the anchor scan.
+
+## Review notes (codex design adversarial pass, 2026-06-25)
+
+- Fix before implementation: live-doc Markdown parser must not treat syntax examples as real
+  anchors.
+- Fix before implementation: do not dogfood a `WORLD_BY_FAMILY` anchor unless constants are
+  intentionally added to deterministic symbol facts.
+- Fix before implementation: RepairTarget must be visible in `codas check` human output, not only
+  JSON/preflight.
+- Fix before implementation: empty/misspelled live-doc globs must not silently disable gate
+  declarations.
+- Clarification: SessionStart preflight is a helpful carrier, but failed `codas check` output is
+  the primary commit-time repair carrier.

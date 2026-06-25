@@ -22,6 +22,14 @@ def print_findings(findings: list[Finding]) -> None:
                 print(f"  Evidence: {location}")
         if finding.recommendation:
             print(f"  Fix: {finding.recommendation}")
+        repair_target = finding.meta.get("repair_target")
+        if isinstance(repair_target, dict):
+            old_node = _node_value(repair_target.get("old_node"))
+            best_node = _node_value(repair_target.get("best_match_new_node"))
+            action = repair_target.get("action")
+            if old_node:
+                suffix = f" -> likely {best_node}" if best_node else " -> no deterministic match"
+                print(f"  RepairTarget: {old_node}{suffix} ({action})")
         print()
 
 
@@ -47,6 +55,23 @@ def print_context_pack(pack: dict) -> None:
     digest = pack.get("digest")
     if digest:
         _print_digest(digest)
+
+    repair_targets = pack.get("repair_targets") or []
+    if repair_targets:
+        print("Repair targets:")
+        for target in repair_targets:
+            best = target.get("best_match_new_node") or "no deterministic match"
+            print(
+                f"  - {target['source']}:{target['line']} "
+                f"{target['old_node']} -> {best} ({target['action']})"
+            )
+
+
+def _node_value(value: object) -> str | None:
+    if isinstance(value, dict):
+        raw = value.get("value")
+        return raw if isinstance(raw, str) else None
+    return None
 
 
 def _print_digest(digest: dict) -> None:

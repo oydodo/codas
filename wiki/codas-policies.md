@@ -20,13 +20,23 @@ Codas dogfoods this layer on itself: `policy_registry` enforces set-equality bet
 
 ## Modules & symbols
 
+### `src/codas/policies/anchor_nodes.py`
+
+- `anchor_call_key` *(function)*
+- `anchor_symbol_node` *(function)*
+
 ### `src/codas/policies/code_anchor.py`
 
 - `_add_path_nodes` *(function)*
+- `_best_call_candidate` *(function)*
+- `_best_symbol_candidate` *(function)*
+- `_repair_payload` *(function)*
+- `_repair_target` *(function)*
 - `check_code_anchor` *(function)*
 
 ### `src/codas/policies/config_sources.py`
 
+- `_check_anchor_live_documents` *(function)*
 - `_rel` *(function)*
 - `check_config_sources` *(function)*
 
@@ -65,12 +75,18 @@ Codas dogfoods this layer on itself: `policy_registry` enforces set-equality bet
 
 ### `src/codas/policies/fact_coupling.py`
 
+- `_Obligation` *(class)*
 - `_any_match` *(function)*
 - `_delta_has_match` *(function)*
+- `_derived_obligations` *(function)*
 - `_malformed` *(function)*
+- `_manual_obligations` *(function)*
 - `_module_and_identity` *(function)*
 - `_norm` *(function)*
+- `_obligation_key` *(function)*
+- `_obligation_matches` *(function)*
 - `_schema_problem` *(function)*
+- `_source_file_path` *(function)*
 - `_stream` *(function)*
 - `_under` *(function)*
 - `check_fact_coupling` *(function)*
@@ -132,89 +148,94 @@ Codas dogfoods this layer on itself: `policy_registry` enforces set-equality bet
 
 ```mermaid
 graph LR
-  n0["src/codas/config/loader.py"]
-  n1["src/codas/core/models.py"]
-  n2["src/codas/facts/context.py"]
-  n3["src/codas/policies/code_anchor.py"]
-  n4["src/codas/policies/config_sources.py"]
-  n5["src/codas/policies/dependency_direction.py"]
-  n6["src/codas/policies/deprecated_path.py"]
-  n7["src/codas/policies/document_set.py"]
-  n8["src/codas/policies/dogfooding.py"]
-  n9["src/codas/policies/duplicate_implementation.py"]
-  n10["src/codas/policies/duplicate_symbol.py"]
-  n11["src/codas/policies/fact_coupling.py"]
-  n12["src/codas/policies/generated_wiki_drift.py"]
-  n13["src/codas/policies/missing_owner.py"]
-  n14["src/codas/policies/policy_registry.py"]
-  n15["src/codas/policies/program_plan.py"]
-  n16["src/codas/policies/stale_claim.py"]
-  n17["src/codas/policies/stale_html_claim.py"]
-  n18["src/codas/policies/stale_wiki_claim.py"]
-  n19["src/codas/policies/structure_drift.py"]
-  n20["src/codas/policies/structure_map.py"]
-  n21["src/codas/policies/trellis_context.py"]
-  n22["src/codas/policies/waivers.py"]
-  n23["src/codas/structure/document_loader.py"]
-  n24["src/codas/structure/index.py"]
-  n25["src/codas/structure/loader.py"]
-  n26["src/codas/structure/models.py"]
-  n27["src/codas/structure/program_loader.py"]
-  n3 --> n1
-  n3 --> n2
-  n4 --> n0
-  n4 --> n1
-  n5 --> n1
+  n0["src/codas/config/anchors.py"]
+  n1["src/codas/config/loader.py"]
+  n2["src/codas/core/models.py"]
+  n3["src/codas/facts/context.py"]
+  n4["src/codas/policies/anchor_nodes.py"]
+  n5["src/codas/policies/code_anchor.py"]
+  n6["src/codas/policies/config_sources.py"]
+  n7["src/codas/policies/dependency_direction.py"]
+  n8["src/codas/policies/deprecated_path.py"]
+  n9["src/codas/policies/document_set.py"]
+  n10["src/codas/policies/dogfooding.py"]
+  n11["src/codas/policies/duplicate_implementation.py"]
+  n12["src/codas/policies/duplicate_symbol.py"]
+  n13["src/codas/policies/fact_coupling.py"]
+  n14["src/codas/policies/generated_wiki_drift.py"]
+  n15["src/codas/policies/missing_owner.py"]
+  n16["src/codas/policies/policy_registry.py"]
+  n17["src/codas/policies/program_plan.py"]
+  n18["src/codas/policies/stale_claim.py"]
+  n19["src/codas/policies/stale_html_claim.py"]
+  n20["src/codas/policies/stale_wiki_claim.py"]
+  n21["src/codas/policies/structure_drift.py"]
+  n22["src/codas/policies/structure_map.py"]
+  n23["src/codas/policies/trellis_context.py"]
+  n24["src/codas/policies/waivers.py"]
+  n25["src/codas/structure/document_loader.py"]
+  n26["src/codas/structure/index.py"]
+  n27["src/codas/structure/loader.py"]
+  n28["src/codas/structure/models.py"]
+  n29["src/codas/structure/program_loader.py"]
   n5 --> n2
-  n5 --> n24
-  n5 --> n25
+  n5 --> n3
+  n5 --> n4
   n6 --> n0
   n6 --> n1
-  n6 --> n24
-  n6 --> n25
-  n7 --> n0
-  n7 --> n1
-  n7 --> n23
-  n8 --> n0
+  n6 --> n2
+  n7 --> n2
+  n7 --> n3
+  n7 --> n26
+  n7 --> n27
   n8 --> n1
-  n9 --> n0
+  n8 --> n2
+  n8 --> n26
+  n8 --> n27
   n9 --> n1
   n9 --> n2
+  n9 --> n25
   n10 --> n1
   n10 --> n2
-  n11 --> n0
   n11 --> n1
   n11 --> n2
-  n12 --> n1
+  n11 --> n3
   n12 --> n2
-  n12 --> n25
-  n12 --> n27
-  n13 --> n0
+  n12 --> n3
   n13 --> n1
-  n13 --> n24
-  n13 --> n25
-  n13 --> n26
-  n14 --> n0
-  n14 --> n1
+  n13 --> n2
+  n13 --> n3
+  n13 --> n4
   n14 --> n2
-  n15 --> n0
+  n14 --> n3
+  n14 --> n27
+  n14 --> n29
   n15 --> n1
+  n15 --> n2
+  n15 --> n26
   n15 --> n27
+  n15 --> n28
   n16 --> n1
   n16 --> n2
+  n16 --> n3
   n17 --> n1
   n17 --> n2
-  n18 --> n1
+  n17 --> n29
   n18 --> n2
-  n18 --> n7
-  n19 --> n0
-  n19 --> n1
-  n19 --> n24
-  n19 --> n25
-  n20 --> n0
-  n20 --> n1
-  n20 --> n25
-  n21 --> n0
+  n18 --> n3
+  n19 --> n2
+  n19 --> n3
+  n20 --> n2
+  n20 --> n3
+  n20 --> n9
   n21 --> n1
+  n21 --> n2
+  n21 --> n26
+  n21 --> n27
   n22 --> n1
+  n22 --> n2
+  n22 --> n27
+  n23 --> n1
+  n23 --> n2
+  n24 --> n2
 ```

@@ -39,6 +39,7 @@ class CodasConfig:
     raw: dict[str, Any]
     authoritative_sources: tuple[str, ...] = ()
     supporting_sources: tuple[str, ...] = ()
+    anchor_live_documents: tuple[str, ...] = ()
     workflow_adapter: str | None = None
     workflow_root: str | None = None
     workflow_task_globs: tuple[str, ...] = ()
@@ -49,11 +50,13 @@ class CodasConfig:
 def load_codas_config(path: Path) -> CodasConfig:
     raw = load_yaml_mapping(path)
     constraint_sources = _mapping(raw.get("constraint_sources"))
+    anchors = _mapping(raw.get("anchors"))
     workflow = _mapping(raw.get("workflow"))
     dogfooding = _mapping(raw.get("dogfooding"))
 
     authoritative = _string_list(constraint_sources.get("authoritative"))
     supporting = _string_list(constraint_sources.get("supporting"))
+    live_documents = _string_list(anchors.get("live_documents"))
     task_globs = _string_list(workflow.get("task_globs"))
 
     return CodasConfig(
@@ -61,6 +64,7 @@ def load_codas_config(path: Path) -> CodasConfig:
         raw=raw,
         authoritative_sources=tuple(authoritative),
         supporting_sources=tuple(supporting),
+        anchor_live_documents=tuple(live_documents),
         workflow_adapter=_optional_str(workflow.get("adapter")),
         workflow_root=_optional_str(workflow.get("root")),
         workflow_task_globs=tuple(task_globs),

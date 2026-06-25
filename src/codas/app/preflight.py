@@ -8,11 +8,13 @@ from codas.app.provenance import provenance_block
 from codas.app.wiki import _owner_index, _owning, _under_any, product_roots
 from codas.config.loader import load_codas_config, load_policies
 from codas.facts.context import build_scan_context
+from codas.policies.code_anchor import check_code_anchor
 
 # Cap on reuse-candidate symbols surfaced in the digest, so a task touching a large unit does
 # not flood the session-start pack; a `truncated` flag + total keep the cut visible (no silent
 # truncation). The full set is always queryable via `codas query symbols`.
 _REUSE_CAP = 80
+_REPAIR_TARGET_CAP = 20
 
 
 def _build_digest(
@@ -135,6 +137,7 @@ def build_context_pack(repo: Path, task_id: str | None = None) -> dict:
         else None
     )
     declared = policies_raw.get("policies", {}) or {}
+    repair_targets = _repair_targets(ctx)
 
     return {
         "schema_version": 1,
@@ -158,8 +161,39 @@ def build_context_pack(repo: Path, task_id: str | None = None) -> dict:
         "digest": _build_digest(
             repo, inventory, task, ctx.changed_paths(), product_root_prefixes
         ),
+        "repair_targets": repair_targets,
         # Same single inventory snapshot as the task facts above -> task and
         # inventory_hash can never disagree; provenance_block keeps the shape shared
         # with compute_provenance.
         "provenance": provenance_block(render_inventory_json(inventory), policies_raw),
     }
+
+
+def _repair_targets(ctx) -> list[dict[str, object]]:
+    targets: list[dict[str, object]] = []
+    for finding in check_code_anchor(ctx):
+        repair = finding.meta.get("repair_target")
+        if not isinstance(repair, dict) or not finding.evidence:
+            continue
+        evidence = finding.evidence[0]
+        old_node = _repair_value(repair.get("old_node"))
+        if old_node is None:
+            continue
+        targets.append(
+            {
+                "source": evidence.path,
+                "line": evidence.line or 0,
+                "old_node": old_node,
+                "best_match_new_node": _repair_value(repair.get("best_match_new_node")),
+                "action": repair.get("action") or "",
+            }
+        )
+    targets.sort(key=lambda item: (str(item["source"]), int(item["line"]), str(item["old_node"])))
+    return targets[:_REPAIR_TARGET_CAP]
+
+
+def _repair_value(value: object) -> str | None:
+    if isinstance(value, dict):
+        raw = value.get("value")
+        return raw if isinstance(raw, str) else None
+    return None

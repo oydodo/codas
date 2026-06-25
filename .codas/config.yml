@@ -38,6 +38,13 @@ constraint_sources:
     - src/**/*.py
     - scripts/*
 
+anchors:
+  live_documents:
+    - docs/codas-design.html
+    - docs/codas-implementation-plan.html
+    - .trellis/tasks/*/prd.md
+    - .trellis/tasks/*/design.md
+
 workflow:
   adapter: trellis
   root: .trellis

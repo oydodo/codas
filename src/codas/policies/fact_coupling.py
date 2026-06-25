@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import fnmatch
+from dataclasses import dataclass
 
 from codas.config.loader import ConfigLoadError, load_claims
 from codas.core.models import Evidence, Finding
 from codas.facts.context import ScanContext
+from codas.policies.anchor_nodes import anchor_call_key, anchor_symbol_node
 
 CLAIMS_SOURCE = ".codas/claims.yml"
 
@@ -23,6 +25,21 @@ _VALID_KINDS = (
     "call_added",
     "call_removed",
 )
+
+
+@dataclass(frozen=True)
+class _Obligation:
+    kind: str
+    scope: str
+    name: str | None
+    requirement: str
+    evidence_path: str
+    evidence_line: int | None
+    detail: str
+    owner: str = ""
+    reason: str = ""
+    call_key: tuple[str, str, str, str, str, str] | None = None
+    origin: str = "manual"
 
 
 def check_fact_coupling(ctx: ScanContext) -> list[Finding]:
@@ -72,67 +89,89 @@ def check_fact_coupling(ctx: ScanContext) -> list[Finding]:
     a parse failure yields ``[]`` because ``duplicate_implementation`` already owns the
     canonical claims-load-error finding. Deterministic (total-key sort).
     """
+    findings: list[Finding] = []
+    obligations: dict[tuple, _Obligation] = {}
     claims_path = ctx.repo / ".codas" / "claims.yml"
-    if not claims_path.exists():
-        return []
-    try:
-        claims_doc = load_claims(claims_path)
-    except ConfigLoadError:
-        return []  # duplicate_implementation owns the claims-load-error finding
+    if claims_path.exists():
+        try:
+            claims_doc = load_claims(claims_path)
+        except ConfigLoadError:
+            claims_doc = None  # duplicate_implementation owns the claims-load-error finding
+        if claims_doc is not None:
+            couplings = claims_doc.get("fact_couplings")
+            if couplings is not None and not isinstance(couplings, list):
+                findings.append(_malformed("`fact_couplings` must be a list"))
+            elif isinstance(couplings, list):
+                for index, entry in enumerate(couplings):
+                    problem = _schema_problem(entry)
+                    if problem is not None:
+                        findings.append(_malformed(f"fact_couplings[{index}]: {problem}"))
+                        continue
+                    for obligation in _manual_obligations(entry):
+                        obligations[_obligation_key(obligation)] = obligation
 
-    couplings = claims_doc.get("fact_couplings")
-    if couplings is None:
-        return []
-    if not isinstance(couplings, list):
-        return [_malformed("`fact_couplings` must be a list")]
+    for malformed in ctx.live_doc_anchor_claims().malformed:
+        findings.append(
+            Finding(
+                severity="error",
+                check_id="fact-coupling",
+                message=f"Malformed live-doc anchor declaration: {malformed.detail}",
+                evidence=[
+                    Evidence(
+                        path=malformed.source,
+                        line=malformed.line,
+                        detail=malformed.detail,
+                    )
+                ],
+                recommendation="Fix or remove the malformed live-doc anchor line.",
+                meta={"origin": "live_doc_anchor"},
+            )
+        )
+
+    for obligation in _derived_obligations(ctx):
+        obligations.setdefault(_obligation_key(obligation), obligation)
 
     delta = ctx.fact_delta()
     changed = ctx.changed_paths()
 
-    findings: list[Finding] = []
-    for index, entry in enumerate(couplings):
-        problem = _schema_problem(entry)
-        if problem is not None:
-            findings.append(_malformed(f"fact_couplings[{index}]: {problem}"))
-            continue
-        when = entry["when_fact"]
-        kind, scope, name = when["kind"], _norm(when["scope"]), when.get("name")
-        if not _delta_has_match(delta, kind, scope, name):
+    for obligation in obligations.values():
+        if not _obligation_matches(delta, obligation):
             continue  # watched fact-delta empty -> coupling dormant
-        for requirement in entry["requires"]:
-            if _any_match(changed, _norm(requirement)):
-                continue
-            label = f"a `{kind}` fact under '{scope}'"
-            if name:
-                label += f" matching '{name}'"
-            findings.append(
-                Finding(
-                    severity="error",
-                    check_id="fact-coupling",
-                    message=(
-                        f"{label} requires a co-update of '{requirement}', which is "
-                        "not present in this change"
-                    ),
-                    evidence=[
-                        Evidence(
-                            path=CLAIMS_SOURCE,
-                            detail=f"fact_couplings[{kind} @ {scope}] -> {requirement}",
-                        )
-                    ],
-                    recommendation=(
-                        "Update the required companion in the same change, or revise or "
-                        "justify the coupling in .codas/claims.yml."
-                    ),
-                    meta={
-                        "kind": kind,
-                        "scope": scope,
-                        "name": name or "",
-                        "requires": requirement,
-                        "owner": entry.get("owner") or "",
-                        "reason": entry.get("reason") or "",
-                    },
-                )
+        if _any_match(changed, _norm(obligation.requirement)):
+            continue
+        label = f"a `{obligation.kind}` fact under '{obligation.scope}'"
+        if obligation.name:
+            label += f" matching '{obligation.name}'"
+        findings.append(
+            Finding(
+                severity="error",
+                check_id="fact-coupling",
+                message=(
+                    f"{label} requires a co-update of '{obligation.requirement}', which is "
+                    "not present in this change"
+                ),
+                evidence=[
+                    Evidence(
+                        path=obligation.evidence_path,
+                        line=obligation.evidence_line,
+                        detail=obligation.detail,
+                    )
+                ],
+                recommendation=(
+                    "Update the required companion in the same change, or revise or justify "
+                    "the coupling declaration."
+                ),
+                meta={
+                    "kind": obligation.kind,
+                    "scope": obligation.scope,
+                    "name": obligation.name or "",
+                    "requires": obligation.requirement,
+                    "owner": obligation.owner,
+                    "reason": obligation.reason,
+                    "origin": obligation.origin,
+                },
             )
+        )
 
     findings.sort(
         key=lambda finding: (
@@ -143,6 +182,93 @@ def check_fact_coupling(ctx: ScanContext) -> list[Finding]:
         )
     )
     return findings
+
+
+def _manual_obligations(entry: dict) -> list[_Obligation]:
+    when = entry["when_fact"]
+    kind, scope, name = when["kind"], _norm(when["scope"]), when.get("name")
+    obligations = []
+    for requirement in entry["requires"]:
+        obligations.append(
+            _Obligation(
+                kind=kind,
+                scope=scope,
+                name=name,
+                requirement=requirement,
+                evidence_path=CLAIMS_SOURCE,
+                evidence_line=None,
+                detail=f"fact_couplings[{kind} @ {scope}] -> {requirement}",
+                owner=entry.get("owner") or "",
+                reason=entry.get("reason") or "",
+            )
+        )
+    return obligations
+
+
+def _derived_obligations(ctx: ScanContext) -> list[_Obligation]:
+    out: list[_Obligation] = []
+    for claim in ctx.live_doc_anchor_claims().claims:
+        if claim.kind == "defines":
+            symbol = anchor_symbol_node(claim.subject)
+            if symbol is None:
+                continue
+            module, name = symbol
+            for kind in ("symbol_added", "symbol_removed"):
+                out.append(
+                    _Obligation(
+                        kind=kind,
+                        scope=module,
+                        name=name,
+                        requirement=claim.source,
+                        evidence_path=claim.source,
+                        evidence_line=claim.line,
+                        detail=f"{claim.kind}: {claim.subject}",
+                        origin="live_doc_anchor",
+                    )
+                )
+        elif claim.kind == "calls":
+            call_key = anchor_call_key(claim.subject, claim.object)
+            if call_key is None:
+                continue
+            for kind in ("call_added", "call_removed"):
+                out.append(
+                    _Obligation(
+                        kind=kind,
+                        scope=call_key[0],
+                        name=call_key[5],
+                        requirement=claim.source,
+                        evidence_path=claim.source,
+                        evidence_line=claim.line,
+                        detail=f"calls: {claim.subject} -> {claim.object}",
+                        call_key=call_key,
+                        origin="live_doc_anchor",
+                    )
+                )
+        elif claim.kind == "contains" and _source_file_path(claim.subject):
+            for kind in ("symbol_added", "symbol_removed"):
+                out.append(
+                    _Obligation(
+                        kind=kind,
+                        scope=claim.subject,
+                        name="[!_]*",
+                        requirement=claim.source,
+                        evidence_path=claim.source,
+                        evidence_line=claim.line,
+                        detail=f"contains: {claim.subject}",
+                        origin="live_doc_anchor",
+                    )
+                )
+    return out
+
+
+def _obligation_key(obligation: _Obligation) -> tuple:
+    return (
+        obligation.kind,
+        obligation.scope,
+        obligation.name or "",
+        obligation.requirement,
+        obligation.call_key or (),
+    )
 
 
 def _schema_problem(entry: object) -> str | None:
@@ -193,6 +319,12 @@ def _delta_has_match(delta, kind: str, scope: str, name: str | None) -> bool:
     return False
 
 
+def _obligation_matches(delta, obligation: _Obligation) -> bool:
+    if obligation.call_key is not None:
+        return obligation.call_key in _stream(delta, obligation.kind)
+    return _delta_has_match(delta, obligation.kind, obligation.scope, obligation.name)
+
+
 def _stream(delta, kind: str) -> tuple:
     return {
         "symbol_added": delta.symbols_added,
@@ -223,6 +355,10 @@ def _under(path: str, scope: str) -> bool:
 def _any_match(paths: tuple[str, ...], pattern: str) -> bool:
     """True if any changed path equals or fnmatch-globs ``pattern`` (``*`` spans ``/``)."""
     return any(path == pattern or fnmatch.fnmatch(path, pattern) for path in paths)
+
+
+def _source_file_path(node: str) -> bool:
+    return "::" not in node and node.endswith(".py")
 
 
 def _malformed(detail: str) -> Finding:
