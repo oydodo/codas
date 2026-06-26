@@ -2,7 +2,7 @@
 
 Status: DECISION RECORD (directions, not yet built). Consolidates and refines the open
 questions in `docs/codas-fact-claim-maintenance-milestone.md`. Companion visuals:
-`codas-architecture.html` + `codas-concept-map.html` (repo root). Owner: Codas Core.
+`docs/codas-architecture.html` + `docs/codas-concept-map.html` (docs). Owner: Codas Core.
 
 This captures a long design dialogue. Tables first (for review), then the reasoning chains
 that future sessions should not re-derive.

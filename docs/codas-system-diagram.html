@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Codas 系统图 — 从 code / fact / claim 逐层构建</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#30363d;
+    --ink:#e6edf3; --dim:#8b949e; --faint:#6e7681;
+    --code:#9ca3af;     /* 灰 — 代码，地面真相 */
+    --fact:#22d3ee;     /* 青 — 事实，开放世界 */
+    --claim:#f59e0b;    /* 琥珀 — 主张，人类意图 */
+    --config:#a78bfa;   /* 紫 — 配置 */
+    --policy:#34d399;   /* 绿 — 策略 */
+    --gate:#f87171;     /* 红 — 闸门阻断 */
+    --inject:#60a5fa;   /* 蓝 — 注入 */
+    --mono:'SF Mono',ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#161d2b 0%,var(--bg) 60%);
+       color:var(--ink);font:15px/1.6 -apple-system,'PingFang SC','Microsoft YaHei',Segoe UI,sans-serif;
+       padding:0 0 120px}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 28px}
+  header{padding:54px 0 18px}
+  h1{font-size:30px;margin:0 0 8px;letter-spacing:-.5px}
+  h1 .k{color:var(--code)} h1 .a{color:var(--fact)} h1 .c{color:var(--claim)}
+  .sub{color:var(--dim);font-size:15px;max-width:760px}
+  .sub code{color:var(--ink);background:#21262d;padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:13px}
+
+  /* 图例 */
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 8px}
+  .chip{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line);
+        padding:5px 11px;border-radius:999px;font-size:12.5px;color:var(--dim)}
+  .dot{width:9px;height:9px;border-radius:50%}
+
+  /* 步骤导航 */
+  .nav{position:sticky;top:0;z-index:20;background:rgba(13,17,23,.86);backdrop-filter:blur(8px);
+       border-bottom:1px solid var(--line);margin:26px 0 0;padding:12px 0}
+  .nav .wrap{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .nav button{background:var(--panel);border:1px solid var(--line);color:var(--dim);
+        padding:7px 13px;border-radius:8px;font-size:13px;cursor:pointer;transition:.15s;font-family:inherit}
+  .nav button:hover{border-color:var(--faint);color:var(--ink)}
+  .nav button.on{background:#1f6feb22;border-color:#1f6feb;color:#fff}
+  .nav .spacer{flex:1}
+  .nav .meta{color:var(--faint);font-size:12px;font-family:var(--mono)}
+
+  /* 步骤卡 */
+  .step{margin:30px 0;padding:26px 28px;background:var(--panel);border:1px solid var(--line);
+        border-radius:16px;position:relative;transition:.3s;overflow:hidden}
+  .step.dim{opacity:.32;filter:saturate(.4)}
+  .step .num{position:absolute;top:18px;right:22px;font:700 52px/1 var(--mono);color:#222b38;letter-spacing:-2px}
+  .step h2{margin:0 0 4px;font-size:20px;display:flex;align-items:center;gap:10px}
+  .step h2 .tag{font:600 11px var(--mono);padding:3px 8px;border-radius:6px;letter-spacing:.5px}
+  .step .lead{color:var(--dim);margin:0 0 18px;max-width:780px;font-size:14px}
+  .step .lead b{color:var(--ink);font-weight:600}
+
+  /* 图盒子 / 流程 */
+  .flow{display:flex;flex-direction:column;gap:0;align-items:flex-start;font-family:var(--mono);font-size:13px}
+  .row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .box{border:1.5px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--panel2);
+       min-width:90px;position:relative}
+  .box .t{font-weight:700;font-size:13.5px}
+  .box .d{color:var(--dim);font-size:11.5px;margin-top:2px;font-family:inherit}
+  .box .n{position:absolute;top:-9px;right:-9px;background:var(--bg);border:1px solid currentColor;
+          border-radius:999px;font-size:11px;padding:1px 7px;font-weight:700}
+  .box.code{border-color:var(--code);color:var(--code)}
+  .box.fact{border-color:var(--fact);color:var(--fact)}
+  .box.claim{border-color:var(--claim);color:var(--claim)}
+  .box.config{border-color:var(--config);color:var(--config)}
+  .box.policy{border-color:var(--policy);color:var(--policy)}
+  .box.gate{border-color:var(--gate);color:var(--gate)}
+  .box.inject{border-color:var(--inject);color:var(--inject)}
+  .box .t,.box .d{color:var(--ink)}
+  .box .d{color:var(--dim)}
+  .arr{color:var(--faint);font-size:18px;padding:0 2px;white-space:nowrap}
+  .arr small{font-family:var(--mono);font-size:10.5px;color:var(--faint);display:block;text-align:center;line-height:1.1;margin-bottom:2px}
+  .down{margin:6px 0 6px 30px;color:var(--faint);font-size:16px}
+  .down small{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-left:8px}
+
+  .anchor{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .note{margin-top:16px;padding:12px 15px;background:#0f1620;border-left:3px solid var(--fact);
+        border-radius:0 8px 8px 0;font-size:13px;color:var(--dim)}
+  .note b{color:var(--fact)}
+  .note.warn{border-left-color:var(--claim)} .note.warn b{color:var(--claim)}
+  .note.red{border-left-color:var(--gate)} .note.red b{color:var(--gate)}
+
+  table.pol{width:100%;border-collapse:collapse;margin-top:14px;font-size:12.5px}
+  table.pol td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.pol td:first-child{font-family:var(--mono);color:var(--policy);white-space:nowrap}
+  table.pol td.mid{color:var(--dim);font-family:var(--mono);font-size:11.5px}
+  table.pol td.r{color:var(--gate);font-family:var(--mono);text-align:right;white-space:nowrap}
+
+  .stack{display:flex;flex-direction:column;gap:7px}
+  .li{font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+  .li b{color:var(--ink)} .li .k{color:var(--claim)}
+
+  /* 全图 */
+  .final{background:linear-gradient(160deg,#161b22,#10151d);border:1px solid var(--fact);}
+  .one{margin-top:22px;padding:20px 24px;background:#0d1117;border:1px dashed var(--faint);border-radius:12px;
+       font-size:16px;line-height:1.8}
+  .one b.f{color:var(--fact)} .one b.c{color:var(--claim)} .one b.g{color:var(--gate)} .one b.i{color:var(--inject)}
+  footer{color:var(--faint);text-align:center;margin-top:50px;font-size:12px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+<header class="wrap">
+  <h1>Codas 系统图 · 从 <span class="k">code</span> → <span class="a">fact</span> → <span class="c">claim</span> 逐层构建</h1>
+  <p class="sub">Codas = <b>Code Atlas System</b>。核心思想：把一个仓库的“真相”分成三类，再用策略闸门强制三者一致。下面 6 步累加，每步在上一步基础上加一层。数字来自当前仓库实时图谱（<code>codas schema</code>）。</p>
+  <div class="legend">
+    <span class="chip"><span class="dot" style="background:var(--code)"></span>CODE 代码 · 地面真相</span>
+    <span class="chip"><span class="dot" style="background:var(--fact)"></span>FACT 事实 · 开放世界（可靠下界）</span>
+    <span class="chip"><span class="dot" style="background:var(--claim)"></span>CLAIM 主张 · 人写意图</span>
+    <span class="chip"><span class="dot" style="background:var(--config)"></span>CONFIG 配置 · 封闭世界</span>
+    <span class="chip"><span class="dot" style="background:var(--policy)"></span>POLICY 策略</span>
+    <span class="chip"><span class="dot" style="background:var(--gate)"></span>GATE 闸门 · 阻断提交</span>
+    <span class="chip"><span class="dot" style="background:var(--inject)"></span>INJECTION 注入 · 喂给 agent</span>
+  </div>
+</header>
+
+<nav class="nav"><div class="wrap">
+  <button data-s="1" class="on">1 三元真相</button>
+  <button data-s="2">2 代码→事实</button>
+  <button data-s="3">3 清单+哈希</button>
+  <button data-s="4">4 主张+配置</button>
+  <button data-s="5">5 策略</button>
+  <button data-s="6">6 闸门+注入</button>
+  <span class="spacer" style="flex:1"></span>
+  <button id="all" class="on">显示全部</button>
+  <span class="meta">inventory sha256:028e14…</span>
+</div></nav>
+
+<main class="wrap">
+
+  <!-- STEP 1 -->
+  <section class="step" data-step="1">
+    <div class="num">1</div>
+    <h2><span class="tag" style="background:#21262d;color:var(--ink)">基石</span>三类真相</h2>
+    <p class="lead">为什么要分三类？<b>代码是真相但是“哑”的</b>。有些东西能从代码机械推导（谁调用谁 = 事实）；有些<b>推导不出来</b>——“这两个重复函数是故意的”“X 改了 Y 必须跟着改”——这只能由<b>人来断言 = 主张</b>。机器证不了的，人补上。</p>
+    <div class="flow">
+      <div class="row" style="margin-left:120px"><div class="box" style="border-color:var(--faint)"><div class="t">THE REPO 仓库</div></div></div>
+      <div class="down">└─┬─┐ 分流</div>
+      <div class="row">
+        <div class="box code"><div class="t">CODE 代码</div><div class="d">.py 文件 · 地面真相 · 无结构</div></div>
+        <span class="arr">　</span>
+        <div class="box fact"><div class="t">FACT 事实</div><div class="d">机械推导 · 可靠但不完整</div></div>
+        <span class="arr">　</span>
+        <div class="box claim"><div class="t">CLAIM 主张</div><div class="d">人写意图 · 事实证不了的关系/义务</div></div>
+      </div>
+    </div>
+    <div class="note"><b>一句话</b>：CODE 是“有什么”，FACT 是“能推导出什么”，CLAIM 是“人断言了什么”。整个 Codas 就建在这三者的区分上。</div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" data-step="2">
+    <div class="num">2</div>
+    <h2><span class="tag" style="background:#0d2b30;color:var(--fact)">提取</span>代码 → 事实</h2>
+    <p class="lead">扫描仓库，<code>ast.parse</code> 每个 .py（一次运行只解析一遍），投影出几族事实。全部是<b>纯函数、确定性、零 LLM</b>。</p>
+    <div class="flow">
+      <div class="row"><div class="box code"><div class="t">CODE .py</div></div>
+        <span class="arr"><small>git ls-files<br>filter_to_roots</small>→</span>
+        <div class="box" style="border-color:var(--faint)"><div class="t">ParsedModules</div><div class="d">ast.parse · 一次/运行</div></div>
+      </div>
+      <div class="down">└─ 投影出事实族 ↓</div>
+      <div class="row">
+        <div class="box fact"><div class="n">862</div><div class="t">symbols</div><div class="d">class/fn 定义</div></div>
+        <div class="box fact"><div class="n">1048</div><div class="t">imports</div><div class="d">module→target 边</div></div>
+        <div class="box fact"><div class="n">1021</div><div class="t">calls</div><div class="d">caller→callee 边</div></div>
+      </div>
+    </div>
+    <p class="anchor" style="margin-top:12px">adapters/python_parse.py:46 · adapters/python.py:50,86 · adapters/callgraph.py:59 &nbsp;|&nbsp; calls 解析种类：direct / imported / module_attr / self_method</p>
+    <div class="note"><b>开放世界不变式</b>（仅代码事实）：<b>presence = 100% 可靠，absence = 未知</b>（Rice 定理：静态分析看不全动态调用）。所以事实 = <b>可靠下界</b>。推论：策略只对“存在”下结论，<b>从不</b>对“不存在”下结论 → 没有“死代码”闸门。<span class="anchor">facts/openworld.py</span></div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" data-step="3">
+    <div class="num">3</div>
+    <h2><span class="tag" style="background:#0d2b30;color:var(--fact)">冻结</span>事实 → 清单 + 哈希</h2>
+    <p class="lead">把所有事实族序列化成<b>一份确定性 JSON</b>（key 排序），取 sha256。这个哈希 = <b>新鲜度锚点</b>。</p>
+    <div class="flow">
+      <div class="row"><div class="box fact"><div class="t">所有事实族</div></div>
+        <span class="arr"><small>build_inventory<br>排序 JSON</small>→</span>
+        <div class="box fact"><div class="t">INVENTORY 清单</div><div class="d">确定性 · 可逐字节比对</div></div>
+        <span class="arr"><small>sha256</small>→</span>
+        <div class="box fact"><div class="t">source_inventory_hash</div><div class="d" style="font-family:var(--mono)">sha256:028e14…</div></div>
+      </div>
+    </div>
+    <p class="anchor" style="margin-top:12px">structure/inventory.py:26 · core/provenance.py:12</p>
+    <div class="note"><b>用途</b>：哈希被钉进生成的 wiki 页（<code>atlas:claims</code> 块）。事实一变 → 哈希变 → <code>generated_wiki_drift</code> 策略发现文档过期 = 报错。文档与事实绑死。</div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" data-step="4">
+    <div class="num">4</div>
+    <h2><span class="tag" style="background:#241a05;color:var(--claim)">人写</span>主张 + 配置（封闭世界）</h2>
+    <p class="lead">另一半，全是人写的 YAML/wiki。<b>封闭世界</b>：缺失即是证据（与事实正好相反）。</p>
+    <div class="row" style="gap:24px;align-items:flex-start">
+      <div class="box claim" style="flex:1;min-width:300px">
+        <div class="t">.codas/claims.yml · 主张</div>
+        <div class="stack" style="margin-top:8px">
+          <div class="li"><b class="k">duplicate_relationships</b> — symbol + canonical|variant|migration + modules[]</div>
+          <div class="li"><b class="k">fact_couplings</b> — when_fact(kind,scope) → requires[] 同改伴随文件</div>
+        </div>
+      </div>
+      <div class="box config" style="flex:1;min-width:300px">
+        <div class="t">.codas/*.yml · 配置</div>
+        <div class="stack" style="margin-top:8px">
+          <div class="li"><b>structure.yml</b> · 24 units {path, owner, must_not_depend_on}</div>
+          <div class="li"><b>program.yml</b> · 9 work-items {phase, status, exit_criteria}</div>
+          <div class="li"><b>documents.yml</b> · 必需文档角色 + 权威等级</div>
+          <div class="li"><b>wiki/**</b> · 49 wiki-claims + code-anchors</div>
+        </div>
+      </div>
+    </div>
+    <div class="note warn"><b>CLAIM ≠ CONFIG</b>：claim 是<b>关系断言</b>（策略本地加载，“是治理输入、不是被扫描的事实” <span class="anchor">duplicate_implementation.py:28</span>）；config 是<b>结构声明</b>（单元/属主/计划）。两者都封闭世界。</div>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="step" data-step="5">
+    <div class="num">5</div>
+    <h2><span class="tag" style="background:#06281c;color:var(--policy)">连接</span>事实 × 主张 → 策略 → 发现</h2>
+    <p class="lead">三者在这里汇合。策略 = 一个谓词，吃 (事实, 主张, 配置)，吐出 <b>Finding(严重度, 证据, 修复建议)</b>。共 25 条策略。</p>
+    <div class="flow">
+      <div class="row">
+        <div class="stack" style="gap:8px">
+          <div class="box fact"><div class="t">FACTS</div></div>
+          <div class="box claim"><div class="t">CLAIMS</div></div>
+          <div class="box config"><div class="t">CONFIG</div></div>
+        </div>
+        <span class="arr">→</span>
+        <div class="box policy"><div class="t">25 条 POLICY</div><div class="d">谓词函数</div></div>
+        <span class="arr">→</span>
+        <div class="box gate"><div class="t">[ Finding ]</div><div class="d">severity · evidence · fix</div></div>
+      </div>
+    </div>
+    <table class="pol">
+      <tr><td>dependency_direction</td><td class="mid">imports × structure.must_not_depend_on</td><td class="r">error</td></tr>
+      <tr><td>duplicate_implementation</td><td class="mid">symbols(同名跨 2+ 模块) × claims（主张可豁免）</td><td class="r">error</td></tr>
+      <tr><td>fact_coupling</td><td class="mid">fact_delta(HEAD↔工作树) × claims（delta 为空则休眠）</td><td class="r">error</td></tr>
+      <tr><td>generated_wiki_drift</td><td class="mid">inventory_hash × 已提交生成页</td><td class="r">error</td></tr>
+      <tr><td>missing_structure_owner</td><td class="mid">changed_file × structure.units</td><td class="r">error</td></tr>
+    </table>
+    <div class="note"><b>fact_coupling 关键</b>：只有被监视的事实<b>真的变了</b>（delta 非空）才触发。只改注释 = 零误报。</div>
+  </section>
+
+  <!-- STEP 6 -->
+  <section class="step" data-step="6">
+    <div class="num">6</div>
+    <h2><span class="tag" style="background:#2b0f0f;color:var(--gate)">收口</span>闸门 + 注入</h2>
+    <p class="lead">两条赛道：<b>闸门</b>管正确性（硬），<b>注入</b>管有效性（软）。</p>
+    <div class="flow">
+      <div class="row"><div class="box policy"><div class="t">codas check .</div><div class="d">1 次扫描 · 跑 25 策略</div></div>
+        <span class="arr">→</span>
+        <div class="box gate"><div class="t">有 error？</div></div>
+        <span class="arr"><small>yes</small>→</span>
+        <div class="box gate"><div class="t">exit ≠ 0</div><div class="d">git hook 阻断提交</div></div>
+      </div>
+      <div class="down" style="color:var(--policy)">no → ✓ green 放行</div>
+      <div class="row" style="margin-top:10px">
+        <div class="box inject"><div class="t">INJECTION 注入</div><div class="d">AGENTS.md 块 + preflight 摘要</div></div>
+        <span class="arr">→</span>
+        <div class="box inject"><div class="t">主 agent 在动手前先读事实</div><div class="d">preflight | query | impact | schema = agent 查活图谱的桌子</div></div>
+      </div>
+    </div>
+    <div class="note red"><b>两层正确性</b> — <b>GATE</b> = 机器能证的硬不变式（依赖方向、重复、漂移）；<b>INJECTION</b> = 机器证不了的承重项（放对子系统、语义复用、抽象层级）→ 在 agent 写之前喂给它。闸门兜底，注入预防。</div>
+  </section>
+
+  <!-- FINAL -->
+  <section class="step final" data-step="6">
+    <h2><span class="tag" style="background:#0d2b30;color:var(--fact)">全图</span>统一视图</h2>
+    <div class="flow" style="font-size:12.5px">
+      <div class="row">
+        <div class="box code"><div class="t">CODE</div></div>
+        <span class="arr"><small>extract</small>→</span>
+        <div class="box fact"><div class="t">FACTS</div><div class="d">开放世界 · 可靠下界</div></div>
+        <span class="arr"><small>serialize</small>→</span>
+        <div class="box fact"><div class="t">INVENTORY+hash</div></div>
+        <span class="arr">┐</span>
+      </div>
+      <div class="row" style="margin-left:auto">
+        <div class="box policy"><div class="t">POLICIES</div></div>
+        <span class="arr">→</span>
+        <div class="box gate"><div class="t">GATE 阻断提交</div></div>
+      </div>
+      <div class="row">
+        <div class="box claim" style="border-style:dashed"><div class="t">HUMAN</div></div>
+        <span class="arr"><small>author</small>→</span>
+        <div class="box claim"><div class="t">CLAIMS + CONFIG</div><div class="d">封闭世界 · 缺失即证据</div></div>
+        <span class="arr">┘ 汇入策略</span>
+        <span class="arr">└→</span>
+        <div class="box inject"><div class="t">INJECTION 预热 agent</div></div>
+      </div>
+    </div>
+    <div class="one">
+      Codas 把<b class="f">代码</b>变成可靠的事实，让<b class="c">人</b>断言事实证不了的东西，然后用闸门<b class="g">在提交前强制三者一致</b>——同时把同一批事实<b class="i">注入到编码 agent</b>，让它在闸门跑之前就把“放哪、复用、抽象”做对。
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">实时数据：symbols 862 · imports 1048 · calls 1021 · units 24 · work-items 9 · wiki-claims 49 · doc-claims 88 · html-claims 52 · tasks 82 &nbsp;|&nbsp; 源：codas schema</footer>
+
+<script>
+  const btns=[...document.querySelectorAll('.nav button[data-s]')];
+  const allBtn=document.getElementById('all');
+  const steps=[...document.querySelectorAll('.step')];
+  function focus(n){
+    allBtn.classList.remove('on');
+    btns.forEach(b=>b.classList.toggle('on',+b.dataset.s===n));
+    steps.forEach(s=>{
+      const sn=+s.dataset.step;
+      s.classList.toggle('dim', sn>n);  // 高于当前步 = 变暗（累加效果）
+    });
+    const tgt=steps.find(s=>+s.dataset.step===n);
+    if(tgt) tgt.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  function showAll(){
+    allBtn.classList.add('on');
+    btns.forEach(b=>b.classList.remove('on'));
+    steps.forEach(s=>s.classList.remove('dim'));
+  }
+  btns.forEach(b=>b.onclick=()=>focus(+b.dataset.s));
+  allBtn.onclick=showAll;
+</script>
+</body>
+</html>

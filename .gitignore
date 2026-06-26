@@ -12,3 +12,5 @@ build/
 .codas/.install-state.json
 .codas/.status-seen.json
 .codex/hooks.json
+.claude/settings.local.json
+.codegraph/

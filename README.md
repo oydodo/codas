@@ -17,6 +17,13 @@ state lives per-repo in `.codas/`. Requires Python 3.9+.
 pipx install codas        # isolated, recommended; or: pip install codas
 ```
 
+From a source checkout or GitHub URL before a registry release:
+
+```bash
+pipx install .
+pip install -e .
+```
+
 Then, in a repository you want Codas to govern:
 
 ```bash
@@ -31,6 +38,14 @@ Node-centric agent-coding ecosystem) is planned; today pip/pipx is the install p
 > The `PYTHONPATH=src python3 -m codas …` form used elsewhere in this README is for a
 > **source checkout** (developing Codas itself / dogfooding this repo), where Codas is
 > not on `PATH`. An installed `codas` needs no `PYTHONPATH`.
+
+## Repository Layout
+
+Codas uses the standard Python `src/` layout. Product code lives under
+`src/codas/`; tests live under `tests/`; governance state lives under `.codas/`;
+Trellis task state lives under `.trellis/`; generated Atlas book pages live under
+`wiki/`. Build outputs, bytecode caches, egg-info metadata, local CodeGraph data,
+and machine-local settings are ignored and should not be committed.
 
 ## Dogfooding
 

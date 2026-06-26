@@ -50,9 +50,9 @@ def render_workflow() -> str:
     Runs the bootstrap test gate + ``codas check`` + the freshness ``--verify``s on
     push / pull_request so a bad change OR a stale generated doc (the AGENTS.md governance
     block, the wiki book) fails CI. The ``--verify`` steps are the BINDING staleness gate
-    (``codas doctor`` only WARNS on staleness; CI is what fails). Uses the repo's
-    ``PYTHONPATH=src`` form (Codas is not yet a published package); a packaged install would
-    shorten these to ``codas <cmd>``. Deterministic, no timestamp.
+    (``codas doctor`` only WARNS on staleness; CI is what fails). Installs the
+    package from the checkout so CI verifies both the console script entry point and
+    the repository gate. Deterministic, no timestamp.
     """
     return (
         "name: codas\n"
@@ -68,15 +68,15 @@ def render_workflow() -> str:
         "        with:\n"
         '          python-version: "3.11"\n'
         "      - name: Install dependencies\n"
-        "        run: python -m pip install pyyaml\n"
+        "        run: python -m pip install -e .\n"
         "      - name: Bootstrap tests\n"
-        "        run: PYTHONPATH=src python -m unittest discover -s tests\n"
+        "        run: python -m unittest discover -s tests\n"
         "      - name: Codas check\n"
-        "        run: PYTHONPATH=src python -m codas check .\n"
+        "        run: codas check .\n"
         "      - name: Codas agents verify\n"
-        "        run: PYTHONPATH=src python -m codas agents --verify .\n"
+        "        run: codas agents --verify .\n"
         "      - name: Codas wiki verify\n"
-        "        run: PYTHONPATH=src python -m codas wiki --verify .\n"
+        "        run: codas wiki --verify .\n"
     )
 
 

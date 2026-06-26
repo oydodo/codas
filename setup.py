@@ -1,0 +1,35 @@
+from setuptools import find_packages, setup
+
+
+setup(
+    name="codas",
+    version="0.1.0",
+    description="Code Atlas System for coding-agent-maintained repositories.",
+    long_description=open("README.md", encoding="utf-8").read(),
+    long_description_content_type="text/markdown",
+    author="oydodo",
+    license="MIT",
+    python_requires=">=3.9",
+    package_dir={"": "src"},
+    packages=find_packages("src"),
+    package_data={"codas": ["presets/*.yml"]},
+    install_requires=["pyyaml>=6.0"],
+    extras_require={"swift": ["tree-sitter>=0.24", "tree-sitter-swift~=0.7"]},
+    entry_points={"console_scripts": ["codas=codas.__main__:main"]},
+    keywords=["agents", "architecture", "governance", "repository", "cli"],
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Environment :: Console",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Topic :: Software Development :: Quality Assurance",
+        "Topic :: Software Development :: Version Control :: Git",
+    ],
+)
