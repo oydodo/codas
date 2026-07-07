@@ -240,153 +240,155 @@ The third is byte-identical determinism. The Atlas pack, knowledge tree, generat
 
 ```mermaid
 graph LR
-  n0["src/codas/app/agent_docs.py"]
-  n1["src/codas/app/agents_block.py"]
-  n2["src/codas/app/book.py"]
-  n3["src/codas/app/calibrate.py"]
-  n4["src/codas/app/check.py"]
-  n5["src/codas/app/doctor.py"]
-  n6["src/codas/app/hooks.py"]
-  n7["src/codas/app/impact.py"]
-  n8["src/codas/app/init.py"]
-  n9["src/codas/app/inventory.py"]
-  n10["src/codas/app/paradigm.py"]
-  n11["src/codas/app/preflight.py"]
-  n12["src/codas/app/provenance.py"]
-  n13["src/codas/app/query.py"]
-  n14["src/codas/app/receipt.py"]
-  n15["src/codas/app/render_util.py"]
-  n16["src/codas/app/status.py"]
-  n17["src/codas/app/views.py"]
-  n18["src/codas/app/wiki.py"]
-  n19["src/codas/config/loader.py"]
-  n20["src/codas/core/models.py"]
-  n21["src/codas/core/provenance.py"]
-  n22["src/codas/core/receipt.py"]
-  n23["src/codas/facts/context.py"]
-  n24["src/codas/facts/openworld.py"]
-  n25["src/codas/integrations/agent_hook.py"]
-  n26["src/codas/integrations/claude.py"]
-  n27["src/codas/integrations/enforcement.py"]
-  n28["src/codas/integrations/hook_settings.py"]
-  n29["src/codas/integrations/install_state.py"]
-  n30["src/codas/integrations/registry.py"]
-  n31["src/codas/policies/code_anchor.py"]
-  n32["src/codas/policies/config_sources.py"]
-  n33["src/codas/policies/dependency_direction.py"]
-  n34["src/codas/policies/deprecated_path.py"]
-  n35["src/codas/policies/document_set.py"]
-  n36["src/codas/policies/dogfooding.py"]
-  n37["src/codas/policies/duplicate_implementation.py"]
-  n38["src/codas/policies/duplicate_symbol.py"]
-  n39["src/codas/policies/fact_coupling.py"]
-  n40["src/codas/policies/generated_wiki_drift.py"]
-  n41["src/codas/policies/missing_owner.py"]
-  n42["src/codas/policies/policy_registry.py"]
-  n43["src/codas/policies/program_plan.py"]
-  n44["src/codas/policies/stale_claim.py"]
-  n45["src/codas/policies/stale_html_claim.py"]
-  n46["src/codas/policies/stale_wiki_claim.py"]
-  n47["src/codas/policies/structure_drift.py"]
-  n48["src/codas/policies/structure_map.py"]
-  n49["src/codas/policies/trellis_context.py"]
-  n50["src/codas/policies/waivers.py"]
-  n51["src/codas/structure/document_loader.py"]
-  n52["src/codas/structure/inventory.py"]
-  n53["src/codas/structure/loader.py"]
-  n54["src/codas/structure/models.py"]
-  n55["src/codas/structure/program_loader.py"]
-  n0 --> n1
-  n0 --> n26
-  n1 --> n15
-  n1 --> n19
-  n1 --> n53
-  n1 --> n54
-  n2 --> n9
-  n2 --> n15
-  n2 --> n18
-  n2 --> n19
-  n2 --> n24
-  n3 --> n18
+  n0[".venv312-ciri-verify/lib/python3.12/site-packages/yaml/__init__.py"]
+  n1["src/codas/app/agent_docs.py"]
+  n2["src/codas/app/agents_block.py"]
+  n3["src/codas/app/book.py"]
+  n4["src/codas/app/calibrate.py"]
+  n5["src/codas/app/check.py"]
+  n6["src/codas/app/doctor.py"]
+  n7["src/codas/app/hooks.py"]
+  n8["src/codas/app/impact.py"]
+  n9["src/codas/app/init.py"]
+  n10["src/codas/app/inventory.py"]
+  n11["src/codas/app/paradigm.py"]
+  n12["src/codas/app/preflight.py"]
+  n13["src/codas/app/provenance.py"]
+  n14["src/codas/app/query.py"]
+  n15["src/codas/app/receipt.py"]
+  n16["src/codas/app/render_util.py"]
+  n17["src/codas/app/status.py"]
+  n18["src/codas/app/views.py"]
+  n19["src/codas/app/wiki.py"]
+  n20["src/codas/config/loader.py"]
+  n21["src/codas/core/models.py"]
+  n22["src/codas/core/provenance.py"]
+  n23["src/codas/core/receipt.py"]
+  n24["src/codas/facts/context.py"]
+  n25["src/codas/facts/openworld.py"]
+  n26["src/codas/integrations/agent_hook.py"]
+  n27["src/codas/integrations/claude.py"]
+  n28["src/codas/integrations/enforcement.py"]
+  n29["src/codas/integrations/hook_settings.py"]
+  n30["src/codas/integrations/install_state.py"]
+  n31["src/codas/integrations/registry.py"]
+  n32["src/codas/policies/code_anchor.py"]
+  n33["src/codas/policies/config_sources.py"]
+  n34["src/codas/policies/dependency_direction.py"]
+  n35["src/codas/policies/deprecated_path.py"]
+  n36["src/codas/policies/document_set.py"]
+  n37["src/codas/policies/dogfooding.py"]
+  n38["src/codas/policies/duplicate_implementation.py"]
+  n39["src/codas/policies/duplicate_symbol.py"]
+  n40["src/codas/policies/fact_coupling.py"]
+  n41["src/codas/policies/generated_wiki_drift.py"]
+  n42["src/codas/policies/missing_owner.py"]
+  n43["src/codas/policies/policy_registry.py"]
+  n44["src/codas/policies/program_plan.py"]
+  n45["src/codas/policies/stale_claim.py"]
+  n46["src/codas/policies/stale_html_claim.py"]
+  n47["src/codas/policies/stale_wiki_claim.py"]
+  n48["src/codas/policies/structure_drift.py"]
+  n49["src/codas/policies/structure_map.py"]
+  n50["src/codas/policies/trellis_context.py"]
+  n51["src/codas/policies/waivers.py"]
+  n52["src/codas/structure/document_loader.py"]
+  n53["src/codas/structure/inventory.py"]
+  n54["src/codas/structure/loader.py"]
+  n55["src/codas/structure/models.py"]
+  n56["src/codas/structure/program_loader.py"]
+  n1 --> n2
+  n1 --> n27
+  n2 --> n16
+  n2 --> n20
+  n2 --> n54
+  n2 --> n55
+  n3 --> n10
+  n3 --> n16
   n3 --> n19
-  n3 --> n23
-  n3 --> n24
+  n3 --> n20
+  n3 --> n25
   n4 --> n19
   n4 --> n20
-  n4 --> n23
-  n4 --> n31
-  n4 --> n32
-  n4 --> n33
-  n4 --> n34
-  n4 --> n35
-  n4 --> n36
-  n4 --> n37
-  n4 --> n38
-  n4 --> n39
-  n4 --> n40
-  n4 --> n41
-  n4 --> n42
-  n4 --> n43
-  n4 --> n44
-  n4 --> n45
-  n4 --> n46
-  n4 --> n47
-  n4 --> n48
-  n4 --> n49
-  n4 --> n50
-  n5 --> n1
-  n5 --> n19
-  n5 --> n23
-  n5 --> n26
-  n5 --> n27
-  n5 --> n29
-  n5 --> n30
+  n4 --> n24
+  n4 --> n25
+  n5 --> n20
+  n5 --> n21
+  n5 --> n24
+  n5 --> n32
+  n5 --> n33
+  n5 --> n34
+  n5 --> n35
+  n5 --> n36
+  n5 --> n37
+  n5 --> n38
+  n5 --> n39
+  n5 --> n40
+  n5 --> n41
+  n5 --> n42
+  n5 --> n43
+  n5 --> n44
+  n5 --> n45
+  n5 --> n46
+  n5 --> n47
+  n5 --> n48
+  n5 --> n49
+  n5 --> n50
   n5 --> n51
-  n5 --> n53
-  n5 --> n55
-  n6 --> n1
-  n6 --> n19
-  n6 --> n25
-  n6 --> n26
+  n6 --> n2
+  n6 --> n20
+  n6 --> n24
   n6 --> n27
   n6 --> n28
-  n6 --> n29
   n6 --> n30
-  n6 --> n53
-  n7 --> n19
-  n7 --> n23
-  n7 --> n24
-  n8 --> n10
-  n9 --> n23
-  n9 --> n52
-  n10 --> n19
-  n11 --> n2
-  n11 --> n9
-  n11 --> n12
-  n11 --> n18
-  n11 --> n19
-  n11 --> n23
-  n11 --> n31
-  n12 --> n9
+  n6 --> n31
+  n6 --> n52
+  n6 --> n54
+  n6 --> n56
+  n7 --> n2
+  n7 --> n20
+  n7 --> n26
+  n7 --> n27
+  n7 --> n28
+  n7 --> n29
+  n7 --> n30
+  n7 --> n31
+  n7 --> n54
+  n8 --> n20
+  n8 --> n24
+  n8 --> n25
+  n9 --> n11
+  n10 --> n24
+  n10 --> n53
+  n11 --> n0
+  n11 --> n20
+  n12 --> n3
+  n12 --> n10
+  n12 --> n13
   n12 --> n19
-  n12 --> n21
-  n12 --> n23
-  n13 --> n9
-  n14 --> n12
-  n14 --> n20
-  n14 --> n22
-  n16 --> n19
-  n16 --> n20
-  n16 --> n23
-  n16 --> n34
-  n16 --> n38
-  n16 --> n41
-  n17 --> n15
-  n17 --> n18
+  n12 --> n20
+  n12 --> n24
+  n12 --> n32
+  n13 --> n10
+  n13 --> n20
+  n13 --> n22
+  n13 --> n24
+  n14 --> n10
+  n15 --> n13
+  n15 --> n21
+  n15 --> n23
+  n17 --> n20
+  n17 --> n21
   n17 --> n24
-  n18 --> n9
-  n18 --> n15
+  n17 --> n35
+  n17 --> n39
+  n17 --> n42
+  n18 --> n16
   n18 --> n19
-  n18 --> n21
-  n18 --> n24
+  n18 --> n25
+  n19 --> n10
+  n19 --> n16
+  n19 --> n20
+  n19 --> n22
+  n19 --> n25
 ```

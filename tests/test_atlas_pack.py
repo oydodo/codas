@@ -82,6 +82,28 @@ class ProjectAtlasPackTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(MINI, before)  # input not mutated
 
+    def test_reference_dependency_edge_projects_with_same_tuple_shape(self) -> None:
+        inventory = copy.deepcopy(MINI)
+        inventory["imports"]["edges"].append(
+            {
+                "module": "src/codas/ui/View.swift",
+                "target": "AgentRuntime",
+                "target_path": "src/codas/agent/Agent.swift",
+                "line": 7,
+            }
+        )
+
+        pack = project_atlas_pack(inventory)
+
+        self.assertIn(
+            {
+                "module": "src/codas/ui/View.swift",
+                "target": "AgentRuntime",
+                "target_path": "src/codas/agent/Agent.swift",
+            },
+            pack["dependency_graph"],
+        )
+
     def test_tolerates_minimal_inventory(self) -> None:
         pack = project_atlas_pack({"units": []})
         self.assertEqual(pack["dependency_graph"], [])

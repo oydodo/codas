@@ -43,6 +43,7 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 - `_command` *(function)*
 - `_command_parts` *(function)*
 - `_db_rel_path` *(function)*
+- `_db_resolution` *(function)*
 - `_edge_rows` *(function)*
 - `_endpoint` *(function)*
 - `_extract_from_codegraph_index` *(function)*
@@ -112,6 +113,13 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 - `parse_python_modules` *(function)*
 - `parse_sources` *(function)*
 
+### `src/codas/adapters/references.py`
+
+- `DefinitionRecord` *(class)*
+- `ReferenceCandidate` *(class)*
+- `_resolve_reference_candidate` *(function)*
+- `resolve_reference_edges` *(function)*
+
 ### `src/codas/adapters/semantic.py`
 
 - `MalformedClaim` *(class)*
@@ -130,10 +138,20 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 ### `src/codas/adapters/swift.py`
 
 - `_class_decl_kind` *(function)*
+- `_dedupe_imports` *(function)*
 - `_import_target` *(function)*
+- `_is_explicit_type_reference` *(function)*
+- `_is_swift_definition_name` *(function)*
+- `_is_under` *(function)*
 - `_line` *(function)*
+- `_node_is_error` *(function)*
+- `_parse_error_reasons` *(function)*
+- `_swift_reference_candidates` *(function)*
+- `_swift_type_definitions` *(function)*
 - `_symbol_for_node` *(function)*
+- `_syntax_kind` *(function)*
 - `_text` *(function)*
+- `_walk` *(function)*
 - `extract_swift_imports` *(function)*
 - `extract_swift_symbols` *(function)*
 
@@ -141,7 +159,13 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 
 - `ParsedSwiftModule` *(class)*
 - `ParsedSwiftModules` *(class)*
+- `SwiftParseError` *(class)*
+- `_collect_parse_errors` *(function)*
 - `_emit_unavailable_notice` *(function)*
+- `_parse_errors` *(function)*
+- `_point_column` *(function)*
+- `_point_line` *(function)*
+- `_snippet` *(function)*
 - `_swift_parser` *(function)*
 - `_to_bytes` *(function)*
 - `parse_swift_modules` *(function)*
@@ -172,32 +196,39 @@ Two invariants run through all of it. First, **open-world soundness**: the call 
 
 ```mermaid
 graph LR
-  n0["src/codas/adapters/__init__.py"]
-  n1["src/codas/adapters/callgraph.py"]
-  n2["src/codas/adapters/html.py"]
-  n3["src/codas/adapters/markdown.py"]
-  n4["src/codas/adapters/python.py"]
-  n5["src/codas/adapters/python_parse.py"]
-  n6["src/codas/adapters/semantic.py"]
-  n7["src/codas/adapters/swift.py"]
-  n8["src/codas/adapters/swift_parse.py"]
-  n9["src/codas/adapters/trellis.py"]
-  n10["src/codas/adapters/wiki.py"]
-  n11["src/codas/config/anchors.py"]
-  n12["src/codas/config/loader.py"]
-  n13["src/codas/structure/index.py"]
-  n0 --> n3
-  n0 --> n9
-  n1 --> n4
-  n1 --> n5
-  n2 --> n3
-  n2 --> n13
-  n3 --> n13
+  n0[".venv312-ciri-verify/lib/python3.12/site-packages/tree_sitter/__init__.py"]
+  n1[".venv312-ciri-verify/lib/python3.12/site-packages/tree_sitter_swift/__init__.py"]
+  n2["src/codas/adapters/__init__.py"]
+  n3["src/codas/adapters/callgraph.py"]
+  n4["src/codas/adapters/html.py"]
+  n5["src/codas/adapters/markdown.py"]
+  n6["src/codas/adapters/python.py"]
+  n7["src/codas/adapters/python_parse.py"]
+  n8["src/codas/adapters/references.py"]
+  n9["src/codas/adapters/semantic.py"]
+  n10["src/codas/adapters/swift.py"]
+  n11["src/codas/adapters/swift_parse.py"]
+  n12["src/codas/adapters/trellis.py"]
+  n13["src/codas/adapters/wiki.py"]
+  n14["src/codas/config/anchors.py"]
+  n15["src/codas/config/loader.py"]
+  n16["src/codas/structure/index.py"]
+  n2 --> n5
+  n2 --> n12
+  n3 --> n6
+  n3 --> n7
   n4 --> n5
-  n6 --> n11
-  n7 --> n4
-  n7 --> n8
-  n9 --> n12
-  n10 --> n3
-  n10 --> n13
+  n4 --> n16
+  n5 --> n16
+  n6 --> n7
+  n8 --> n6
+  n9 --> n14
+  n10 --> n6
+  n10 --> n8
+  n10 --> n11
+  n11 --> n0
+  n11 --> n1
+  n12 --> n15
+  n13 --> n5
+  n13 --> n16
 ```

@@ -136,7 +136,9 @@ def _command_parts(executable: str | os.PathLike[str] | None) -> list[str]:
 
 
 def _is_real_codegraph_cli(parts: list[str]) -> bool:
-    return len(parts) == 1 and Path(parts[0]).name == "codegraph"
+    return len(parts) == 1 and Path(parts[0]).name == "codegraph" and (
+        parts[0] == "codegraph" or Path(parts[0]).exists()
+    )
 
 
 def _extract_from_codegraph_index(
@@ -145,25 +147,41 @@ def _extract_from_codegraph_index(
     executable: str,
     timeout: float,
 ) -> CodeGraphCallFacts:
-    try:
-        result = subprocess.run(
-            [executable, "status", "--json", repo.as_posix()],
-            cwd=repo,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-            timeout=timeout,
-        )
-    except FileNotFoundError:
-        return CodeGraphCallFacts(edges=(), skipped=("codegraph: executable not found",))
-    except subprocess.TimeoutExpired:
-        return CodeGraphCallFacts(edges=(), skipped=("codegraph: timeout",))
-    except OSError as error:
-        return CodeGraphCallFacts(edges=(), skipped=(f"codegraph: {error.__class__.__name__}",))
+    local_db = repo / ".codegraph" / "codegraph.db"
+    if local_db.exists():
+        try:
+            return _read_codegraph_db(local_db, repo, files)
+        except sqlite3.Error as error:
+            return CodeGraphCallFacts(
+                edges=(), skipped=(f"codegraph: sqlite {error.__class__.__name__}",)
+            )
 
-    if result.returncode != 0:
-        return CodeGraphCallFacts(edges=(), skipped=(f"codegraph: exit {result.returncode}",))
+    result = None
+    for command in (
+        [executable, "status", "--json"],
+        [executable, "status", "--json", repo.as_posix()],
+    ):
+        try:
+            result = subprocess.run(
+                command,
+                cwd=repo,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=timeout,
+            )
+        except FileNotFoundError:
+            return CodeGraphCallFacts(edges=(), skipped=("codegraph: executable not found",))
+        except subprocess.TimeoutExpired:
+            return CodeGraphCallFacts(edges=(), skipped=("codegraph: timeout",))
+        except OSError as error:
+            return CodeGraphCallFacts(edges=(), skipped=(f"codegraph: {error.__class__.__name__}",))
+        if result.returncode == 0:
+            break
+    if result is None or result.returncode != 0:
+        code = result.returncode if result is not None else "unknown"
+        return CodeGraphCallFacts(edges=(), skipped=(f"codegraph: exit {code}",))
     try:
         status = json.loads(result.stdout)
     except json.JSONDecodeError:
@@ -188,17 +206,17 @@ def _read_codegraph_db(db_path: Path, repo: Path, files: tuple[str, ...]) -> Cod
     edges: list[CodeGraphCallFact] = []
     skipped: list[str] = []
     seen: set[tuple[str, str, str, str, str, str, str]] = set()
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect(f"file:{db_path.as_posix()}?mode=ro", uri=True) as conn:
         rows = conn.execute(
             """
             SELECT
               s.qualified_name, s.kind, s.name, s.file_path, s.start_line,
               t.qualified_name, t.kind, t.name, t.file_path, t.start_line,
-              e.line, e.provenance
+              e.kind, e.line, e.provenance
             FROM edges e
             JOIN nodes s ON e.source = s.id
             JOIN nodes t ON e.target = t.id
-            WHERE e.kind = 'calls'
+            WHERE e.kind IN ('calls', 'instantiates')
             """
         )
         for index, row in enumerate(rows):
@@ -249,6 +267,7 @@ def _fact_from_db_row(
         callee_name,
         callee_path,
         callee_line,
+        edge_kind,
         edge_line,
         edge_provenance,
     ) = row
@@ -276,10 +295,18 @@ def _fact_from_db_row(
             callee_symbol=callee_symbol,
             callee_path=callee_rel,
             callee_line=_int(callee_line),
-            resolution=str(edge_provenance or "codegraph"),
+            resolution=_db_resolution(edge_kind, edge_provenance),
         ),
         None,
     )
+
+
+def _db_resolution(edge_kind: Any, edge_provenance: Any) -> str:
+    kind = edge_kind if isinstance(edge_kind, str) and edge_kind else "edge"
+    provenance = edge_provenance if isinstance(edge_provenance, str) and edge_provenance else ""
+    if provenance:
+        return f"{kind}:{provenance}"
+    return kind
 
 
 def _module_from_db(qualified: Any, path: str) -> str:
@@ -287,9 +314,7 @@ def _module_from_db(qualified: Any, path: str) -> str:
 
 
 def _db_rel_path(path: str, repo: Path) -> str | None:
-    if Path(path).is_absolute():
-        return _repo_rel(path, repo)
-    return path
+    return _repo_rel(path, repo)
 
 
 def _class_from_db(qualified: Any, kind: Any, symbol: str) -> str:

@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/06-27-multilang-call-graph-coverage/prd.md", "reason": "requirements and acceptance criteria"}
+{"file": ".trellis/tasks/06-27-multilang-call-graph-coverage/design.md", "reason": "technical design and guardrails"}
+{"file": ".trellis/tasks/06-27-multilang-call-graph-coverage/implement.md", "reason": "planned validation and rollback points"}
+{"file": "docs/codas-fact-claim-maintenance-milestone.md", "reason": "CodeGraph must remain advisory-only"}

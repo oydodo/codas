@@ -5,6 +5,7 @@ import textwrap
 import unittest
 from pathlib import Path
 
+from codas.adapters.python import ImportFact, ImportFacts
 from codas.config.loader import CodasConfig
 from codas.facts.context import build_scan_context
 from codas.policies.dependency_direction import check_dependency_direction
@@ -68,6 +69,7 @@ class DependencyDirectionPolicyTests(unittest.TestCase):
             self.assertEqual(finding.meta["forbidden_unit"], "adp")
             self.assertEqual(finding.evidence[0].path, "src/pol/p.py")
             self.assertEqual(finding.evidence[1].path, "src/adp/a.py")
+            self.assertIn("depends on", finding.message)
 
     def test_allowed_first_party_import_is_not_flagged(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -213,6 +215,35 @@ class DependencyDirectionPolicyTests(unittest.TestCase):
             _write(repo / "src" / "pol" / "p.py", "import adp.a\n")
 
             self.assertEqual(_findings(repo), [])
+
+    def test_reference_edge_wording_does_not_claim_import_statement(self) -> None:
+        class FakeContext:
+            def __init__(self, repo: Path) -> None:
+                self.repo = repo
+
+            def imports(self) -> ImportFacts:
+                return ImportFacts(
+                    (
+                        ImportFact(
+                            module="src/pol/View.swift",
+                            target="AgentRuntime",
+                            target_path="src/adp/Agent.swift",
+                            line=2,
+                        ),
+                    ),
+                    (),
+                )
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _structure(repo, UNITS, {"pol": ["adp"]})
+
+            findings = check_dependency_direction(FakeContext(repo))
+
+            self.assertEqual(len(findings), 1)
+            self.assertIn("depends on AgentRuntime", findings[0].message)
+            self.assertNotIn(" imports ", findings[0].message)
+            self.assertIn("Remove the dependency", findings[0].recommendation)
 
 
 if __name__ == "__main__":

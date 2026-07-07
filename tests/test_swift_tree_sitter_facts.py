@@ -152,14 +152,113 @@ extension Box {}
             [("Foundation", None), ("UIKit.UIView", None)],
         )
 
-    def test_swift_malformed_file_is_skipped(self) -> None:
+    def test_swift_type_references_emit_first_party_edges(self) -> None:
+        parsed = parse_swift_sources(
+            {
+                "Sources/Agent.swift": """
+public protocol AgentRunnable {}
+public struct AgentRuntime {}
+public struct KnowledgeStore {}
+public struct ViewModel<T> {}
+""",
+                "Sources/UI.swift": """
+import SwiftUI
+struct DashboardView: AgentRunnable {
+  let agent: AgentRuntime
+  var agents: [AgentRuntime]
+  func render(input: AgentRuntime, store: KnowledgeStore) -> ViewModel<AgentRuntime> {
+    fatalError()
+  }
+}
+""",
+            }
+        )
+
+        imports = extract_swift_imports(parsed)
+        edges = {
+            (fact.module, fact.target, fact.target_path)
+            for fact in imports.imports
+            if fact.target_path is not None
+        }
+
+        self.assertEqual(
+            edges,
+            {
+                ("Sources/UI.swift", "AgentRunnable", "Sources/Agent.swift"),
+                ("Sources/UI.swift", "AgentRuntime", "Sources/Agent.swift"),
+                ("Sources/UI.swift", "KnowledgeStore", "Sources/Agent.swift"),
+                ("Sources/UI.swift", "ViewModel", "Sources/Agent.swift"),
+            },
+        )
+        self.assertIn(
+            ("SwiftUI", None),
+            {(fact.target, fact.target_path) for fact in imports.imports},
+        )
+
+    def test_swift_ambiguous_type_reference_emits_no_edge(self) -> None:
+        parsed = parse_swift_sources(
+            {
+                "Sources/A/Store.swift": "struct Store {}\n",
+                "Sources/B/Store.swift": "struct Store {}\n",
+                "Sources/UI.swift": "struct UI { let store: Store }\n",
+            }
+        )
+
+        imports = extract_swift_imports(parsed)
+
+        self.assertEqual(
+            [
+                (fact.module, fact.target, fact.target_path)
+                for fact in imports.imports
+                if fact.target == "Store"
+            ],
+            [],
+        )
+
+    def test_swift_malformed_file_records_parse_diagnostic(self) -> None:
         parsed = parse_swift_sources({"Sources/Broken.swift": "struct {"})
         symbols = extract_swift_symbols(parsed)
         imports = extract_swift_imports(parsed)
         self.assertEqual(symbols.definitions, ())
-        self.assertEqual(symbols.skipped, ("Sources/Broken.swift",))
+        self.assertEqual(len(symbols.skipped), 1)
+        self.assertTrue(symbols.skipped[0].startswith("Sources/Broken.swift:1:"))
+        self.assertIn("ERROR", symbols.skipped[0])
         self.assertEqual(imports.imports, ())
-        self.assertEqual(imports.skipped, ("Sources/Broken.swift",))
+        self.assertEqual(imports.skipped, symbols.skipped)
+
+    def test_swift_partial_parse_keeps_valid_symbols_and_reference_edges(self) -> None:
+        parsed = parse_swift_sources(
+            {
+                "Sources/Shared.swift": "struct CredentialService {}\n",
+                "Sources/App.swift": """
+struct ToolDispatcher {
+  let credentialService: CredentialService
+  func run() {
+    nonisolated(unsafe) let arguments: [String: Any] = [:]
+  }
+}
+""",
+            }
+        )
+
+        symbols = extract_swift_symbols(parsed)
+        imports = extract_swift_imports(parsed)
+
+        self.assertIn(
+            ("Sources/App.swift", "ToolDispatcher", "struct"),
+            {(fact.module, fact.name, fact.kind) for fact in symbols.definitions},
+        )
+        self.assertIn(
+            ("Sources/Shared.swift", "CredentialService", "struct"),
+            {(fact.module, fact.name, fact.kind) for fact in symbols.definitions},
+        )
+        self.assertIn(
+            ("Sources/App.swift", "CredentialService", "Sources/Shared.swift"),
+            {(fact.module, fact.target, fact.target_path) for fact in imports.imports},
+        )
+        self.assertEqual(len(symbols.skipped), 1)
+        self.assertIn("nonisolated(unsafe)", symbols.skipped[0])
+        self.assertEqual(imports.skipped, symbols.skipped)
 
     def test_mixed_merge_orders_deterministically(self) -> None:
         python = SymbolFacts((SymbolFact("pkg/z.py", "py_symbol", "function", 10),), ())
@@ -197,6 +296,36 @@ extension Box {}
             self.assertEqual(
                 delta.symbols_added,
                 (("Sources/App.swift", "NewName", "struct"),),
+            )
+
+    def test_head_snapshot_swift_reference_delta_symmetric(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _init(repo)
+            _write(repo / "Sources" / "Agent.swift", "struct AgentRuntime {}\n")
+            _write(repo / "Sources" / "UI.swift", "struct UI { let agent: AgentRuntime }\n")
+            _commit(repo)
+
+            clean = build_scan_context(repo, _config(repo))
+            self.assertTrue(clean.fact_delta().is_empty())
+            self.assertIn(
+                ("Sources/UI.swift", "AgentRuntime", "Sources/Agent.swift"),
+                {
+                    (fact.module, fact.target, fact.target_path)
+                    for fact in clean.imports().imports
+                },
+            )
+
+            _write(repo / "Sources" / "UI.swift", "struct UI { let agent: MissingRuntime }\n")
+            dirty = build_scan_context(repo, _config(repo))
+            delta = dirty.fact_delta()
+            self.assertIn(
+                ("Sources/UI.swift", "AgentRuntime", "Sources/Agent.swift"),
+                delta.imports_removed,
+            )
+            self.assertNotIn(
+                ("Sources/UI.swift", "MissingRuntime", "Sources/Agent.swift"),
+                delta.imports_added,
             )
 
 

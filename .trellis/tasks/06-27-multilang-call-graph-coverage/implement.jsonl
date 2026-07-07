@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/archive/2026-06/06-23-codegraph-advisory-adapter/prd.md", "reason": "existing CodeGraph advisory adapter requirements and constraints"}
+{"file": ".trellis/tasks/archive/2026-06/06-23-codegraph-advisory-adapter/implement.md", "reason": "existing implementation plan and isolation tests"}
+{"file": ".trellis/tasks/archive/2026-06/06-21-w3-s2-multi-language-extraction/design.md", "reason": "prior multi-language extraction direction"}
+{"file": "docs/codas-fact-claim-maintenance-milestone.md", "reason": "advisory vs gate-grade fact-tier invariant"}

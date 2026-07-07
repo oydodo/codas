@@ -7,11 +7,24 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class SwiftParseError:
+    line: int
+    column: int
+    node_type: str
+    snippet: str
+
+    def as_skipped_reason(self, path: str) -> str:
+        suffix = f" {self.snippet}" if self.snippet else ""
+        return f"{path}:{self.line}:{self.column}: {self.node_type}{suffix}"
+
+
+@dataclass(frozen=True)
 class ParsedSwiftModule:
     path: str
     tree: Any | None
     source: bytes
     read_error: OSError | None = None
+    parse_errors: tuple[SwiftParseError, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -68,10 +81,14 @@ def parse_swift_sources(sources: dict[str, str | bytes]) -> ParsedSwiftModules:
         except Exception:  # tree-sitter parser errors are environment/ABI failures.
             modules.append(ParsedSwiftModule(path=path, tree=None, source=source))
             continue
-        if tree.root_node.has_error:
-            modules.append(ParsedSwiftModule(path=path, tree=None, source=source))
-        else:
-            modules.append(ParsedSwiftModule(path=path, tree=tree, source=source))
+        modules.append(
+            ParsedSwiftModule(
+                path=path,
+                tree=tree,
+                source=source,
+                parse_errors=_parse_errors(tree.root_node, source) if tree.root_node.has_error else (),
+            )
+        )
     return ParsedSwiftModules(tuple(modules))
 
 
@@ -98,6 +115,50 @@ def _to_bytes(source: str | bytes) -> bytes:
     if isinstance(source, bytes):
         return source
     return source.encode("utf-8", "ignore")
+
+
+def _parse_errors(root: Any, source: bytes) -> tuple[SwiftParseError, ...]:
+    errors: list[SwiftParseError] = []
+    _collect_parse_errors(root, source, errors)
+    errors.sort(key=lambda error: (error.line, error.column, error.node_type, error.snippet))
+    return tuple(errors)
+
+
+def _collect_parse_errors(node: Any, source: bytes, errors: list[SwiftParseError]) -> None:
+    if node.type == "ERROR" or getattr(node, "is_missing", False):
+        errors.append(
+            SwiftParseError(
+                line=_point_line(node),
+                column=_point_column(node),
+                node_type="MISSING" if getattr(node, "is_missing", False) else node.type,
+                snippet=_snippet(source, node),
+            )
+        )
+    for child in getattr(node, "children", ()):
+        _collect_parse_errors(child, source, errors)
+
+
+def _snippet(source: bytes, node: Any) -> str:
+    text = source[node.start_byte:node.end_byte].decode("utf-8", "ignore").strip()
+    return " ".join(text.split())[:160]
+
+
+def _point_line(node: Any) -> int:
+    point = node.start_point
+    try:
+        row = point[0]
+    except TypeError:
+        row = point.row
+    return int(row) + 1
+
+
+def _point_column(node: Any) -> int:
+    point = node.start_point
+    try:
+        column = point[1]
+    except TypeError:
+        column = point.column
+    return int(column) + 1
 
 
 def _emit_unavailable_notice(reason: str | None) -> None:

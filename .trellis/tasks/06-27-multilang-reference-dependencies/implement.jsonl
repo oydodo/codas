@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/archive/2026-06/06-23-tree-sitter-gate-adapter/design.md", "reason": "existing gate-grade tree-sitter adapter design and invariants"}
+{"file": ".trellis/tasks/archive/2026-06/06-21-w3-s2-multi-language-extraction/design.md", "reason": "prior multi-language extraction direction and tree-sitter tradeoffs"}
+{"file": "docs/codas-fact-claim-maintenance-milestone.md", "reason": "fact tiering: deterministic in-core facts can gate, CodeGraph remains advisory"}
+{"file": ".trellis/spec/codas/workflow/index.md", "reason": "Codas workflow/spec entrypoint for implementation"}

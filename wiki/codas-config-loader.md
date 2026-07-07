@@ -43,4 +43,9 @@ PyYAML-only, no schema framework, no network — consistent with Codas's serverl
 
 ## Dependencies
 
-_No first-party import edges originate in this unit._
+```mermaid
+graph LR
+  n0[".venv312-ciri-verify/lib/python3.12/site-packages/yaml/__init__.py"]
+  n1["src/codas/config/loader.py"]
+  n1 --> n0
+```

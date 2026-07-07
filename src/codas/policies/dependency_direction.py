@@ -9,10 +9,10 @@ STRUCTURE_SOURCE = ".codas/structure.yml"
 
 
 def check_dependency_direction(ctx: ScanContext) -> list[Finding]:
-    """Flag first-party imports that violate a Structure Map must_not_depend_on rule.
+    """Flag first-party dependency edges that violate a Structure Map rule.
 
     Dogfooded enforcement of the §11 Adapter Boundary (and any declared dependency
-    direction): an importer's most-specific owning unit must not import a unit listed
+    direction): an importer's most-specific owning unit must not depend on a unit listed
     in its ``must_not_depend_on``. Rules are local to the owning unit — schema-faithful,
     not inherited from ancestors. Consumes B1 import facts through the ScanContext
     seam, so the boundary-enforcing policy imports no adapter itself. Deterministic,
@@ -71,14 +71,14 @@ def check_dependency_direction(ctx: ScanContext) -> list[Finding]:
                 check_id="dependency-direction",
                 message=(
                     f"Unit '{importer.id}' must not depend on '{forbidden}': "
-                    f"{edge.module} imports {edge.target}"
+                    f"{edge.module} depends on {edge.target}"
                 ),
                 evidence=[
                     Evidence(path=edge.module, line=edge.line, detail=edge.target),
                     Evidence(path=edge.target_path),
                 ],
                 recommendation=(
-                    f"Remove the import, or revise the '{importer.id}' "
+                    f"Remove the dependency, or revise the '{importer.id}' "
                     "must_not_depend_on rule in the Structure Map."
                 ),
                 meta={

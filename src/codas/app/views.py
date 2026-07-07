@@ -15,8 +15,8 @@ from codas.facts.openworld import open_world_gaps
 # re-import a false-completeness failure at the presentation layer (mirrors `codas impact`).
 
 _IMPORT_CAVEAT = (
-    "OPEN-WORLD: this import graph is a sound LOWER BOUND — a missing edge is not proof of "
-    "no import (absence is not denial). Misses: "
+    "OPEN-WORLD: this dependency graph is a sound LOWER BOUND — a missing edge is not proof of "
+    "no dependency (absence is not denial). Misses: "
 )
 
 
@@ -25,7 +25,7 @@ def _import_caveat() -> str:
 
 
 def build_mermaid(repo: Path) -> str:
-    """A Mermaid `graph LR` of the PRODUCT module dependency graph (import facts), with the
+    """A Mermaid `graph LR` of the PRODUCT module dependency graph (dependency facts), with the
     open-world caveat as a `%%` comment AND a visible note node. Deterministic: nodes are
     sorted and id'd by sorted position; edges follow the pack's already-sorted order."""
     edges = build_atlas_pack(repo)["dependency_graph"]
@@ -33,7 +33,7 @@ def build_mermaid(repo: Path) -> str:
     node_id = {path: f"n{i}" for i, path in enumerate(nodes)}
 
     lines = [
-        "%% codas wiki --emit-mermaid — product module dependency graph (import facts).",
+        "%% codas wiki --emit-mermaid — product module dependency graph (dependency facts).",
         "%% " + _import_caveat(),
         "graph LR",
     ]
